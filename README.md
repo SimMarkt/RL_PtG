@@ -1,6 +1,6 @@
-# RL_PtG-CH4
+# RL_PtG
 
-Deep Reinforcement Learning for dynamic Real-time optimization of Power-to-Methane (PtG-CH4) dispatch with respect to Day-ahead electricity, natural gas, and emission allowances market data.
+Deep Reinforcement Learning for dynamic Real-time optimization of Power-to-Gas (PtG) dispatch with respect to Day-ahead electricity, natural gas, and emission allowances market data. The PtG process comprises a proton exchange membrane electrolyzer (PEMEL) and a chemical methanation unit.
 
 ---
 
@@ -51,9 +51,6 @@ cd RL_PtG
 Afterwards, create a new Python virtual environment in the project folder and install the packages in the requirements.txt.
 Note that Python 3.10 or a newer Version is required to run the code.
 After installing all Python packages, the code can be run by using the rl_main_TQC_hpc.py file.
-Conflict maain
-
-Conflict sidebranch again
 
 ---
 
