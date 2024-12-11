@@ -1,7 +1,13 @@
-# Configuration file for the PtG-CH4 environment including three different economic business cases (scenarios)
-# 1 > Involves trading at the electricity, gas, and emission spot markets
-# 2 > Involves a fixed synthetic natural gas (SNG) price and trading at the electricity and emission spot markets
-# 3 > Involves participating in EEG tenders by using a combined heat and power (CHP) plant and trading at the electricity spot markets
+# ----------------------------------------------------------------------------------------------------------------
+# RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
+# https://github.com/SimMarkt/RL_PtG
+
+# config_env: 
+# > Configuration file for the PtG environment including three different economic business cases (scenarios) 
+# > scenario: 1 - Involves trading at the electricity, gas, and emission spot markets
+# > scenario: 2 - Involves a fixed synthetic natural gas (SNG) price and trading at the electricity and emission spot markets
+# > scenario: 3 - Involves participating in EEG tenders by using a combined heat and power (CHP) plant and trading at the electricity spot markets
+# ----------------------------------------------------------------------------------------------------------------
 
 scenario: 1                   # business case
 operation : OP1               # specifies the load level "OP1" or "OP2" of the PtG-CH4 plant
@@ -53,7 +59,7 @@ datafile_path :
         datafile_path17 : data-meth_op11_f_p_f_15.csv  # load change from full to partial load and back to full load after 15 min
         datafile_path18 : data-meth_op12_f_p_f_20.csv  # load change from full to partial load and back to full load after 20 min  
 
-# Control and inner state spaces of the PtG-CH4 system (aligned with the programmable logic controller)
+# control and inner state spaces of the PtG-CH4 system (aligned with the programmable logic controller)
 ptg_state_space:
   standby : 0
   cooldown : 1
@@ -86,36 +92,35 @@ meth_stats_load :
 
 
 # economic data and parameters
-ch4_price_fix : 15.0               # Fixed SNG price in business case/ scenario 2 in [ct/kWh]
-heat_price : 4.6                   # Heat price in [ct/kWh]
+ch4_price_fix : 15.0               # fixed SNG price in business case/ scenario 2 in [ct/kWh]
+heat_price : 4.6                   # heat price in [ct/kWh]
 o2_price : 10.2                    # O2 price in [ct/Nm³]
-water_price : 6.4                  # Water price in [ct/m³]
+water_price : 6.4                  # water price in [ct/m³]
 eeg_el_price : 17.84               # EEG tender price in business case/ scenario 3 in [ct/kWh_el]
 # species properties and efficiencies
-H_u_CH4 : 35.883                   # Lower heating value of methane in [MJ/m³]
-H_u_H2 : 10.783                    # Lower heating value of hydrogen in [MJ/m³]
-h_H2O_evap : 2257                  # Specific enthalpy of vaporization in [kJ/kg] (at 0.1 MPa)
-dt_water : 90                      # Tempature difference between cooling water and evaporation in [K]
-cp_water : 4.18                    # Specific heat capacity of water in [kJ/kgK]
-rho_water : 998                    # Densitiy of water in [kg/m³]
-convert_mol_to_Nm3 : 0.02241407    # Factor for converting moles to Nm³ for an ideal gas at normal conditions in [Nm³/mol] (convert_mol_to_Nm3 : R_uni * T_0 / p_0 = 8.3145J/mol/K * 273.15K / 101325Pa = 0.02241407 Nm3/mol)
-Molar_mass_CO2 : 44.01             # Molar mass of carbon dioxid in [g/mol]
-Molar_mass_H2O : 18.02             # Molar mass of water in [g/mol]
-min_load_electrolyzer : 0.032      # Minimum electrolyzer load = 3.2% (According to static data-based regression model of PEMEL)
-eta_CHP : 0.38                    # Gas engine/ CHP efficiency
+H_u_CH4 : 35.883                   # lower heating value of methane in [MJ/m³]
+H_u_H2 : 10.783                    # lower heating value of hydrogen in [MJ/m³]
+h_H2O_evap : 2257                  # specific enthalpy of vaporization in [kJ/kg] (at 0.1 MPa)
+dt_water : 90                      # tempature difference between cooling water and evaporation in [K]
+cp_water : 4.18                    # specific heat capacity of water in [kJ/kgK]
+rho_water : 998                    # densitiy of water in [kg/m³]
+convert_mol_to_Nm3 : 0.02241407    # factor for converting moles to Nm³ for an ideal gas at normal conditions in [Nm³/mol] (convert_mol_to_Nm3 : R_uni * T_0 / p_0 = 8.3145J/mol/K * 273.15K / 101325Pa = 0.02241407 Nm3/mol)
+Molar_mass_CO2 : 44.01             # molar mass of carbon dioxid in [g/mol]
+Molar_mass_H2O : 18.02             # molar mass of water in [g/mol]
+min_load_electrolyzer : 0.032      # minimum electrolyzer load = 3.2% (According to static data-based regression model of PEMEL)
+eta_CHP : 0.38                     # gas engine/ CHP efficiency
 
-# Optional: The model can also apply a reward penalty for state transitions
+# optional: The model can also apply a reward penalty for state transitions
 r_0_values :   # Reward level price values -> Set the general height of the reward penalty according to electricity, (S)NG, and EUA price levels
     el_price : [0]
     gas_price : [10]
     eua_price : [50]
 
-
-# Threshold values for methanation data
-t_cat_standby : 188.2              # Catalyst temperature threshold for changing standby data set in [°C] (If the plant goes to standby from idle state and reaches T_Cat > t_cat_standby, the model uses "data-meth_startup_hot.csv" for the next startup)
-t_cat_startup_cold : 160           # Catalyst temperature threshold for cold start conditions in [°C] (For T_Cat < t_cat_startup_cold, the model uses "data-meth_startup_cold.csv" for the next startup)
-t_cat_startup_hot : 350            # Catalyst temperature threshold for hot start conditions in [°C] (For T_Cat > t_cat_startup_hot, the model uses "data-meth_startup_hot.csv" for the next startup)
-# Time threshold for load change data set, from time = 0 (Important to identify the data set with the most suitable mode transition)
+# threshold values for methanation data
+t_cat_standby : 188.2              # catalyst temperature threshold for changing standby data set in [°C] (If the plant goes to standby from idle state and reaches T_Cat > t_cat_standby, the model uses "data-meth_startup_hot.csv" for the next startup)
+t_cat_startup_cold : 160           # catalyst temperature threshold for cold start conditions in [°C] (For T_Cat < t_cat_startup_cold, the model uses "data-meth_startup_cold.csv" for the next startup)
+t_cat_startup_hot : 350            # catalyst temperature threshold for hot start conditions in [°C] (For T_Cat > t_cat_startup_hot, the model uses "data-meth_startup_hot.csv" for the next startup)
+# time threshold for load change data set, from time = 0 (Important to identify the data set with the most suitable mode transition)
 time1_start_p_f : 1201             # simulation step -> 2400 sec
 time2_start_f_p : 151              # simulation step -> 300 sec
 time_p_f : 210                     # simulation steps for load change (asc) -> 420 sec

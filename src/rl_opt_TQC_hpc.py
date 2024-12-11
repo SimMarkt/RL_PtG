@@ -4,7 +4,7 @@ import numpy as np
 from tqdm import tqdm
 import math
 
-from src.rl_class_TQC_hpc import GlobalParams
+from src.rl_glo_param import GlobalParams
 
 
 def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_price_data: np.array, data_name: str):

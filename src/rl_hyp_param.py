@@ -1,4 +1,13 @@
-# Contains hyperparameters of RL optimization of Power-to-Gas using TQC
+# ----------------------------------------------------------------------------------------------------------------
+# RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
+# https://github.com/SimMarkt/RL_PtG
+
+# rl_hyp_param: 
+# > Contains hyperparameters of the RL agents
+# > Converts the config_agent.yaml data into a class object for further processing
+# ----------------------------------------------------------------------------------------------------------------
+
+
 import numpy as np
 import pandas as pd
 import os
