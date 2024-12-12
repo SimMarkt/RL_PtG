@@ -66,7 +66,7 @@ If you use RL_PtG in your research please use the following BibTeX entry:
 ```BibTeX
 @misc{SimMarkRLPtG,
   author = {Markthaler, Simon},
-  title = {RL_PtG: Deep Reinforcement Learning for Power-to-Methane Optimization},
+  title = {RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization},
   year = {2024},
   url = {https://github.com/SimMarkt/RL_PtG}
 }

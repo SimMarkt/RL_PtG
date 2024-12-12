@@ -6,9 +6,9 @@ from matplotlib.path import Path
 import matplotlib.patches as patches
 import math
 
-from src.rl_class_TQC_hpc import GlobalParams
+from src.rl_glo_param import GlobalParams
 from src.rl_opt_TQC_hpc import calculate_optimum
-from src.rl_hyp_param_TQC_hpc import HypParams
+from src.rl_hyp_param import HypParams
 
 
 def import_market_data(csvfile: str, type: str):  # , df: pd.DataFrame) # for future implementation
