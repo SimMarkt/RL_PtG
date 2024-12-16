@@ -1,6 +1,6 @@
 # RL_PtG
 
-Deep Reinforcement Learning for dynamic Real-time optimization of Power-to-Gas (PtG) dispatch with respect to Day-ahead electricity, natural gas, and emission allowances market data. The PtG process comprises a proton exchange membrane electrolyzer (PEMEL) and a chemical methanation unit.
+Deep Reinforcement Learning (RL) for dynamic Real-time optimization of Power-to-Gas (PtG) dispatch with respect to Day-ahead electricity, natural gas, and emission allowances market data. The PtG process comprises a proton exchange membrane electrolyzer (PEMEL) and a chemical methanation unit.
 
 ---
 
@@ -17,12 +17,19 @@ Deep Reinforcement Learning for dynamic Real-time optimization of Power-to-Gas (
 
 ## Overview
 
-Describe your project in detail:
-- **What problem does it solve?**
-- **Who are the intended users?**
-- Optionally include a screenshot or a demo link.
+Deep RL is a promising approach for economic optimization of chemical plant operation. This python project implements deep RL for PtG dispatch optimization under Day-ahead energy
+market conditions. The file "rl_main.py" contains the for training RL agents using a "data-based process model" of PtG as environment. This model has been derived from experimental data of a real PtG demonstration plant and serve as environment, along with energy market data.
+The environment has been implemented using the Gymnasium environment.
+With regard to RL, the project incorporates six state-of-the-art RL algorithms (DQN, A2C, PPO, TD3, SAC, TQC) from Stable-Baselines3 library.
+
+To configure the code, the project provides two YAML files in "./config": config_agent.yaml (for the RL agents) and config_env.yaml (for the environment)
+
+The experimental process data and energy market data are present in "./data".
+Note that two different load levels are ...
 
 ![Screenshot](screenshot.png)
+
+For more information on the data-based process model, please refer to ...
 
 ---
 
