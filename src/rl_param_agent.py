@@ -2,14 +2,16 @@
 # RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
 # https://github.com/SimMarkt/RL_PtG
 
-# rl_agent_param: 
+# rl_param_agent: 
 # > Contains hyperparameters of the RL agents
 # > Converts the config_agent.yaml data into a class object for further processing
+# > Contains three additional functions to specify, load, and save the Stable-Baselines3 models
 # ----------------------------------------------------------------------------------------------------------------
 
 import numpy as np
 import torch as th
 import yaml
+from src.rl_param_env import EnvParams
 
 
 class AgentParams:
@@ -18,10 +20,15 @@ class AgentParams:
         with open("config/config_agent.yaml", "r") as env_file:
             agent_config = yaml.safe_load(env_file)
 
-        self.str_inv = agent_config['str_inv']          # string for denoting your training results and models to a specific investigation ##################################---------------------------------
+        self.device = agent_config['str_inv']
+        com_set : ['pc','slurm']   # computational resources: local personal computer ('pc') or computing cluster with SLURM management ('slurm')
+        com_conf : pc               # selected computational resources either 'pc' or 'slurm'
+        self.str_inv = agent_config['str_inv']              # specifies the training results and models to a specific investigation ##################################---------------------------------
+        self.str_inv_load = agent_config['str_inv_load']    # specifies the name of the pretrained model ##################################----
         assert agent_config['model_conf'] in agent_config['train_set'], f'Wrong training setup specified - data/config_agent.yaml -> 
                                                                           model_conf : {agent_config['model_conf']} must match {agent_config['train_set']}'
         self.model_conf = agent_config['model_conf']    # training setup
+        self.path_files = agent_config['path_files']    # data path with pretrained RL models
         self.n_envs = agent_config['n_envs']            # Number environments/workers for training
         assert agent_config['rl_alg'] in agent_config['hyperparameters'], f'Wrong algorithm specified - data/config_agent.yaml -> 
                                                                             model_conf : {agent_config['rl_alg']} must match {agent_config['hyperparameters'].keys()}'
@@ -34,7 +41,15 @@ class AgentParams:
         self.r_seed_test = agent_config['r_seed_test']         # random seeds for neural network initialization (and environment randomness) of the validation and test sets
         assert len(self.r_seed_train) == len(self.r_seed_test), 'Number of random seeds must be equal for the training and test set!'
 
-    def load_model(self, env, tb_log, device, seed_train):
+    def set_model(self, env, tb_log):
+        """
+            Specify the Stable-Baselines3 model for RL training
+            :param env: environment
+            :param tb_log: # tensorboard log file
+            :device: device for computation (CPU or GPU)
+            :seed_train: random seed for training
+            :return model: Stable-Baselines3 model for RL training
+        """
         
         # Implement the neural network architecture:
         #   Custom actor (pi) and value function (vf) networks with the
@@ -47,7 +62,7 @@ class AgentParams:
         net_arch = np.ones((self.rl_alg_hyp['hidden_layers'],), int) * self.rl_alg_hyp['hidden_units']
         net_arch = net_arch.tolist()
 
-        # Load RL algorithms and specify hyperparameters
+        # Set RL algorithms and specify hyperparameters
         if self.rl_alg == 'DQN':
             from stable_baselines3 import DQN           # import algorithm
             policy_kwargs = dict(activation_fn=activation_fn, net_arch=net_arch)
@@ -67,9 +82,9 @@ class AgentParams:
                 tau=self.rl_alg_hyp['tau'],                                             # soft update parameter
                 train_freq=self.rl_alg_hyp['train_freq'],                               # training frequency
                 policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
-                device=device,                                                          # CPU or GPU
+                device=self.device,                                                     # CPU or GPU
                 target_update_interval=self.rl_alg_hyp['target_update_interval'],       # target network update interval
-                seed=seed_train,                                                        # random seed
+                seed=self.r_seed_train,                                                 # random seed
             )
 
         elif self.rl_alg == 'A2C':                      # import algorithm
@@ -96,8 +111,8 @@ class AgentParams:
                 ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # entropy coefficient
                 policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
                 use_sde=gSDE,                                                           # gSDE exploration  (0: False, 1: True)
-                device=device,                                                          # CPU or GPU
-                seed=seed_train,                                                        # random seed
+                device=self.device,                                                     # CPU or GPU
+                seed=self.r_seed_train,                                                 # random seed
             )
 
         elif self.rl_alg == 'PPO':                      # import algorithm
@@ -127,8 +142,8 @@ class AgentParams:
                 ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # entropy coefficient
                 policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
                 use_sde=gSDE,                                                           # gSDE exploration  (0: False, 1: True)
-                device=device,                                                          # CPU or GPU
-                seed=seed_train,                                                        # random seed
+                device=self.device,                                                     # CPU or GPU
+                seed=self.r_seed_train,                                                 # random seed
             )
 
         elif self.rl_alg == 'TD3':                      # import algorithm
@@ -148,8 +163,8 @@ class AgentParams:
                 train_freq=self.rl_alg_hyp['train_freq'],                               # training frequency
                 target_policy_noise=self.rl_alg_hyp['sigma_exp'],                       # standard deviation of Gaussian noise added to the target policy
                 policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
-                device=device,                                                          # CPU or GPU
-                seed=seed_train,                                                        # random seed
+                device=self.device,                                                     # CPU or GPU
+                seed=self.r_seed_train,                                                 # random seed
             )
         
         elif self.rl_alg == 'SAC':                      # import algorithm
@@ -174,9 +189,9 @@ class AgentParams:
                 ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # entropy coefficient
                 policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
                 use_sde=gSDE,                                                           # gSDE exploration  (0: False, 1: True)
-                device=device,                                                          # CPU or GPU
+                device=self.device,                                                     # CPU or GPU
                 target_update_interval=self.rl_alg_hyp['train_freq'],                   # target network update interval
-                seed=seed_train,                                                        # random seed
+                seed=self.r_seed_train,                                                 # random seed
             )
         
         elif self.rl_alg == 'TQC':                      # import algorithm
@@ -203,12 +218,89 @@ class AgentParams:
                 ent_coef=self.rl_alg_hyp['ent_coeff'],                                      # entropy coefficient
                 policy_kwargs=policy_kwargs,                                                # contain network hyperparameters
                 use_sde=gSDE,                                                               # gSDE exploration  (0: False, 1: True)
-                device=device,                                                              # CPU or GPU
+                device=self.device,                                                         # CPU or GPU
                 target_update_interval=self.rl_alg_hyp['train_freq'],                       # target network update interval
-                seed=seed_train,                                                            # random seed
+                seed=self.r_seed_train,                                                     # random seed
             )
         else:
             assert False, 'Algorithm is not implemented!'
         
         return model
+    
+    def load_model(self, env, tb_log):
+        """
+            Load pretrained Stable-Baselines3 model for RL training
+            :param env: environment
+            :param tb_log: # tensorboard log file
+            :return model: Stable-Baselines3 model for RL training
+        """
+
+        ENV_PARAMS = EnvParams()
+
+        # Load pretrained RL algorithms
+        if self.rl_alg == 'DQN':
+            from stable_baselines3 import DQN           # import algorithm
+            model = DQN.load(self.path_files + self.str_inv_load, tensorboard_log=tb_log)
+            print("Check replay buffer:")
+            print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - before loading the replay buffer")
+            model.load_replay_buffer(self.path_files + self.str_inv_load)
+            print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - after loading the replay buffer")
+            model.set_env(env)
+
+        elif self.rl_alg == 'A2C':                      # import algorithm
+            from stable_baselines3 import A2C
+            model = A2C.load(self.path_files + self.str_inv_load, tensorboard_log=tb_log)
+            model.set_env(env)
+
+        elif self.rl_alg == 'PPO':                      # import algorithm
+            from stable_baselines3 import PPO
+            model = PPO.load(self.path_files + self.str_inv_load, tensorboard_log=tb_log)
+            model.set_env(env)
+
+        elif self.rl_alg == 'TD3':                      # import algorithm
+            from stable_baselines3 import TD3
+            model = TD3.load(self.path_files + self.str_inv_load, tensorboard_log=tb_log)
+            print("Check replay buffer:")
+            print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - before loading the replay buffer")
+            model.load_replay_buffer(self.path_files + self.str_inv_load)
+            print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - after loading the replay buffer")
+            model.set_env(env)
+        
+        elif self.rl_alg == 'SAC':                      # import algorithm
+            from stable_baselines3 import SAC
+            model = SAC.load(self.path_files + self.str_inv_load, tensorboard_log=tb_log)
+            print("Check replay buffer:")
+            print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - before loading the replay buffer")
+            model.load_replay_buffer(self.path_files + self.str_inv_load)
+            print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - after loading the replay buffer")
+            model.set_env(env)
+
+        elif self.rl_alg == 'TQC':                      # import algorithm
+            from sb3_contrib import TQC
+            model = TQC.load(self.path_files + self.str_inv_load, tensorboard_log=tb_log)
+            print("Check replay buffer:")
+            print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - before loading the replay buffer")
+            model.load_replay_buffer(self.path_files + self.str_inv_load)
+            print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - after loading the replay buffer")
+            model.set_env(env)
+        else:
+            assert False, 'Algorithm is not implemented!'
+
+        return model
+    
+    def save_model(self, model):
+        """
+            Load pretrained Stable-Baselines3 model for RL training
+            :param env: environment
+            :param tb_log: # tensorboard log file
+            :return model: Stable-Baselines3 model for RL training
+        """
+
+        print("Save final Model...")
+        model.save(self.path_files + self.str_inv)
+        if 'buffer_size' in self.rl_alg_hyp.keys():
+            model.save_replay_buffer(self.path_files + self.str_inv)
+
+
+        
 

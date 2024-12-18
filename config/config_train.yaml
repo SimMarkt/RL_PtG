@@ -1,0 +1,26 @@
+# ----------------------------------------------------------------------------------------------------------------
+# RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
+# https://github.com/SimMarkt/RL_PtG
+
+# config_train: 
+# > Configuration file for the training setup
+# ----------------------------------------------------------------------------------------------------------------
+          
+com_set : ['pc', 'slurm']   # computational resources: local personal computer ('pc') or computing cluster with SLURM management ('slurm')
+com_conf : pc               # selected computational resources either 'pc' or 'slurm'
+device : auto               # computational device ['cpu', 'gpu', 'auto']
+str_inv : _training_        # specifies the training results and models to a specific investigation ##################---------------------------------
+str_inv_load: : _pretrain_  # specifies the name of the pretrained model  
+train_set : ['simple_train', 'save_model', 'load_model', 'save_load_model']
+model_conf : simple_train   # simple_train: Train RL from scratch without saving the model afterwards
+                            # save_model: Train RL from scratch and save the model afterwards
+                            # load_model: Load a pretrained RL model and continue with training without saving the model afterwards
+                            # save_load_model: Load a pretrained RL model and continue with training and save the model afterwards
+path_files : ./log/final/   # data path with pretrained RL models
+
+parallel : Singleprocessing   # specifies the computation setup: "Singleprocessing" (DummyVecEnv) or "Multiprocessing" (SubprocVecEnv)
+train_or_eval : train         # specifies whether the environment provides detailed descriptions of the state for evaluation ("eval") or not ("train" - recommended for training)
+
+total_steps : 100000          # total number of training steps
+r_seed_train : [3654, 467, 9327, 5797, 249, 9419]         # random seeds for neural network initialization (and environment randomness) of the training set
+r_seed_test : [605, 5534, 2910, 7653, 8936, 1925]         # random seeds for neural network initialization (and environment randomness) of the validation and test sets

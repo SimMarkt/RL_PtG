@@ -2,25 +2,45 @@
 # RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
 # https://github.com/SimMarkt/RL_PtG
 
-# rl_env_param: 
-# > Contains global parameters of the environment (Power-to-Gas Process) 
-# > Converts the config_env.yaml data into a class object for further processing
+# rl_param_train: 
+# > Contains the parameters and settings for RL training 
+# > Converts the config_train.yaml data into a class object for further processing
 # ----------------------------------------------------------------------------------------------------------------
 
 import yaml
 
-class EnvParams:
+class TrainParams:
     def __init__(self):
         # Load the environment configuration
-        with open("config/config_env.yaml", "r") as env_file:
-            env_config = yaml.safe_load(env_file)
+        with open("config/config_train.yaml", "r") as env_file:
+            train_config = yaml.safe_load(env_file)
         
-        self.scenario = env_config['scenario']                  # business case / economic scenario
-        self.total_steps = env_config['total_steps']            # total number of training steps
-        self.initial_n_steps = env_config['initial_n_steps']    # initial number of training steps if the model has already been trained before
+        com_set : ['pc', 'slurm']   # computational resources: local personal computer ('pc') or computing cluster with SLURM management ('slurm')
+        self.com_conf = train_config['com_conf']               # selected computational resources either 'pc' or 'slurm'
+        self.device = train_config['device']               # computational device ['cpu', 'gpu', 'auto']
+        self.str_inv = train_config['str_inv']_        # specifies the training results and models to a specific investigation ##################---------------------------------
+        self.str_inv_load = train_config['str_inv_load']  # specifies the name of the pretrained model  
+        assert train_config['model_conf'] in train_config['train_set'], f'Wrong training setup specified - data/config_agent.yaml -> 
+                                                                          model_conf : {train_config['model_conf']} must match {train_config['train_set']}'
+        self.model_conf = train_config['model_conf']   # simple_train: Train RL from scratch without saving the model afterwards
+                                    # save_model: Train RL from scratch and save the model afterwards
+                                    # load_model: Load a pretrained RL model and continue with training without saving the model afterwards
+                                    # save_load_model: Load a pretrained RL model and continue with training and save the model afterwards
+        self.path_files = train_config['path_files']   # data path with pretrained RL models
+
+        self.parallel = train_config['parallel']   # specifies the computation setup: "Singleprocessing" (DummyVecEnv) or "Multiprocessing" (SubprocVecEnv)
+        self.train_or_eval = train_config['train_or_eval']         # specifies whether the environment provides detailed descriptions of the state for evaluation ("eval") or not ("train" - recommended for training)
+
+        self.total_steps = train_config['total_steps']          # total number of training steps
+        self.r_seed_train = train_config['r_seed_train']         # random seeds for neural network initialization (and environment randomness) of the training set
+        self.r_seed_test = train_config['r_seed_test']         # random seeds for neural network initialization (and environment randomness) of the validation and test sets
+
+
+
+        self.total_steps = train_config['total_steps']            # total number of training steps
         # self.num_loops = env_config['num_loops']              # number of loops over the total training set   ###############----------------------------
         self.train_len_d = None                                 # total number of days in the training set      ###############----------------------------
-        self.price_ahead = env_config['price_ahead']            # number of forecast values for electricity price future data (0-12h)
+        self.price_ahead = train_config['price_ahead']            # number of forecast values for electricity price future data (0-12h)
         #######self.n_envs = 6                     
         self.time_step_op = env_config['time_step_op']          # Time step between consecutive entries in the methanation operation data sets in sec
         self.noise = env_config['noise']                        # noise factor when changing the methanation state in the gym env [# of steps in operation data set]                         
