@@ -13,25 +13,25 @@ scenario: 1                   # business case
 operation : OP1               # specifies the load level "OP1" or "OP2" of the PtG-CH4 plant
 total_steps : 100000          # total number of training steps
 initial_n_steps : 0           # initial number of training steps if the model has already been trained before
-num_loops : 5                 # number of loops over the total training set
-train_len_d : 46496           # total number of days in the training set
+# num_loops : 5                 # number of loops over the total training set ###########################
+# train_len_d : 46496           # total number of days in the training set ####################
 price_ahead : 13              # number of forecast values for electricity price future data (0-12h)
 time_step_op : 2              # time step between consecutive entries in the methanation operation data sets [sec]
 noise : 10                    # noise factor when changing the methanation state in the gym env [# of steps in operation data set]
 parallel : Singleprocessing   # specifies the computation setup: "Singleprocessing" (DummyVecEnv) or "Multiprocessing" (SubprocVecEnv)
-train_or_eval : train         # specifies whether the environment provides detailed descriptions of the state for evaluation ("eval") or not ("train")(recommended for training)
+train_or_eval : train         # specifies whether the environment provides detailed descriptions of the state for evaluation ("eval") or not ("train" - recommended for training)
 
 # file paths of energy spot market data for training and evaluation:
 # (_train: training set; _cv: validation set; _test: test set)
-# _el: electricity spot market data
+# _el: electricity spot market data in [hours]
 datafile_path_train_el : ../data/spot_market_data/data-day-ahead-el-train_separate_syn_aug6.csv
 datafile_path_cv_el : ../data/spot_market_data/data-day-ahead-el-cv_separate.csv
 datafile_path_test_el : ../data/spot_market_data/data-day-ahead-el-test_separate.csv
-# _gas: natural gas/SNG spot market data
+# _gas: natural gas/SNG spot market data in [days]
 datafile_path_train_gas : ../data/spot_market_data/data-day-ahead-gas-train_separate_syn_aug6.csv
 datafile_path_cv_gas : ../data/spot_market_data/data-day-ahead-gas-cv_separate.csv
 datafile_path_test_gas : ../data/spot_market_data/data-day-ahead-gas-test_separate.csv
-# _eua: European emission allowances (EUA) spot market data
+# _eua: European emission allowances (EUA) spot market data in [days]
 datafile_path_train_eua : ../data/spot_market_data/data-day-ahead-eua-train_separate_syn_aug6.csv
 datafile_path_cv_eua : ../data/spot_market_data/data-day-ahead-eua-cv_separate.csv
 datafile_path_test_eua : ../data/spot_market_data/data-day-ahead-eua-test_separate.csv
