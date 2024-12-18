@@ -9,17 +9,15 @@
 # > scenario: 3 - Involves participating in EEG tenders by using a combined heat and power (CHP) plant and trading at the electricity spot markets
 # ----------------------------------------------------------------------------------------------------------------
 
-scenario: 1                   # business case
-operation : OP1               # specifies the load level "OP1" or "OP2" of the PtG-CH4 plant
-total_steps : 100000          # total number of training steps
-initial_n_steps : 0           # initial number of training steps if the model has already been trained before
+scenario: 1                     # business case
+operation : OP1                 # specifies the load level "OP1" or "OP2" of the PtG-CH4 plant
 # num_loops : 5                 # number of loops over the total training set ###########################
 # train_len_d : 46496           # total number of days in the training set ####################
-price_ahead : 13              # number of forecast values for electricity price future data (0-12h)
-time_step_op : 2              # time step between consecutive entries in the methanation operation data sets [sec]
-noise : 10                    # noise factor when changing the methanation state in the gym env [# of steps in operation data set]
-parallel : Singleprocessing   # specifies the computation setup: "Singleprocessing" (DummyVecEnv) or "Multiprocessing" (SubprocVecEnv)
-train_or_eval : train         # specifies whether the environment provides detailed descriptions of the state for evaluation ("eval") or not ("train" - recommended for training)
+price_ahead : 13                # number of forecast values for electricity price future data (0-12h)
+time_step_op : 2                # time step between consecutive entries in the methanation operation data sets [sec]
+noise : 10                      # noise factor when changing the methanation state in the gym env [# of steps in operation data set]
+eps_len_d : 32                  # No. of days in an episode (episodes are randomly selected from the entire training data set without replacement)
+state_change_penalty : 0.0      # Factor which enables reward penalty during training (if state_change_penalty = 0.0: No reward penalty; if state_change_penalty > 0.0: Reward penalty on mode transitions;)
 
 # file paths of energy spot market data for training and evaluation:
 # (_train: training set; _cv: validation set; _test: test set)
@@ -89,7 +87,6 @@ meth_stats_load :
         Meth_H2_res_flow : [0.0, 0.000151, 0.0017]      # hydrogen product molar flow (residues) [mol/s]
         Meth_H2O_flow : [0.0, 0.458545, 1.22]           # water mass flow [kg/h]
         Meth_el_heating : [0.0, 350.0, 380.0]           # electrical power consumption for heating the methanation plant [W]
-
 
 # economic data and parameters
 ch4_price_fix : 15.0               # fixed SNG price in business case/ scenario 2 in [ct/kWh]

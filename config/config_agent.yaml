@@ -3,7 +3,7 @@
 # https://github.com/SimMarkt/RL_PtG
 
 # config_agent: 
-# > Configuration file for the training setup and the RL agent in the PtG-CH4 environment
+# > Configuration file for the RL agent in the PtG-CH4 environment
 # 
 # For adding additional algorithms, take the following steps:
 # 1. Extent the "hyperparameters" dictionary with the algorithm as a new key entry incl. hyperparameters, aligned with the structure below and
@@ -13,21 +13,9 @@
 # 3. Add... param_short??
 # ----------------------------------------------------------------------------------------------------------------
 
-# Training setup:
-str_inv : _training_        # string for denoting your training results and models to a specific investigation ##################---------------------------------
-train_set : ['simple_train', 'save_model', 'load_model', 'save_load_model']
-model_conf : simple_train   # simple_train: Train RL from scratch without saving the model afterwards
-                            # save_model: Train RL from scratch and save the model afterwards
-                            # load_model: Load a pretrained RL model and continue with training without saving the model afterwards
-                            # save_load_model: Load a pretrained RL model and continue with training and save the model afterwards
-
 n_envs : 6                   # Number environments/workers for training
 rl_alg : TQC                 # selected RL algorithm - already implemented [DQN, A2C, PPO, TD3, SAC, TQC]
 sim_step : 600               # Frequency for taking an action in [s]
-eps_len_d : 32               # No. of days in an episode (episodes are randomly selected from the entire training data set without replacement)
-state_change_penalty : 0.0   # Factor which enables reward penalty during training (if state_change_penalty = 0.0: No reward penalty; if state_change_penalty > 0.0: Reward penalty on mode transitions;)
-r_seed_train : [3654, 467, 9327, 5797, 249, 9419]         # random seeds for neural network initialization (and environment randomness) of the training set
-r_seed_test : [605, 5534, 2910, 7653, 8936, 1925]         # random seeds for neural network initialization (and environment randomness) of the validation and test sets
 
 hyperparameters:    # Implemented hyperparameters of the RL algorithms used
     DQN :
