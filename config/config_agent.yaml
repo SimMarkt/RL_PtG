@@ -1,14 +1,28 @@
-# Configuration file for the training setup and the RL agent in the PtG-CH4 environment
+# ----------------------------------------------------------------------------------------------------------------
+# RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
+# https://github.com/SimMarkt/RL_PtG
+
+# config_agent: 
+# > Configuration file for the training setup and the RL agent in the PtG-CH4 environment
+# 
+# For adding additional algorithms, take the following steps:
+# 1. Extent the "hyperparameters" dictionary with the algorithm as a new key entry incl. hyperparameters, aligned with the structure below and
+#       Stable-Baselines3 : https://stable-baselines3.readthedocs.io/en/master/guide/algos.html
+#       SB3 Contrib: https://sb3-contrib.readthedocs.io/en/master/
+# 2. Include the new algorithm in src/rl_agent_param.py -> def load_model(self)
+# 3. Add... param_short??
+# ----------------------------------------------------------------------------------------------------------------
 
 # Training setup:
-str_vary_former : _training_  # string for denoting your training results and models to a specific investigation
+str_inv : _training_        # string for denoting your training results and models to a specific investigation ##################---------------------------------
+train_set : ['simple_train', 'save_model', 'load_model', 'save_load_model']
 model_conf : simple_train   # simple_train: Train RL from scratch without saving the model afterwards
                             # save_model: Train RL from scratch and save the model afterwards
                             # load_model: Load a pretrained RL model and continue with training without saving the model afterwards
                             # save_load_model: Load a pretrained RL model and continue with training and save the model afterwards
 
-n_envs : 6                    # Number environments/workers for training
-rl_alg : TQC    # selected RL algorithm - already implemented [DQN, A2C, PPO, TD3, SAC, TQC]
+n_envs : 6                   # Number environments/workers for training
+rl_alg : TQC                 # selected RL algorithm - already implemented [DQN, A2C, PPO, TD3, SAC, TQC]
 sim_step : 600               # Frequency for taking an action in [s]
 eps_len_d : 32               # No. of days in an episode (episodes are randomly selected from the entire training data set without replacement)
 state_change_penalty : 0.0   # Factor which enables reward penalty during training (if state_change_penalty = 0.0: No reward penalty; if state_change_penalty > 0.0: Reward penalty on mode transitions;)
@@ -75,7 +89,7 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         action_type : continuous      # the type of action: "discrete" or "continuous"
         alpha : 0.0001                  # learning rate
         gamma : 0.9628                  # discount factor
-        ent_coeff : 2                   # entropy coefficient (choose either values within [0,1] or the automatic adjustment using [2])
+        ent_coeff : auto                # entropy coefficient (choose either values within [0,1] or the automatic adjustment using 'auto')
         buffer_size : 2267734           # replay buffer size
         batch_size : 470                # batch size
         hidden_layers : 6               # No. of hidden layers

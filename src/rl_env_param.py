@@ -2,16 +2,14 @@
 # RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
 # https://github.com/SimMarkt/RL_PtG
 
-# rl_glo_param: 
+# rl_env_param: 
 # > Contains global parameters of the environment (Power-to-Gas Process) 
 # > Converts the config_env.yaml data into a class object for further processing
 # ----------------------------------------------------------------------------------------------------------------
 
-import numpy as np
 import yaml
 
-
-class GlobalParams:
+class EnvParams:
     def __init__(self):
         # Load the environment configuration
         with open("config/config_env.yaml", "r") as env_file:
@@ -20,8 +18,8 @@ class GlobalParams:
         self.scenario = env_config['scenario']                  # business case / economic scenario
         self.total_steps = env_config['total_steps']            # total number of training steps
         self.initial_n_steps = env_config['initial_n_steps']    # initial number of training steps if the model has already been trained before
-        self.num_loops = env_config['num_loops']                # number of loops over the total training set   ###############----------------------------
-        self.train_len_d = env_config['train_len_d']            # total number of days in the training set      ###############----------------------------
+        # self.num_loops = env_config['num_loops']              # number of loops over the total training set   ###############----------------------------
+        self.train_len_d = None                                 # total number of days in the training set      ###############----------------------------
         self.price_ahead = env_config['price_ahead']            # number of forecast values for electricity price future data (0-12h)
         #######self.n_envs = 6                     
         self.time_step_op = env_config['time_step_op']          # Time step between consecutive entries in the methanation operation data sets in sec
@@ -46,8 +44,7 @@ class GlobalParams:
         self.datafile_path_test_eua = env_config['datafile_path_test_eua']
 
         # file paths of process data for the dynamic data-based process model of the methanation plant depending on the load level:
-        if env_config['operation'] != "OP1" and env_config['operation'] != "OP2":
-            assert False, f'Wrong load level specified - data/config_env.yaml > operation : {env_config['operation']} must match ["OP1", "OP2"]'
+        assert env_config['operation'] in {'OP1', 'OP2'}, f'Wrong load level specified - data/config_env.yaml -> operation : {env_config['operation']} must match ["OP1", "OP2"]'
         self.datafile_path2 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path2']     # cold startup
         self.datafile_path3 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path3']     # warm startup
         self.datafile_path4 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path4']     # cooldown
@@ -90,99 +87,56 @@ class GlobalParams:
         self.eta_CHP = env_config['eta_CHP']                                # gas engine/ CHP efficiency
 
         # threshold values for methanation data
-        self.t_cat_standby = env_config['t_cat_standby']              # catalyst temperature threshold for changing standby data set in [°C] (If the plant goes to standby from idle state and reaches T_Cat > t_cat_standby, the model uses "data-meth_startup_hot.csv" for the next startup)
-        self.t_cat_startup_cold = env_config['t_cat_startup_cold']           # catalyst temperature threshold for cold start conditions in [°C] (For T_Cat < t_cat_startup_cold, the model uses "data-meth_startup_cold.csv" for the next startup)
-        self.t_cat_startup_hot = env_config['t_cat_startup_hot']            # catalyst temperature threshold for hot start conditions in [°C] (For T_Cat > t_cat_startup_hot, the model uses "data-meth_startup_hot.csv" for the next startup)
+        self.t_cat_standby = env_config['t_cat_standby']                # catalyst temperature threshold for changing standby data set in [°C] (If the plant goes to standby from idle state and reaches T_Cat > t_cat_standby, the model uses "data-meth_startup_hot.csv" for the next startup)
+        self.t_cat_startup_cold = env_config['t_cat_startup_cold']      # catalyst temperature threshold for cold start conditions in [°C] (For T_Cat < t_cat_startup_cold, the model uses "data-meth_startup_cold.csv" for the next startup)
+        self.t_cat_startup_hot = env_config['t_cat_startup_hot']        # catalyst temperature threshold for hot start conditions in [°C] (For T_Cat > t_cat_startup_hot, the model uses "data-meth_startup_hot.csv" for the next startup)
         # time threshold for load change data set, from time = 0 (Important to identify the data set with the most suitable mode transition)
-        self.time1_start_p_f = env_config['time1_start_p_f']             # simulation step -> 2400 sec
-        self.time2_start_f_p = env_config['time2_start_f_p']              # simulation step -> 300 sec
-        self.time_p_f = env_config['time_p_f']                     # simulation steps for load change (asc) -> 420 sec
-        self.time_f_p = env_config['time_f_p']                     # simulation steps for load change (des) -> 252 sec
-        self.time1_p_f_p = env_config['time1_p_f_p']                   # simulation step -> 100 sec
-        self.time2_p_f_p = env_config['time2_p_f_p']                  # simulation step -> 300 sec
-        self.time23_p_f_p = env_config['time23_p_f_p']                 # simulation step inbetween time2_p_f_p and time3_p_f_p
-        self.time3_p_f_p = env_config['time3_p_f_p']                  # simulation step -> 600 sec
-        self.time34_p_f_p = env_config['time34_p_f_p']                 # simulation step inbetween time3_p_f_p and time4_p_f_p
-        self.time4_p_f_p = env_config['time4_p_f_p']                  # simulation step -> 900 sec
-        self.time45_p_f_p = env_config['time45_p_f_p']                 # simulation step inbetween time4_p_f_p and time5_p_f_p
-        self.time5_p_f_p = env_config['time5_p_f_p']                  # simulation step -> 1348 sec
-        self.time1_f_p_f = env_config['time1_f_p_f']                   # simulation step -> 100 sec
-        self.time2_f_p_f = env_config['time2_f_p_f']                  # simulation step -> 300 sec
-        self.time23_f_p_f = env_config['time23_f_p_f']                 # simulation step inbetween time2_f_p_f and time3_f_p_f
-        self.time3_f_p_f = env_config['time3_f_p_f']                  # simulation step -> 600 sec
-        self.time34_f_p_f = env_config['time34_f_p_f']                 # simulation step inbetween time3_f_p_f and time4_f_p_f
-        self.time4_f_p_f = env_config['time4_f_p_f']                  # simulation step -> 900 sec
-        self.time45_f_p_f = env_config['time45_f_p_f']                 # simulation step inbetween time4_f_p_f and time5_f_p_f
-        self.time5_f_p_f = env_config['time5_f_p_f']                  # simulation step -> 1200 sec
+        self.time1_start_p_f = env_config['time1_start_p_f']            # simulation step -> 2400 sec
+        self.time2_start_f_p = env_config['time2_start_f_p']            # simulation step -> 300 sec
+        self.time_p_f = env_config['time_p_f']                          # simulation steps for load change (asc) -> 420 sec
+        self.time_f_p = env_config['time_f_p']                          # simulation steps for load change (des) -> 252 sec
+        self.time1_p_f_p = env_config['time1_p_f_p']                    # simulation step -> 100 sec
+        self.time2_p_f_p = env_config['time2_p_f_p']                    # simulation step -> 300 sec
+        self.time23_p_f_p = env_config['time23_p_f_p']                  # simulation step inbetween time2_p_f_p and time3_p_f_p
+        self.time3_p_f_p = env_config['time3_p_f_p']                    # simulation step -> 600 sec
+        self.time34_p_f_p = env_config['time34_p_f_p']                  # simulation step inbetween time3_p_f_p and time4_p_f_p
+        self.time4_p_f_p = env_config['time4_p_f_p']                    # simulation step -> 900 sec
+        self.time45_p_f_p = env_config['time45_p_f_p']                  # simulation step inbetween time4_p_f_p and time5_p_f_p
+        self.time5_p_f_p = env_config['time5_p_f_p']                    # simulation step -> 1348 sec
+        self.time1_f_p_f = env_config['time1_f_p_f']                    # simulation step -> 100 sec
+        self.time2_f_p_f = env_config['time2_f_p_f']                    # simulation step -> 300 sec
+        self.time23_f_p_f = env_config['time23_f_p_f']                  # simulation step inbetween time2_f_p_f and time3_f_p_f
+        self.time3_f_p_f = env_config['time3_f_p_f']                    # simulation step -> 600 sec
+        self.time34_f_p_f = env_config['time34_f_p_f']                  # simulation step inbetween time3_f_p_f and time4_f_p_f
+        self.time4_f_p_f = env_config['time4_f_p_f']                    # simulation step -> 900 sec
+        self.time45_f_p_f = env_config['time45_f_p_f']                  # simulation step inbetween time4_f_p_f and time5_f_p_f
+        self.time5_f_p_f = env_config['time5_f_p_f']                    # simulation step -> 1200 sec
         # simulation steps for fully developed partial / full load transition
-        self.i_fully_developed = env_config['i_fully_developed']          # simulation step -> 24000 sec (initial value)
-        self.j_fully_developed = env_config['j_fully_developed']            # simulation step -> 24000 sec (step marker)
+        self.i_fully_developed = env_config['i_fully_developed']        # simulation step -> 24000 sec (initial value)
+        self.j_fully_developed = env_config['j_fully_developed']        # simulation step -> 24000 sec (step marker)
 
         # Lower and upper bounds for gym observations for normalization of the state features to accelerate learning (Should be adjusted to the respected value range)
-        self.el_l_b = env_config['el_l_b']    # lower bound of electricity prices in [ct/kWh_el]
-        self.el_u_b = env_config['el_u_b']     # upper bound of electricity prices in [ct/kWh_el]
-        self.gas_l_b = env_config['gas_l_b']   # lower bound of (S)NG prices in [ct/kWh_th]
-        self.gas_u_b = env_config['gas_u_b']  # upper bound of (S)NG prices in [ct/kWh_th]
-        self.eua_l_b = env_config['H_u_CH4']    # lower bound of EUA prices in [€/t_CO2]
-        self.eua_u_b = env_config['H_u_CH4']    # upper bound of EUA prices in [€/t_CO2]
-        self.T_l_b = env_config['H_u_CH4']      # lower bound of catalyst temperatures T_CAT in [°C]
-        self.T_u_b = env_config['H_u_CH4']     # upper bound of catalyst temperatures T_CAT in [°C]
-        self.h2_l_b = env_config['H_u_CH4']      # lower bound of hydrogen molar flow in [mol/s]
-        self.ch4_l_b = env_config['H_u_CH4']     # lower bound of methane molar flow in [mol/s]
-        self.h2_res_l_b = env_config['H_u_CH4']  # lower bound of residual product gas hydrogen molar flow in [mol/s]
-        self.h2o_l_b = env_config['H_u_CH4']     # lower bound of water mass flow in [kg/h]
+        self.el_l_b = env_config['el_l_b']                              # lower bound of electricity prices in [ct/kWh_el]
+        self.el_u_b = env_config['el_u_b']                              # upper bound of electricity prices in [ct/kWh_el]
+        self.gas_l_b = env_config['gas_l_b']                            # lower bound of (S)NG prices in [ct/kWh_th]
+        self.gas_u_b = env_config['gas_u_b']                            # upper bound of (S)NG prices in [ct/kWh_th]
+        self.eua_l_b = env_config['H_u_CH4']                            # lower bound of EUA prices in [€/t_CO2]
+        self.eua_u_b = env_config['H_u_CH4']                            # upper bound of EUA prices in [€/t_CO2]
+        self.T_l_b = env_config['H_u_CH4']                              # lower bound of catalyst temperatures T_CAT in [°C]
+        self.T_u_b = env_config['H_u_CH4']                              # upper bound of catalyst temperatures T_CAT in [°C]
+        self.h2_l_b = env_config['H_u_CH4']                             # lower bound of hydrogen molar flow in [mol/s]
+        self.h2_u_b = self.meth_stats_load['Meth_H2_flow'][2]           # upper bound of hydrogen molar flow in [mol/s]
+        self.ch4_l_b = env_config['H_u_CH4']                            # lower bound of methane molar flow in [mol/s]
+        self.ch4_u_b = self.meth_stats_load['Meth_CH4_flow'][2]         # upper bound of methane molar flow in [mol/s]
+        self.h2_res_l_b = env_config['H_u_CH4']                         # lower bound of residual product gas hydrogen molar flow in [mol/s]
+        self.h2_res_u_b = self.meth_stats_load['Meth_H2_res_flow'][2]   # upper bound of residual product gas hydrogen molar flow in [mol/s]
+        self.h2o_l_b = env_config['H_u_CH4']                            # lower bound of water mass flow in [kg/h]
+        self.h2o_u_b = self.meth_stats_load['Meth_H2O_flow'][2]         # upper bound of water mass flow in [kg/h]
         # The upper bound of hydrogen (h2_u_b), methane (ch4_u_b), residual hydrogen (h2_res_u_b), and water (h2o_u_b) equal the full_load values of meth_stats_load of the chosen load level
-        self.heat_l_b = env_config['H_u_CH4']    # lower bound of the power consumption of methanation in [W]
-        self.heat_u_b = env_config['H_u_CH4'] # upper bound of the power consumption of methanation in [W]
+        self.heat_l_b = env_config['H_u_CH4']                           # lower bound of the power consumption of methanation in [W]
+        self.heat_u_b = env_config['H_u_CH4']                           # upper bound of the power consumption of methanation in [W]
 
-        # threshold values for methanation data
-        self.t_cat_standby = 188.2              # °C (catalyst temperature threshold for changing standby data set)
-        self.t_cat_startup_cold = 160           # °C (catalyst temperature threshold for cold start conditions)
-        self.t_cat_startup_hot = 350            # °C (catalyst temperature threshold for hot start conditions)
-        # time threshold for load change data set, from time = 0
-        self.time1_start_p_f = 1201             # simulation step -> 2400 sec
-        self.time2_start_f_p = 151              # simulation step -> 300 sec
-        self.time_p_f = 210                     # simulation steps for load change (asc) -> 420 sec
-        self.time_f_p = 126                     # simulation steps for load change (des) -> 252 sec
-        self.time1_p_f_p = 51                   # simulation step -> 100 sec
-        self.time2_p_f_p = 151                  # simulation step -> 300 sec
-        self.time23_p_f_p = 225                 # simulation step inbetween time2_p_f_p and time3_p_f_p
-        self.time3_p_f_p = 301                  # simulation step -> 600 sec
-        self.time34_p_f_p = 376                 # simulation step inbetween time3_p_f_p and time4_p_f_p
-        self.time4_p_f_p = 451                  # simulation step -> 900 sec
-        self.time45_p_f_p = 563                 # simulation step inbetween time4_p_f_p and time5_p_f_p
-        self.time5_p_f_p = 675                  # simulation step -> 1348 sec
-        self.time1_f_p_f = 51                   # simulation step -> 100 sec
-        self.time2_f_p_f = 151                  # simulation step -> 300 sec
-        self.time23_f_p_f = 225                 # simulation step inbetween time2_f_p_f and time3_f_p_f
-        self.time3_f_p_f = 301                  # simulation step -> 600 sec
-        self.time34_f_p_f = 376                 # simulation step inbetween time3_f_p_f and time4_f_p_f
-        self.time4_f_p_f = 451                  # simulation step -> 900 sec
-        self.time45_f_p_f = 526                 # simulation step inbetween time4_f_p_f and time5_f_p_f
-        self.time5_f_p_f = 601                  # simulation step -> 1200 sec
-        # simulation steps for fully developed partial / full load
-        self.i_fully_developed = 12000          # simulation step -> 24000 sec (initial value)
-        self.j_fully_developed = 100            # simulation step -> 24000 sec (step marker)
-
-        # lower and upper bounds for gym observations
-        self.el_l_b = -10
-        self.el_u_b = 80
-        self.gas_l_b = 0.4
-        self.gas_u_b = 31.6
-        self.eua_l_b = 23
-        self.eua_u_b = 98
-        self.T_l_b = 10
-        self.T_u_b = 600
-        self.h2_l_b = 0
-        self.h2_u_b = self.meth_stats_load['Meth_H2_flow'][2]
-        self.ch4_l_b = 0
-        self.ch4_u_b = self.meth_stats_load['Meth_CH4_flow'][2]
-        self.h2_res_l_b = 0
-        self.h2_res_u_b = self.meth_stats_load['Meth_H2_res_flow'][2]
-        self.h2o_l_b = 0
-        self.h2o_u_b = self.meth_stats_load['Meth_H2O_flow'][2]
-        self.heat_l_b = 0
-        self.heat_u_b = 1800
+        
 
        
 

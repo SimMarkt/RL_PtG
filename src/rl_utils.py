@@ -7,7 +7,7 @@ import matplotlib.patches as patches
 import math
 
 from src.rl_glo_param import GlobalParams
-from src.rl_opt_TQC_hpc import calculate_optimum
+from src.rl_opt import calculate_optimum
 from src.rl_hyp_param import HypParams
 
 
@@ -67,6 +67,7 @@ def load_data():
     """
 
     GLOBAL_PARAMS = GlobalParams()
+    HYPER_PARAMS = HypParams()
 
     # Load historical market data for electricity, gas and EUA
     dict_price_data = {'el_price_train': import_market_data(GLOBAL_PARAMS.datafile_path_train_el, "elec"),
@@ -127,6 +128,18 @@ def load_data():
     dict_price_data['el_price_reward_level'] = GLOBAL_PARAMS.r_0_values['el_price']
     dict_price_data['gas_price_reward_level'] = GLOBAL_PARAMS.r_0_values['gas_price']
     dict_price_data['eua_price_reward_level'] = GLOBAL_PARAMS.r_0_values['eua_price']
+
+    # Check if training set is divisible by the episode length
+    min_train_len = 5           # Minimum No. of days in the training set
+    GLOBAL_PARAMS.train_len_d = dict_price_data['gas_price_train'] - min_train_len
+    assert GLOBAL_PARAMS.train_len_d > min_train_len, f'The training set size must be greater than {min_train_len} days'
+    if GLOBAL_PARAMS.train_len_d % HYPER_PARAMS.eps_len_d != 0:
+        # Find all possible divisors of 'a'
+        divisors = [i for i in range(1, GLOBAL_PARAMS.train_len_d + 1) if GLOBAL_PARAMS.train_len_d % i == 0]
+        print(f"Possible divisors of {a} are: {divisors}")
+        assert False, f'The training set size {GLOBAL_PARAMS.train_len_d} must be divisible by the episode length - data/config_env.yaml -> eps_len_d : {HYPER_PARAMS.eps_len_d}; 
+                        Possible divisors are: {divisors}'
+
 
     return dict_price_data, dict_op_data
 
@@ -597,4 +610,53 @@ def multiple_plots_4(stats_dict: dict, time_step_size: int, plot_name: str, pote
 
     plt.close()
     # plt.show()
+
+
+def get_param_str(eps_sim_steps_train, seed):                           ################################------------------------------------------------------------
+    """
+    Returns the hyperparameter setting as a long string
+    :return: hyperparameter setting
+    """
+    HYPER_PARAMS = HypParams()
+
+    str_params_short = "_ep" + str(HYPER_PARAMS.eps_len_d) + \
+                       "_al" + str(np.round(HYPER_PARAMS.alpha, 6)) + \
+                       "_ga" + str(np.round(HYPER_PARAMS.gamma, 4)) + \
+                       "_bt" + str(HYPER_PARAMS.batch_size) + \
+                       "_bf" + str(HYPER_PARAMS.buffer_size) + \
+                       "_et" + str(np.round(HYPER_PARAMS.ent_coeff, 5)) + \
+                       "_hu" + str(HYPER_PARAMS.hidden_units) + \
+                       "_hl" + str(HYPER_PARAMS.hidden_layers) + \
+                       "_st" + str(HYPER_PARAMS.sim_step) + \
+                       "_ac" + str(HYPER_PARAMS.activation) + \
+                       "_ls" + str(HYPER_PARAMS.learning_starts) + \
+                       "_tf" + str(HYPER_PARAMS.train_freq) + \
+                       "_tau" + str(HYPER_PARAMS.tau) + \
+                       "_cr" + str(HYPER_PARAMS.n_critics) + \
+                       "_qu" + str(HYPER_PARAMS.n_quantiles) + \
+                       "_qd" + str(HYPER_PARAMS.top_quantiles_drop) + \
+                       "_gsd" + str(HYPER_PARAMS.gSDE) + \
+                       "_sd" + str(seed)
+
+    str_params_long = "\n     episode length=" + str(HYPER_PARAMS.eps_len_d) + \
+                      "\n     alpha=" + str(HYPER_PARAMS.alpha) + \
+                      "\n     gamma=" + str(HYPER_PARAMS.gamma) + \
+                      "\n     batchsize=" + str(HYPER_PARAMS.batch_size) + \
+                      "\n     replaybuffer=" + str(HYPER_PARAMS.buffer_size) + \
+                      " (#ofEpisodes=" + str(HYPER_PARAMS.buffer_size / eps_sim_steps_train) + ")" + \
+                      "\n     coeff_ent=" + str(HYPER_PARAMS.ent_coeff) + \
+                      "\n     hiddenunits=" + str(HYPER_PARAMS.hidden_units) + \
+                      "\n     hiddenlayers=" + str(HYPER_PARAMS.hidden_layers) + \
+                      "\n     sim_step=" + str(HYPER_PARAMS.sim_step) + \
+                      "\n     activation=" + str(HYPER_PARAMS.activation) + " (0=Relu, 1=tanh" + ")" + \
+                      "\n     learningstarts=" + str(HYPER_PARAMS.learning_starts) + \
+                      "\n     training_freq=" + str(HYPER_PARAMS.train_freq) + \
+                      "\n     tau=" + str(HYPER_PARAMS.tau) + \
+                      "\n     n_critics=" + str(HYPER_PARAMS.n_critics) + \
+                      "\n     n_quantiles=" + str(HYPER_PARAMS.n_quantiles) + \
+                      "\n     top_quantiles_to_drop_per_net=" + str(HYPER_PARAMS.top_quantiles_drop) + \
+                      "\n     g_SDE=" + str(HYPER_PARAMS.gSDE) + \
+                      "\n     seed=" + str(seed)
+
+    return str_params_short, str_params_long
 
