@@ -1,5 +1,13 @@
 # Configuration file for the training setup and the RL agent in the PtG-CH4 environment
 
+# ----------------------------------------------------------------------------------------------------------------
+# RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
+# https://github.com/SimMarkt/RL_PtG
+
+# config_agent: 
+# > Configuration file for the training setup and the RL agent in the PtG-CH4 environment including the agent hyperparameters 
+# ----------------------------------------------------------------------------------------------------------------
+
 # Training setup:
 str_vary_former : _training_  # string for denoting your training results and models to a specific investigation
 model_conf : simple_train   # simple_train: Train RL from scratch without saving the model afterwards

@@ -7,7 +7,7 @@ import matplotlib.patches as patches
 import math
 
 from src.rl_glo_param import GlobalParams
-from src.rl_opt_TQC_hpc import calculate_optimum
+from src.rl_opt import calculate_optimum
 from src.rl_hyp_param import HypParams
 
 
