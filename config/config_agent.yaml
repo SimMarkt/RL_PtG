@@ -87,7 +87,6 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         tau : 0.005                     # soft update parameter
         learning_starts : 100           # No. of steps before starting the training of actor/critic networks
         gSDE : 0                        # gSDE exploration  (0: False, 1: True)
-
     TQC :
         action_type : continuous      # the type of action: "discrete" or "continuous"
         alpha : 0.00044                 # learning rate
