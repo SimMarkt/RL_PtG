@@ -2,27 +2,45 @@
 # RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
 # https://github.com/SimMarkt/RL_PtG
 
-# rl_glo_param: 
-# > Contains global parameters of the environment (Power-to-Gas Process) 
-# > Converts the config_env.yaml data into a class object for further processing
+# rl_param_train: 
+# > Contains the parameters and settings for RL training 
+# > Converts the config_train.yaml data into a class object for further processing
 # ----------------------------------------------------------------------------------------------------------------
 
-import numpy as np
 import yaml
 
-
-class GlobalParams:
+class TrainParams:
     def __init__(self):
         # Load the environment configuration
-        with open("config/config_env.yaml", "r") as env_file:
-            env_config = yaml.safe_load(env_file)
+        with open("config/config_train.yaml", "r") as env_file:
+            train_config = yaml.safe_load(env_file)
         
-        self.scenario = env_config['scenario']                  # business case / economic scenario
-        self.total_steps = env_config['total_steps']            # total number of training steps
-        self.initial_n_steps = env_config['initial_n_steps']    # initial number of training steps if the model has already been trained before
-        self.num_loops = env_config['num_loops']                # number of loops over the total training set   ###############----------------------------
-        self.train_len_d = env_config['train_len_d']            # total number of days in the training set      ###############----------------------------
-        self.price_ahead = env_config['price_ahead']            # number of forecast values for electricity price future data (0-12h)
+        com_set : ['pc', 'slurm']   # computational resources: local personal computer ('pc') or computing cluster with SLURM management ('slurm')
+        self.com_conf = train_config['com_conf']               # selected computational resources either 'pc' or 'slurm'
+        self.device = train_config['device']               # computational device ['cpu', 'gpu', 'auto']
+        self.str_inv = train_config['str_inv']_        # specifies the training results and models to a specific investigation ##################---------------------------------
+        self.str_inv_load = train_config['str_inv_load']  # specifies the name of the pretrained model  
+        assert train_config['model_conf'] in train_config['train_set'], f'Wrong training setup specified - data/config_agent.yaml -> 
+                                                                          model_conf : {train_config['model_conf']} must match {train_config['train_set']}'
+        self.model_conf = train_config['model_conf']   # simple_train: Train RL from scratch without saving the model afterwards
+                                    # save_model: Train RL from scratch and save the model afterwards
+                                    # load_model: Load a pretrained RL model and continue with training without saving the model afterwards
+                                    # save_load_model: Load a pretrained RL model and continue with training and save the model afterwards
+        self.path_files = train_config['path_files']   # data path with pretrained RL models
+
+        self.parallel = train_config['parallel']   # specifies the computation setup: "Singleprocessing" (DummyVecEnv) or "Multiprocessing" (SubprocVecEnv)
+        self.train_or_eval = train_config['train_or_eval']         # specifies whether the environment provides detailed descriptions of the state for evaluation ("eval") or not ("train" - recommended for training)
+
+        self.total_steps = train_config['total_steps']          # total number of training steps
+        self.r_seed_train = train_config['r_seed_train']         # random seeds for neural network initialization (and environment randomness) of the training set
+        self.r_seed_test = train_config['r_seed_test']         # random seeds for neural network initialization (and environment randomness) of the validation and test sets
+
+
+
+        self.total_steps = train_config['total_steps']            # total number of training steps
+        # self.num_loops = env_config['num_loops']              # number of loops over the total training set   ###############----------------------------
+        self.train_len_d = None                                 # total number of days in the training set      ###############----------------------------
+        self.price_ahead = train_config['price_ahead']            # number of forecast values for electricity price future data (0-12h)
         #######self.n_envs = 6                     
         self.time_step_op = env_config['time_step_op']          # Time step between consecutive entries in the methanation operation data sets in sec
         self.noise = env_config['noise']                        # noise factor when changing the methanation state in the gym env [# of steps in operation data set]                         
@@ -46,8 +64,7 @@ class GlobalParams:
         self.datafile_path_test_eua = env_config['datafile_path_test_eua']
 
         # file paths of process data for the dynamic data-based process model of the methanation plant depending on the load level:
-        if env_config['operation'] != "OP1" and env_config['operation'] != "OP2":
-            assert False, f'Wrong load level specified - data/config_env.yaml > operation : {env_config['operation']} must match ["OP1", "OP2"]'
+        assert env_config['operation'] in {'OP1', 'OP2'}, f'Wrong load level specified - data/config_env.yaml -> operation : {env_config['operation']} must match ["OP1", "OP2"]'
         self.datafile_path2 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path2']     # cold startup
         self.datafile_path3 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path3']     # warm startup
         self.datafile_path4 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path4']     # cooldown
@@ -123,22 +140,23 @@ class GlobalParams:
         self.el_u_b = env_config['el_u_b']                              # upper bound of electricity prices in [ct/kWh_el]
         self.gas_l_b = env_config['gas_l_b']                            # lower bound of (S)NG prices in [ct/kWh_th]
         self.gas_u_b = env_config['gas_u_b']                            # upper bound of (S)NG prices in [ct/kWh_th]
-        self.eua_l_b = env_config['eua_l_b']                            # lower bound of EUA prices in [€/t_CO2]
-        self.eua_u_b = env_config['eua_u_b']                            # upper bound of EUA prices in [€/t_CO2]
-        self.T_l_b = env_config['T_l_b']                                # lower bound of catalyst temperatures T_CAT in [°C]
-        self.T_u_b = env_config['T_u_b']                                # upper bound of catalyst temperatures T_CAT in [°C]
-        self.h2_l_b = env_config['h2_l_b']                              # lower bound of hydrogen molar flow in [mol/s]
+        self.eua_l_b = env_config['H_u_CH4']                            # lower bound of EUA prices in [€/t_CO2]
+        self.eua_u_b = env_config['H_u_CH4']                            # upper bound of EUA prices in [€/t_CO2]
+        self.T_l_b = env_config['H_u_CH4']                              # lower bound of catalyst temperatures T_CAT in [°C]
+        self.T_u_b = env_config['H_u_CH4']                              # upper bound of catalyst temperatures T_CAT in [°C]
+        self.h2_l_b = env_config['H_u_CH4']                             # lower bound of hydrogen molar flow in [mol/s]
         self.h2_u_b = self.meth_stats_load['Meth_H2_flow'][2]           # upper bound of hydrogen molar flow in [mol/s]
-        self.ch4_l_b = env_config['ch4_l_b']                            # lower bound of methane molar flow in [mol/s]
+        self.ch4_l_b = env_config['H_u_CH4']                            # lower bound of methane molar flow in [mol/s]
         self.ch4_u_b = self.meth_stats_load['Meth_CH4_flow'][2]         # upper bound of methane molar flow in [mol/s]
-        self.h2_res_l_b = env_config['h2_res_l_b']                      # lower bound of residual product gas hydrogen molar flow in [mol/s]
+        self.h2_res_l_b = env_config['H_u_CH4']                         # lower bound of residual product gas hydrogen molar flow in [mol/s]
         self.h2_res_u_b = self.meth_stats_load['Meth_H2_res_flow'][2]   # upper bound of residual product gas hydrogen molar flow in [mol/s]
-        self.h2o_l_b = env_config['h2o_l_b']                            # lower bound of water mass flow in [kg/h]
+        self.h2o_l_b = env_config['H_u_CH4']                            # lower bound of water mass flow in [kg/h]
         self.h2o_u_b = self.meth_stats_load['Meth_H2O_flow'][2]         # upper bound of water mass flow in [kg/h]
         # The upper bound of hydrogen (h2_u_b), methane (ch4_u_b), residual hydrogen (h2_res_u_b), and water (h2o_u_b) equal the full_load values of meth_stats_load of the chosen load level
-        self.heat_l_b = env_config['heat_l_b']                          # lower bound of the power consumption of methanation in [W]
-        self.heat_u_b = env_config['heat_u_b']                          # upper bound of the power consumption of methanation in [W]
+        self.heat_l_b = env_config['H_u_CH4']                           # lower bound of the power consumption of methanation in [W]
+        self.heat_u_b = env_config['H_u_CH4']                           # upper bound of the power consumption of methanation in [W]
 
+        
 
        
 

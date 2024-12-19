@@ -4,7 +4,7 @@ import numpy as np
 from tqdm import tqdm
 import math
 
-from src.rl_glo_param import GlobalParams
+from src.rl_param_env import EnvParam
 
 
 def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_price_data: np.array, data_name: str):
@@ -17,9 +17,9 @@ def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_pri
     :return stats_dict_opt: dictionary with methanation status values
     """
 
-    GLOBAL_PARAMS = GlobalParams()
+    ENV_PARAMS = EnvParam()
 
-    meth_stats = GLOBAL_PARAMS.meth_stats_load
+    meth_stats = ENV_PARAMS.meth_stats_load
 
     # Define stats for data storage
     stats_names = ['steps_stats', 'el_price_stats', 'gas_price_stats', 'eua_price_stats', 'Meth_State_stats',
@@ -31,7 +31,7 @@ def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_pri
     stats_dict_opt = {}
     stats = np.zeros((len(el_price_data), len(stats_names)))
 
-    if GLOBAL_PARAMS.scenario == 3:
+    if ENV_PARAMS.scenario == 3:
         b_s3 = 1
     else:
         b_s3 = 0
@@ -45,43 +45,43 @@ def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_pri
         for l in range(2):  # Calculation of rew for both partial and full load
 
             # Gas proceeds (Scenario 1+2):          If Scenario == 3: self.gas_price_h[0] = 0
-            ch4_volumeflow = meth_stats['Meth_CH4_flow'][l+1] * GLOBAL_PARAMS.convert_mol_to_Nm3
-            h2_res_volumeflow = meth_stats['Meth_H2_res_flow'][l+1] * GLOBAL_PARAMS.convert_mol_to_Nm3  # in Nm³/s
-            Q_ch4 = ch4_volumeflow * GLOBAL_PARAMS.H_u_CH4 * 1000  # in kW
-            Q_h2_res = h2_res_volumeflow * GLOBAL_PARAMS.H_u_H2 * 1000
+            ch4_volumeflow = meth_stats['Meth_CH4_flow'][l+1] * ENV_PARAMS.convert_mol_to_Nm3
+            h2_res_volumeflow = meth_stats['Meth_H2_res_flow'][l+1] * ENV_PARAMS.convert_mol_to_Nm3  # in Nm³/s
+            Q_ch4 = ch4_volumeflow * ENV_PARAMS.H_u_CH4 * 1000  # in kW
+            Q_h2_res = h2_res_volumeflow * ENV_PARAMS.H_u_H2 * 1000
             ch4_revenues = (Q_ch4 + Q_h2_res) * gas_price_data[t_day]  # in ct/h
 
-            power_bhkw = Q_ch4 * GLOBAL_PARAMS.eta_BHKW * b_s3  # in kW
-            Q_bhkw = Q_ch4 * (1 - GLOBAL_PARAMS.eta_BHKW) * b_s3  # in kW
-            bhkw_revenues = power_bhkw * GLOBAL_PARAMS.eeg_el_price  # in ct/h
+            power_bhkw = Q_ch4 * ENV_PARAMS.eta_BHKW * b_s3  # in kW
+            Q_bhkw = Q_ch4 * (1 - ENV_PARAMS.eta_BHKW) * b_s3  # in kW
+            bhkw_revenues = power_bhkw * ENV_PARAMS.eeg_el_price  # in ct/h
 
-            Q_steam = meth_stats['Meth_H2O_flow'][l+1] * (GLOBAL_PARAMS.dt_water * GLOBAL_PARAMS.cp_water +
-                                                          GLOBAL_PARAMS.h_H2O_evap) / 3600  # in kW
-            steam_revenues = (Q_steam + Q_bhkw) * GLOBAL_PARAMS.heat_price  # in ct/h
+            Q_steam = meth_stats['Meth_H2O_flow'][l+1] * (ENV_PARAMS.dt_water * ENV_PARAMS.cp_water +
+                                                          ENV_PARAMS.h_H2O_evap) / 3600  # in kW
+            steam_revenues = (Q_steam + Q_bhkw) * ENV_PARAMS.heat_price  # in ct/h
 
-            h2_volumeflow = meth_stats['Meth_H2_flow'][l+1] * GLOBAL_PARAMS.convert_mol_to_Nm3  # in Nm³/s
+            h2_volumeflow = meth_stats['Meth_H2_flow'][l+1] * ENV_PARAMS.convert_mol_to_Nm3  # in Nm³/s
             o2_volumeflow = 1 / 2 * h2_volumeflow * 3600  # in Nm³/h = Nm³/s * 3600 s/h
-            o2_revenues = o2_volumeflow * GLOBAL_PARAMS.o2_price  # in ct/h
+            o2_revenues = o2_volumeflow * ENV_PARAMS.o2_price  # in ct/h
 
-            Meth_CO2_mass_flow = meth_stats['Meth_CH4_flow'][l+1] * GLOBAL_PARAMS.Molar_mass_CO2 / 1000  # in kg/s
+            Meth_CO2_mass_flow = meth_stats['Meth_CH4_flow'][l+1] * ENV_PARAMS.Molar_mass_CO2 / 1000  # in kg/s
             eua_revenues = Meth_CO2_mass_flow / 1000 * 3600 * eua_price_data[t_day] * 100  # in ct/h = kg/s * t/1000kg * 3600 s/h * €/t * 100 ct/€
 
             # Linear regression model for LHV efficiency of an 6 MW electrolyzer (maximum reference power)
             elec_costs_heating = meth_stats['Meth_el_heating'][l+1] / 1000 * el_price_data[t]  # in ct/h
-            load_elec = h2_volumeflow / GLOBAL_PARAMS.max_h2_volumeflow
-            if load_elec < GLOBAL_PARAMS.min_load_electrolyzer:
+            load_elec = h2_volumeflow / ENV_PARAMS.max_h2_volumeflow
+            if load_elec < ENV_PARAMS.min_load_electrolyzer:
                 eta_electrolyzer = 0.02
             else:
                 eta_electrolyzer = (0.598 - 0.325 * load_elec ** 2 + 0.218 * load_elec ** 3 +
                                     0.01 * load_elec ** (-1) - 1.68 * 10 ** (-3) * load_elec ** (-2) +
                                     2.51 * 10 ** (-5) * load_elec ** (-3))
-            elec_costs_electrolyzer = h2_volumeflow * GLOBAL_PARAMS.H_u_H2 * 1000 / eta_electrolyzer * el_price_data[t]
+            elec_costs_electrolyzer = h2_volumeflow * ENV_PARAMS.H_u_H2 * 1000 / eta_electrolyzer * el_price_data[t]
             elec_costs = elec_costs_heating + elec_costs_electrolyzer
 
             # Costs for water consumption:
-            water_elec = meth_stats['Meth_H2_flow'][l+1] * GLOBAL_PARAMS.Molar_mass_H2O / 1000 * 3600  # in kg/h (1 mol water is consumed for producing 1 mol H2)
-            water_costs = (meth_stats['Meth_H2O_flow'][l+1] + water_elec) / GLOBAL_PARAMS.rho_water * \
-                          GLOBAL_PARAMS.water_price  # in ct/h = kg/h / kg/m³ * ct/m³
+            water_elec = meth_stats['Meth_H2_flow'][l+1] * ENV_PARAMS.Molar_mass_H2O / 1000 * 3600  # in kg/h (1 mol water is consumed for producing 1 mol H2)
+            water_costs = (meth_stats['Meth_H2O_flow'][l+1] + water_elec) / ENV_PARAMS.rho_water * \
+                          ENV_PARAMS.water_price  # in ct/h = kg/h / kg/m³ * ct/m³
 
             rew_l[l] = (ch4_revenues + bhkw_revenues + steam_revenues + eua_revenues +
                         o2_revenues - elec_costs - water_costs)  # in ct/h
@@ -152,7 +152,7 @@ def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_pri
         stats_dict_opt[stats_names[m]] = stats[:, m]
 
     if data_name != "reward_Level":
-        max_pot_cum_rew = stats_dict_opt['Meth_cum_reward_stats'][-GLOBAL_PARAMS.price_ahead]
+        max_pot_cum_rew = stats_dict_opt['Meth_cum_reward_stats'][-ENV_PARAMS.price_ahead]
     else:
         max_pot_cum_rew = stats_dict_opt['Meth_cum_reward_stats'][0]
 
