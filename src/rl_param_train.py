@@ -15,7 +15,7 @@ class TrainParams:
         with open("config/config_train.yaml", "r") as env_file:
             train_config = yaml.safe_load(env_file)
         
-        com_set : ['pc', 'slurm']   # computational resources: local personal computer ('pc') or computing cluster with SLURM management ('slurm')
+        com_set = ['pc', 'slurm']   # computational resources: local personal computer ('pc') or computing cluster with SLURM management ('slurm')
         self.com_conf = train_config['com_conf']               # selected computational resources either 'pc' or 'slurm'
         self.device = train_config['device']               # computational device ['cpu', 'gpu', 'auto']
         self.str_inv = train_config['str_inv']_        # specifies the training results and models to a specific investigation ##################---------------------------------
