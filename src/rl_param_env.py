@@ -16,16 +16,15 @@ class EnvParams:
             env_config = yaml.safe_load(env_file)
         
         self.scenario = env_config['scenario']                  # business case / economic scenario
-        self.total_steps = env_config['total_steps']            # total number of training steps
+        operation = env_config['operation']                     # specifies the load level "OP1" or "OP2" of the PtG-CH4 plant
         # self.num_loops = env_config['num_loops']              # number of loops over the total training set   ###############----------------------------
         self.train_len_d = None                                 # total number of days in the training set      ###############----------------------------
-        self.price_ahead = env_config['price_ahead']            # number of forecast values for electricity price future data (0-12h)
-        #######self.n_envs = 6                     
+        self.price_ahead = env_config['price_ahead']            # number of forecast values for electricity price future data (0-12h)                    
         self.time_step_op = env_config['time_step_op']          # Time step between consecutive entries in the methanation operation data sets in sec
         self.noise = env_config['noise']                        # noise factor when changing the methanation state in the gym env [# of steps in operation data set]                         
-        self.parallel = env_config['parallel']                       # specifies the computation setup: "Singleprocessing" (DummyVecEnv) or "Multiprocessing" (SubprocVecEnv)
-        self.train_or_eval = env_config['train_or_eval']             # specifies whether the environment provides detailed descriptions of the state for evaluation ("eval") or not ("train")(recommended for training)
-        #####self.action_type = "continuous"  # the type of action: "discrete" or "continuous" 
+        self.eps_len_d = env_config['eps_len_d']                # No. of days in an episode (episodes are randomly selected from the entire training data set without replacement)
+        self.state_change_penalty = env_config['state_change_penalty'] # Factor which enables reward penalty during training (if state_change_penalty = 0.0: No reward penalty; if state_change_penalty > 0.0: Reward penalty on mode transitions;)
+        self.sim_step = env_config['sim_step']        # Frequency for taking an action in [s] 
 
         # file paths of energy spot market data for training and evaluation:
         # (_train: training set; _cv: validation set; _test: test set)
@@ -43,27 +42,13 @@ class EnvParams:
         self.datafile_path_test_eua = env_config['datafile_path_test_eua']
 
         # file paths of process data for the dynamic data-based process model of the methanation plant depending on the load level:
-        assert env_config['operation'] in {'OP1', 'OP2'}, f'Wrong load level specified - data/config_env.yaml -> operation : {env_config['operation']} must match ["OP1", "OP2"]'
-        self.datafile_path2 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path2']     # cold startup
-        self.datafile_path3 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path3']     # warm startup
-        self.datafile_path4 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path4']     # cooldown
-        self.datafile_path5 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path5']     # from operation to standby
-        self.datafile_path6 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path6']     # from idle state to standby
-        self.datafile_path7 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path7']     # entering partial load after startup
-        self.datafile_path8 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path8']     # entering full load after startup
-        self.datafile_path9 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path9']     # load change from partial to full load
-        self.datafile_path10 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path10']   # load change from partial to full load and back to partial load after 5 min
-        self.datafile_path11 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path11']   # load change from partial to full load and back to partial load after 10 min
-        self.datafile_path12 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path12']   # load change from partial to full load and back to partial load after 15 min
-        self.datafile_path13 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path13']   # load change from partial to full load and back to partial load after 20 min
-        self.datafile_path14 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path14']   # load change from full to partial load
-        self.datafile_path15 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path15']   # load change from full to partial load and back to full load after 5 min
-        self.datafile_path16 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path16']   # load change from full to partial load and back to full load after 10 min
-        self.datafile_path17 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path17']   # load change from full to partial load and back to full load after 15 min
-        self.datafile_path18 = env_config['datafile_path']['path'] + env_config['operation'] + env_config['datafile_path']['datafile']['datafile_path18']   # load change from full to partial load and back to full load after 20 min
+        assert operation in {'OP1', 'OP2'}, f'Wrong load level specified - data/config_env.yaml -> operation : {env_config['operation']} must match ["OP1", "OP2"]'
+        base_path = env_config['datafile_path']['path'] + operation + env_config['datafile_path']['datafile']
+        for i in range(2, 19):  # For datafile_path2 to datafile_path18
+            setattr(self, f'datafile_path{i}', f"{base_path}/datafile_path{i}")
 
         self.ptg_state_space = env_config['ptg_state_space']                            # control and inner state spaces of the Power-to-Gas System (aligned with the programmable logic controller)
-        self.meth_stats_load = env_config['meth_stats_load'][env_config['operation']]   # methanation data for steady-state operation for the different load levels
+        self.meth_stats_load = env_config['meth_stats_load'][operation]                 # methanation data for steady-state operation for the different load levels
         self.r_0_values = env_config['r_0_values']                                      # Reward level price values -> Sets general height of the Reward penalty
 
         # economic data and parameters

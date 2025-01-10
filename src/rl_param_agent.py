@@ -20,26 +20,12 @@ class AgentParams:
         with open("config/config_agent.yaml", "r") as env_file:
             agent_config = yaml.safe_load(env_file)
 
-        self.device = agent_config['str_inv']
-        com_set : ['pc','slurm']   # computational resources: local personal computer ('pc') or computing cluster with SLURM management ('slurm')
-        com_conf : pc               # selected computational resources either 'pc' or 'slurm'
-        self.str_inv = agent_config['str_inv']              # specifies the training results and models to a specific investigation ##################################---------------------------------
-        self.str_inv_load = agent_config['str_inv_load']    # specifies the name of the pretrained model ##################################----
-        assert agent_config['model_conf'] in agent_config['train_set'], f'Wrong training setup specified - data/config_agent.yaml -> 
-                                                                          model_conf : {agent_config['model_conf']} must match {agent_config['train_set']}'
-        self.model_conf = agent_config['model_conf']    # training setup
-        self.path_files = agent_config['path_files']    # data path with pretrained RL models
         self.n_envs = agent_config['n_envs']            # Number environments/workers for training
         assert agent_config['rl_alg'] in agent_config['hyperparameters'], f'Wrong algorithm specified - data/config_agent.yaml -> 
                                                                             model_conf : {agent_config['rl_alg']} must match {agent_config['hyperparameters'].keys()}'
         self.rl_alg = agent_config['rl_alg']            # selected RL algorithm - already implemented [DQN, A2C, PPO, TD3, SAC, TQC]
         self.rl_alg_hyp = agent_config['hyperparameters'][self.rl_alg]     # hyperparameters of the algorithm
-        self.sim_step = agent_config['sim_step']        # Frequency for taking an action in [s]
-        self.eps_len_d = agent_config['eps_len_d']      # No. of days in an episode (episodes are randomly selected from the entire training data set without replacement)       
-        self.state_change_penalty = agent_config['state_change_penalty']   # Factor which enables reward penalty during training (if state_change_penalty = 0.0: No reward penalty; if state_change_penalty > 0.0: Reward penalty on mode transitions;)
-        self.r_seed_train = agent_config['r_seed_train']         # random seeds for neural network initialization (and environment randomness) of the training set
-        self.r_seed_test = agent_config['r_seed_test']         # random seeds for neural network initialization (and environment randomness) of the validation and test sets
-        assert len(self.r_seed_train) == len(self.r_seed_test), 'Number of random seeds must be equal for the training and test set!'
+        
 
     def set_model(self, env, tb_log):
         """
@@ -300,7 +286,4 @@ class AgentParams:
         model.save(self.path_files + self.str_inv)
         if 'buffer_size' in self.rl_alg_hyp.keys():
             model.save_replay_buffer(self.path_files + self.str_inv)
-
-
-        
 

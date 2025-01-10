@@ -15,7 +15,6 @@
 
 n_envs : 6                   # Number environments/workers for training
 rl_alg : TQC                 # selected RL algorithm - already implemented [DQN, A2C, PPO, TD3, SAC, TQC]
-sim_step : 600               # Frequency for taking an action in [s]
 
 hyperparameters:    # Implemented hyperparameters of the RL algorithms used
     DQN :

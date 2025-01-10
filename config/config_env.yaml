@@ -18,6 +18,7 @@ time_step_op : 2                # time step between consecutive entries in the m
 noise : 10                      # noise factor when changing the methanation state in the gym env [# of steps in operation data set]
 eps_len_d : 32                  # No. of days in an episode (episodes are randomly selected from the entire training data set without replacement)
 state_change_penalty : 0.0      # Factor which enables reward penalty during training (if state_change_penalty = 0.0: No reward penalty; if state_change_penalty > 0.0: Reward penalty on mode transitions;)
+sim_step : 600                  # Frequency for taking an action in [s]
 
 # file paths of energy spot market data for training and evaluation:
 # (_train: training set; _cv: validation set; _test: test set)
