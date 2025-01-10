@@ -6,15 +6,17 @@ from matplotlib.path import Path
 import matplotlib.patches as patches
 import math
 
-from src.rl_param_env import EnvParams
-from src.rl_opt import calculate_optimum
 from src.rl_param_agent import AgentParams
+from src.rl_param_env import EnvParams
+from src.rl_param_train import TrainParams
+from src.rl_opt import calculate_optimum
 
 
-def import_market_data(csvfile: str, type: str):  # , df: pd.DataFrame) # for future implementation
+
+def import_market_data(csvfile: str, type: str):
     """
         Import data of day-ahead prices for electricity
-        :param csvfile: Time; <data>
+        :param csvfile: Path and name of the .csv files containing energy market data ["Time [s]"; <data>]
         :param type: market data type
         :return arr: np.array with market data
     """
@@ -24,9 +26,9 @@ def import_market_data(csvfile: str, type: str):  # , df: pd.DataFrame) # for fu
     df["Time"] = pd.to_datetime(df["Time"], format="%d-%m-%Y %H:%M")
 
     if type == "elec": # electricity price data
-        arr = df["Day-Ahead-price [Euro/MWh]"].values.astype(float) / 10  # Convert Euro/MWh into ct/kWh
+        arr = df["Day-Ahead-price [Euro/MWh]"].values.astype(float) / 10        # Convert Euro/MWh into ct/kWh
     elif type == "gas": # gas price data
-        arr = df["THE_DA_Gas [Euro/MWh]"].values.astype(float) / 10   # Convert Euro/MWh into ct/kWh
+        arr = df["THE_DA_Gas [Euro/MWh]"].values.astype(float) / 10             # Convert Euro/MWh into ct/kWh
     elif type == "eua": # EUA price data
         arr = df["EUA_CO2 [Euro/t]"].values.astype(float)
     else:
@@ -38,22 +40,21 @@ def import_market_data(csvfile: str, type: str):  # , df: pd.DataFrame) # for fu
 def import_data(csvfile: str):
     """
         Import experimental methanation data for state changes
-        :param csvfile - columns
-        ["Time [s]", "T_cat [°C]", "n_h2 [mol/s]", "n_ch4 [mol/s]", "n_h2_res [mol/s]", "m_DE [kg/h]", "Pel [W]"]
-        :return arr: np.array with operational data
+        :param csvfile: Path and name of the .csv files containing process data ["Time [s]", "T_cat [°C]", "n_h2 [mol/s]", "n_ch4 [mol/s]", "n_h2_res [mol/s]", "m_DE [kg/h]", "Pel [W]"]
+        :return arr: Numpy array with operational data
     """
     # Import historic Data from csv file
     file_path = os.path.dirname(__file__) + "/" + csvfile
     df = pd.read_csv(file_path, delimiter=";", decimal=".")
 
     # Transform data to numpy array
-    t = df["Time [s]"].values.astype(float)
-    t_cat = df["T_cat [gradC]"].values.astype(float)
-    n_h2 = df["n_h2 [mol/s]"].values.astype(float)
-    n_ch4 = df["n_ch4 [mol/s]"].values.astype(float)
-    n_h2_res = df["n_h2_res [mol/s]"].values.astype(float)
-    m_h2o = df["m_DE [kg/h]"].values.astype(float)
-    p_el = df["Pel [W]"].values.astype(float)
+    t = df["Time [s]"].values.astype(float)                         # Time
+    t_cat = df["T_cat [gradC]"].values.astype(float)                # Maximum catalyst temperature in the methanation reactor system [°C]
+    n_h2 = df["n_h2 [mol/s]"].values.astype(float)                  # Hydrogen reactant molar flow [mol/s]
+    n_ch4 = df["n_ch4 [mol/s]"].values.astype(float)                # Methane product molar flow [mol/s]
+    n_h2_res = df["n_h2_res [mol/s]"].values.astype(float)          # Hydrogen product molar flow (residues) [mol/s]    
+    m_h2o = df["m_DE [kg/h]"].values.astype(float)                  # Water mass flow [kg/h]
+    p_el = df["Pel [W]"].values.astype(float)                       # Electrical power consumption for heating the methanation plant [W]
     arr = np.c_[t, t_cat, n_h2, n_ch4, n_h2_res, m_h2o, p_el]
 
     return arr
@@ -61,62 +62,48 @@ def import_data(csvfile: str):
 
 def load_data():
     """
-    Loads historical market data and experimental data of methanation operation
-    :return dict_price_data: dictionary with market data
-            dict_op_data: dictionary with data of dynamic methanation operation
+        Loads historical market data and experimental data of methanation operation
+        :return dict_price_data: dictionary with market data
+                dict_op_data: dictionary with data of dynamic methanation operation
     """
 
     ENV_PARAMS = EnvParams()
-    AGENT_PARAMS = AgentParams()
 
-    # Load historical market data for electricity, gas and EUA
-    dict_price_data = {'el_price_train': import_market_data(ENV_PARAMS.datafile_path_train_el, "elec"),
-                       'el_price_cv': import_market_data(ENV_PARAMS.datafile_path_cv_el, "elec"),
-                       'el_price_test': import_market_data(ENV_PARAMS.datafile_path_test_el, "elec"),
-                       'gas_price_train': import_market_data(ENV_PARAMS.datafile_path_train_gas, "gas"),
-                       'gas_price_cv': import_market_data(ENV_PARAMS.datafile_path_cv_gas, "gas"),
-                       'gas_price_test': import_market_data(ENV_PARAMS.datafile_path_test_gas, "gas"),
-                       'eua_price_train': import_market_data(ENV_PARAMS.datafile_path_train_eua, "eua"),
-                       'eua_price_cv': import_market_data(ENV_PARAMS.datafile_path_cv_eua, "eua"),
-                       'eua_price_test': import_market_data(ENV_PARAMS.datafile_path_test_eua, "eua")}
+    # Load historical market data for electricity, gas and EUA ##########################################MAKE SHORTER##################
+    dict_price_data = {'el_price_train': import_market_data(ENV_PARAMS.datafile_path_train_el, "elec"),     # Electricity prices of the training set
+                       'el_price_cv': import_market_data(ENV_PARAMS.datafile_path_cv_el, "elec"),           # Electricity prices of the validation set
+                       'el_price_test': import_market_data(ENV_PARAMS.datafile_path_test_el, "elec"),       # Electricity prices of the test set
+                       'gas_price_train': import_market_data(ENV_PARAMS.datafile_path_train_gas, "gas"),    # Gas prices of the training set
+                       'gas_price_cv': import_market_data(ENV_PARAMS.datafile_path_cv_gas, "gas"),          # Gas prices of the validation set
+                       'gas_price_test': import_market_data(ENV_PARAMS.datafile_path_test_gas, "gas"),      # Gas prices of the test set
+                       'eua_price_train': import_market_data(ENV_PARAMS.datafile_path_train_eua, "eua"),    # EUA prices of the training set
+                       'eua_price_cv': import_market_data(ENV_PARAMS.datafile_path_cv_eua, "eua"),          # EUA prices of the validation set
+                       'eua_price_test': import_market_data(ENV_PARAMS.datafile_path_test_eua, "eua")}      # EUA prices of the test set
 
-    # Load experimental methanation data for state changes
-    dict_op_data = {'startup_cold': import_data(ENV_PARAMS.datafile_path2),  # cold start
-                    'startup_hot': import_data(ENV_PARAMS.datafile_path3),  # hot start
-                    'cooldown': import_data(ENV_PARAMS.datafile_path4),  # cooldown
-                    'standby_down': import_data(ENV_PARAMS.datafile_path5),
-                    # standby dataset for high temperatures to standby
-                    'standby_up': import_data(ENV_PARAMS.datafile_path6),
-                    # standby dataset for low temperatures to standby
-                    'op1_start_p': import_data(ENV_PARAMS.datafile_path7),  # partial load - warming up
-                    'op2_start_f': import_data(ENV_PARAMS.datafile_path8),  # full load - warming up
-                    'op3_p_f': import_data(ENV_PARAMS.datafile_path9),  # Load change: Partial -> Full
-                    'op4_p_f_p_5': import_data(ENV_PARAMS.datafile_path10),
-                    # Load change: Partial -> Full -> Partial (Return after 5 min)
-                    'op5_p_f_p_10': import_data(ENV_PARAMS.datafile_path11),
-                    # Load change: Partial -> Full -> Partial (Return after 10 min)
-                    'op6_p_f_p_15': import_data(ENV_PARAMS.datafile_path12),
-                    # Load change: Partial -> Full -> Partial (Return after 15 min)
-                    'op7_p_f_p_22': import_data(ENV_PARAMS.datafile_path13),
-                    # Load change: Partial -> Full -> Partial (Return after 22 min)
-                    'op8_f_p': import_data(ENV_PARAMS.datafile_path14),  # Load change: Full -> Partial
-                    'op9_f_p_f_5': import_data(ENV_PARAMS.datafile_path15),
-                    # Load change: Full -> Partial -> Full (Return after 5 min)
-                    'op10_f_p_f_10': import_data(ENV_PARAMS.datafile_path16),
-                    # Load change: Full -> Partial -> Full (Return after 10 min)
-                    'op11_f_p_f_15': import_data(ENV_PARAMS.datafile_path17),
-                    # Load change: Full -> Partial -> Full (Return after 15 min)
-                    'op12_f_p_f_20': import_data(
-                        ENV_PARAMS.datafile_path18)}  # Load change: Full -> Partial -> Full (Return after 20 min)
+    # Load experimental methanation data for state changes  ##########################################MAKE SHORTER##################
+    dict_op_data = {'startup_cold': import_data(ENV_PARAMS.datafile_path2),     # Cold start
+                    'startup_hot': import_data(ENV_PARAMS.datafile_path3),      # Hot start
+                    'cooldown': import_data(ENV_PARAMS.datafile_path4),         # Cooldown
+                    'standby_down': import_data(ENV_PARAMS.datafile_path5),     # Standby dataset for high temperatures to standby
+                    'standby_up': import_data(ENV_PARAMS.datafile_path6),       # Standby dataset for low temperatures to standby
+                    'op1_start_p': import_data(ENV_PARAMS.datafile_path7),      # Partial load - warming up
+                    'op2_start_f': import_data(ENV_PARAMS.datafile_path8),      # Full load - warming up
+                    'op3_p_f': import_data(ENV_PARAMS.datafile_path9),          # Load change: Partial -> Full
+                    'op4_p_f_p_5': import_data(ENV_PARAMS.datafile_path10),     # Load change: Partial -> Full -> Partial (Return after 5 min)
+                    'op5_p_f_p_10': import_data(ENV_PARAMS.datafile_path11),    # Load change: Partial -> Full -> Partial (Return after 10 min)
+                    'op6_p_f_p_15': import_data(ENV_PARAMS.datafile_path12),    # Load change: Partial -> Full -> Partial (Return after 15 min)
+                    'op7_p_f_p_22': import_data(ENV_PARAMS.datafile_path13),    # Load change: Partial -> Full -> Partial (Return after 22 min)
+                    'op8_f_p': import_data(ENV_PARAMS.datafile_path14),         # Load change: Full -> Partial
+                    'op9_f_p_f_5': import_data(ENV_PARAMS.datafile_path15),     # Load change: Full -> Partial -> Full (Return after 5 min)
+                    'op10_f_p_f_10': import_data(ENV_PARAMS.datafile_path16),   # Load change: Full -> Partial -> Full (Return after 10 min)
+                    'op11_f_p_f_15': import_data(ENV_PARAMS.datafile_path17),   # Load change: Full -> Partial -> Full (Return after 15 min)
+                    'op12_f_p_f_20': import_data(ENV_PARAMS.datafile_path18)}   # Load change: Full -> Partial -> Full (Return after 20 min)
 
-    if ENV_PARAMS.scenario == 2:  # fixed gas price market data
-        dict_price_data['gas_price_train'] = np.ones(
-            len(dict_price_data['gas_price_train'])) * ENV_PARAMS.ch4_price_fix
-        dict_price_data['gas_price_cv'] = np.ones(
-            len(dict_price_data['gas_price_cv'])) * ENV_PARAMS.ch4_price_fix
-        dict_price_data['gas_price_test'] = np.ones(
-            len(dict_price_data['gas_price_test'])) * ENV_PARAMS.ch4_price_fix
-    elif ENV_PARAMS.scenario == 3:  # gas price and eua = 0
+    if ENV_PARAMS.scenario == 2:  # Fixed gas prices    ##########################################MAKE SHORTER##################
+        dict_price_data['gas_price_train'] = np.ones(len(dict_price_data['gas_price_train'])) * ENV_PARAMS.ch4_price_fix
+        dict_price_data['gas_price_cv'] = np.ones(len(dict_price_data['gas_price_cv'])) * ENV_PARAMS.ch4_price_fix
+        dict_price_data['gas_price_test'] = np.ones(len(dict_price_data['gas_price_test'])) * ENV_PARAMS.ch4_price_fix
+    elif ENV_PARAMS.scenario == 3:  # Gas and EUA prices = 0
         dict_price_data['gas_price_train'] = np.zeros(len(dict_price_data['gas_price_train']))
         dict_price_data['gas_price_cv'] = np.zeros(len(dict_price_data['gas_price_cv']))
         dict_price_data['gas_price_test'] = np.zeros(len(dict_price_data['gas_price_test']))
@@ -130,10 +117,10 @@ def load_data():
     dict_price_data['eua_price_reward_level'] = ENV_PARAMS.r_0_values['eua_price']
 
     # Check if training set is divisible by the episode length
-    min_train_len = 5           # Minimum No. of days in the training set
-    ENV_PARAMS.train_len_d = dict_price_data['gas_price_train'] - min_train_len
+    min_train_len = 5           # Minimum No. of days in the training set 
+    ENV_PARAMS.train_len_d = len(dict_price_data['gas_price_train'])
     assert ENV_PARAMS.train_len_d > min_train_len, f'The training set size must be greater than {min_train_len} days'
-    if ENV_PARAMS.train_len_d % AGENT_PARAMS.eps_len_d != 0:
+    if ENV_PARAMS.train_len_d % ENV_PARAMS.eps_len_d != 0:
         # Find all possible divisors of 'a'
         divisors = [i for i in range(1, ENV_PARAMS.train_len_d + 1) if ENV_PARAMS.train_len_d % i == 0]
         print(f"Possible divisors of {a} are: {divisors}")

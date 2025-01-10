@@ -6,12 +6,11 @@
 # > Configuration file for the training setup
 # ----------------------------------------------------------------------------------------------------------------
           
-com_set : ['pc', 'slurm']   # computational resources: local personal computer ('pc') or computing cluster with SLURM management ('slurm')
-com_conf : pc               # selected computational resources either 'pc' or 'slurm'
+com_set : ['pc', 'slurm']   # computational resources: localr personal compute ('pc') or computing cluster with SLURM management ('slurm')
+com_conf : pc               # selected computational resources either 'pc' (local personal computer) or 'slurm' (computing cluster with SLURM management)
 device : auto               # computational device ['cpu', 'gpu', 'auto']
 str_inv : _training_        # specifies the training results and models to a specific investigation ##################---------------------------------
 str_inv_load: : _pretrain_  # specifies the name of the pretrained model  
-train_set : ['simple_train', 'save_model', 'load_model', 'save_load_model']
 model_conf : simple_train   # simple_train: Train RL from scratch without saving the model afterwards
                             # save_model: Train RL from scratch and save the model afterwards
                             # load_model: Load a pretrained RL model and continue with training without saving the model afterwards

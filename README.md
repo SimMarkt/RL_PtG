@@ -10,8 +10,8 @@ Deep Reinforcement Learning (RL) for dynamic Real-time optimization of Power-to-
 2. [Features](#features)
 3. [Installation](#installation)
 4. [License](#license)
-4. [Citing](#citing)
-5. [Acknowledgments](#acknowledgments)
+5. [Citing](#citing)
+6. [Acknowledgments](#acknowledgments)
 
 ---
 
