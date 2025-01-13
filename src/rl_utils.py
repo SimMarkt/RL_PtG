@@ -118,13 +118,12 @@ def load_data():
 
     # Check if training set is divisible by the episode length
     min_train_len = 5           # Minimum No. of days in the training set 
-    ENV_PARAMS.train_len_d = len(dict_price_data['gas_price_train'])
-    assert ENV_PARAMS.train_len_d > min_train_len, f'The training set size must be greater than {min_train_len} days'
+    ENV_PARAMS.train_len_d = len(dict_price_data['gas_price_train']) - min_train_len # Training uses min_train_len days less than the data size to always allow enough space for the price forecast of Day-ahead market data
+    assert ENV_PARAMS.train_len_d > 0, f'The training set size must be greater than {min_train_len} days'
     if ENV_PARAMS.train_len_d % ENV_PARAMS.eps_len_d != 0:
-        # Find all possible divisors of 'a'
+        # Find all possible divisors of ENV_PARAMS.train_len_d
         divisors = [i for i in range(1, ENV_PARAMS.train_len_d + 1) if ENV_PARAMS.train_len_d % i == 0]
-        print(f"Possible divisors of {a} are: {divisors}")
-        assert False, f'The training set size {ENV_PARAMS.train_len_d} must be divisible by the episode length - data/config_env.yaml -> eps_len_d : {AGENT_PARAMS.eps_len_d}; 
+        assert False, f'The training set size {ENV_PARAMS.train_len_d} must be divisible by the episode length - data/config_env.yaml -> eps_len_d : {ENV_PARAMS.eps_len_d}; 
                         Possible divisors are: {divisors}'
 
     return dict_price_data, dict_op_data
@@ -138,9 +137,7 @@ def preprocessing_rew(dict_price_data):
     :return dict_pot_r_b: dictionary with potential reward [pot_rew...] and boolean reward identifier [part_full_b...]
     """
 
-    ENV_PARAMS = EnvParams()
-
-    # compute methanation operation data for theoretical optimum (ignoring dynamics)
+    # compute methanation operation data for theoretical optimum (ignoring dynamics) ##########################################MAKE SHORTER##################
     stats_dict_opt_train = calculate_optimum(dict_price_data['el_price_train'], dict_price_data['gas_price_train'],
                                              dict_price_data['eua_price_train'], "Train")
     stats_dict_opt_cv = calculate_optimum(dict_price_data['el_price_cv'], dict_price_data['gas_price_cv'],
@@ -152,14 +149,15 @@ def preprocessing_rew(dict_price_data):
 
     # Store data sets with future values of the potential reward on the two different load levels and
     # data sets of a boolean identifier of future values of the potential reward in a dictionary
-    # if pot_rew_... <= 0:
-    #   part_full_b_... = -1
-    # else:
-    #   if (pot_rew_... in full load) < (pot_rew... in partial load):
-    #       part_full_b_... = 0
-    #   else:
-    #       part_full_b_... = 1
-    dict_pot_r_b = {
+    # Pseudo code for part_full_b_... calculation:
+    #       if pot_rew_... <= 0:
+    #           part_full_b_... = -1
+    #       else:
+    #           if (pot_rew_... in full load) < (pot_rew... in partial load):
+    #               part_full_b_... = 0
+    #           else:
+    #               part_full_b_... = 1
+    dict_pot_r_b = {                ##########################################MAKE SHORTER##################
         'pot_rew_train': stats_dict_opt_train['Meth_reward_stats'],
         'part_full_b_train': stats_dict_opt_train['partial_full_b'],
         'pot_rew_cv': stats_dict_opt_cv['Meth_reward_stats'],
@@ -169,15 +167,15 @@ def preprocessing_rew(dict_price_data):
     }
 
     r_level = stats_dict_opt_level['Meth_reward_stats']
-    # multiple_plots(stats_dict_opt_train, 3600, "Opt_Training_set_sen" + str(ENV_PARAMS.scenario))
-    # multiple_plots(stats_dict_opt_test, 3600, "Opt_Test_set_sen" + str(ENV_PARAMS.scenario))
+    # multiple_plots(stats_dict_opt_train, 3600, "Opt_Training_set_sen" + str(ENV_PARAMS.scenario))         ################# Include Graphics as default ##############
+    # multiple_plots(stats_dict_opt_test, 3600, "Opt_Test_set_sen" + str(ENV_PARAMS.scenario))              ################# Include Graphics as default ##############
 
     return dict_pot_r_b, r_level
 
 
 def preprocessing_array(dict_price_data, dict_pot_r_b):
     """
-    Transforms dictionaries to np.arrays for computation purposes
+    Transforms dictionaries to np.arrays for computational purposes
     :param dict_price_data: market data
     :param dict_pot_r_b: potential reward and boolean reward identifier
     :return:    e_r_b_train/e_r_b_cv/e_r_b_test: (hourly values)
@@ -200,14 +198,11 @@ def preprocessing_array(dict_price_data, dict_pot_r_b):
     # and boolean identifier for the entire training and test set
     # e.g. e_r_b_train[0, 5, 156] represents the future value of the electricity price [0,-,-] in 4 hours [-,5,-] at the
     # 156ths entry of the electricity price data set
-    e_r_b_train = np.zeros((3, ENV_PARAMS.price_ahead,
-                            dict_price_data['el_price_train'].shape[0] - ENV_PARAMS.price_ahead))
-    e_r_b_cv = np.zeros((3, ENV_PARAMS.price_ahead,
-                           dict_price_data['el_price_cv'].shape[0] - ENV_PARAMS.price_ahead))
-    e_r_b_test = np.zeros((3, ENV_PARAMS.price_ahead,
-                           dict_price_data['el_price_test'].shape[0] - ENV_PARAMS.price_ahead))
+    e_r_b_train = np.zeros((3, ENV_PARAMS.price_ahead, dict_price_data['el_price_train'].shape[0] - ENV_PARAMS.price_ahead))
+    e_r_b_cv = np.zeros((3, ENV_PARAMS.price_ahead, dict_price_data['el_price_cv'].shape[0] - ENV_PARAMS.price_ahead))
+    e_r_b_test = np.zeros((3, ENV_PARAMS.price_ahead, dict_price_data['el_price_test'].shape[0] - ENV_PARAMS.price_ahead))
 
-    for i in range(ENV_PARAMS.price_ahead):
+    for i in range(ENV_PARAMS.price_ahead):     ##########################################MAKE SHORTER##################
         e_r_b_train[0, i, :] = dict_price_data['el_price_train'][i:(-ENV_PARAMS.price_ahead + i)]
         e_r_b_train[1, i, :] = dict_pot_r_b['pot_rew_train'][i:(-ENV_PARAMS.price_ahead + i)]
         e_r_b_train[2, i, :] = dict_pot_r_b['part_full_b_train'][i:(-ENV_PARAMS.price_ahead + i)]
@@ -223,7 +218,7 @@ def preprocessing_array(dict_price_data, dict_pot_r_b):
     g_e_cv = np.zeros((2, 2, dict_price_data['gas_price_cv'].shape[0] - 1))
     g_e_test = np.zeros((2, 2, dict_price_data['gas_price_test'].shape[0] - 1))
 
-    g_e_train[0, 0, :] = dict_price_data['gas_price_train'][:-1]
+    g_e_train[0, 0, :] = dict_price_data['gas_price_train'][:-1]     ##########################################MAKE SHORTER##################
     g_e_train[1, 0, :] = dict_price_data['eua_price_train'][:-1]
     g_e_cv[0, 0, :] = dict_price_data['gas_price_cv'][:-1]
     g_e_cv[1, 0, :] = dict_price_data['eua_price_cv'][:-1]
@@ -262,11 +257,8 @@ def define_episodes(dict_price_data, seed_train):
     test_len_d = len(dict_price_data['gas_price_test']) - 1
 
     # Split up the entire training set into several smaller subsets which represents an own episodes
-    if train_len_d % AGENT_PARAMS.eps_len_d == 0:
-        n_eps = int(train_len_d / AGENT_PARAMS.eps_len_d)  # number of training subsets
-    else:
-        assert False, "No. of days in the training set (train_len_d) should be a factor of the episode length (eps_len_d)!"
-
+    n_eps = int(train_len_d / AGENT_PARAMS.eps_len_d)  # number of training subsets
+    
     eps_len = 24 * 3600 * AGENT_PARAMS.eps_len_d  # episode length in seconds
 
     # Number of steps in train and test set per episode
