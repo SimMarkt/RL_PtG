@@ -11,8 +11,6 @@ from src.rl_param_env import EnvParams
 from src.rl_param_train import TrainParams
 from src.rl_opt import calculate_optimum
 
-
-
 def import_market_data(csvfile: str, type: str):
     """
         Import data of day-ahead prices for electricity
@@ -128,320 +126,323 @@ def load_data():
 
     return dict_price_data, dict_op_data
 
-
-def preprocessing_rew(dict_price_data):
+class Preprocessing():
     """
-    Data preprocessing including the computation of a potential reward, which signifies the maximum reward the
-    Power-to-Gas plant can yield in either partial load [part_full_b... = 0] or full load [part_full_b... = 1]
-    :param dict_price_data: dictionary with market data
-    :return dict_pot_r_b: dictionary with potential reward [pot_rew...] and boolean reward identifier [part_full_b...]
+        A class that contains variables and functions for preprocessing of energy market and process data
     """
-
-    # compute methanation operation data for theoretical optimum (ignoring dynamics) ##########################################MAKE SHORTER##################
-    stats_dict_opt_train = calculate_optimum(dict_price_data['el_price_train'], dict_price_data['gas_price_train'],
-                                             dict_price_data['eua_price_train'], "Train")
-    stats_dict_opt_cv = calculate_optimum(dict_price_data['el_price_cv'], dict_price_data['gas_price_cv'],
-                                            dict_price_data['eua_price_cv'], "CV")
-    stats_dict_opt_test = calculate_optimum(dict_price_data['el_price_test'], dict_price_data['gas_price_test'],
-                                            dict_price_data['eua_price_test'], "Test")
-    stats_dict_opt_level = calculate_optimum(dict_price_data['el_price_reward_level'], dict_price_data['gas_price_reward_level'],
-                                            dict_price_data['eua_price_reward_level'], "reward_Level")
-
-    # Store data sets with future values of the potential reward on the two different load levels and
-    # data sets of a boolean identifier of future values of the potential reward in a dictionary
-    # Pseudo code for part_full_b_... calculation:
-    #       if pot_rew_... <= 0:
-    #           part_full_b_... = -1
-    #       else:
-    #           if (pot_rew_... in full load) < (pot_rew... in partial load):
-    #               part_full_b_... = 0
-    #           else:
-    #               part_full_b_... = 1
-    dict_pot_r_b = {                ##########################################MAKE SHORTER##################
-        'pot_rew_train': stats_dict_opt_train['Meth_reward_stats'],
-        'part_full_b_train': stats_dict_opt_train['partial_full_b'],
-        'pot_rew_cv': stats_dict_opt_cv['Meth_reward_stats'],
-        'part_full_b_cv': stats_dict_opt_cv['partial_full_b'],
-        'pot_rew_test': stats_dict_opt_test['Meth_reward_stats'],
-        'part_full_b_test': stats_dict_opt_test['partial_full_b'],
-    }
-
-    r_level = stats_dict_opt_level['Meth_reward_stats']
-    # multiple_plots(stats_dict_opt_train, 3600, "Opt_Training_set_sen" + str(ENV_PARAMS.scenario))         ################# Include Graphics as default ##############
-    # multiple_plots(stats_dict_opt_test, 3600, "Opt_Test_set_sen" + str(ENV_PARAMS.scenario))              ################# Include Graphics as default ##############
-
-    return dict_pot_r_b, r_level
+    def __init__(self, dict_price_data, seed_train):
+        """
+            Initialization of variables
+            :param dict_price_data: dictionary with market data
+            :param seed_train: Random seed of the training set
+        """
+        # Initialization
+        self.AGENT_PARAMS = AgentParams()
+        self.ENV_PARAMS = EnvParams()
+        self.TRAIN_PARAMS = TrainParams()
+        self.dict_price_data = dict_price_data
+        self.seed_train = seed_train
+        self.dict_pot_r_b = None                    # dictionary with potential reward [pot_rew...] and boolean reward identifier [part_full_b...]
+        self.r_level = None                         # Sets the general height of the reward penalty according to electricity, (S)NG, and EUA price levels
+        # e_r_b_train/e_r_b_cv/e_r_b_test: (hourly values)
+        #   np.array which stores elec. price data, potential reward, and boolean identifier
+        #   Dimensions = [Type of data] x [No. of day-ahead values] x [historical values]
+        #       Type of data = [el_price, pot_rew, part_full_b]
+        #       No. of day-ahead values = ENV_PARAMS.price_ahead
+        #       historical values = No. of values in the electricity price data set
+        self.e_r_b_train = None
+        self.e_r_b_cv = None
+        self.e_r_b_test = None
+        # g_e_train/g_e_cv/g_e_test: (daily values)
+        #   np.array which stores gas and EUA price data
+        #   Dimensions = [Type of data] x [No. of day-ahead values] x [historical values]
+        #       Type of data = [gas_price, pot_rew, part_full_b]
+        #       No. of day-ahead values = 2 (today and tomorrow)
+        #       historical values = No. of values in the gas/EUA price data set
+        self.g_e_train = None
+        self.g_e_cv = None
+        self.g_e_test = None
 
 
-def preprocessing_array(dict_price_data, dict_pot_r_b):
-    """
-    Transforms dictionaries to np.arrays for computational purposes
-    :param dict_price_data: market data
-    :param dict_pot_r_b: potential reward and boolean reward identifier
-    :return:    e_r_b_train/e_r_b_cv/e_r_b_test: (hourly values)
-                    np.array which stores elec. price data, potential reward, and boolean identifier
-                    Dimensions = [Type of data] x [No. of day-ahead values] x [historical values]
-                        Type of data = [el_price, pot_rew, part_full_b]
-                        No. of day-ahead values = ENV_PARAMS.price_ahead
-                        historical values = No. of values in the electricity price data set
-                g_e_train/g_e_cv/g_e_test: (daily values)
-                    np.array which stores gas and eua price data
-                    Dimensions = [Type of data] x [No. of day-ahead values] x [historical values]
-                        Type of data = [gas_price, pot_rew, part_full_b]
-                        No. of day-ahead values = 2 (today and tomorrow)
-                        historical values = No. of values in the gas/eua price data set
-    """
+    def preprocessing_rew(self):
+        """
+            Data preprocessing including the computation of a potential reward, which signifies the maximum reward the
+            Power-to-Gas plant can yield in either partial load [part_full_b... = 0] or full load [part_full_b... = 1]
+            :return dict_pot_r_b: dictionary with potential reward [pot_rew...] and boolean reward identifier [part_full_b...]
+            :return r_level: ###################################################################################################################################?????????
+        """
 
-    ENV_PARAMS = EnvParams()
+        # compute methanation operation data for theoretical optimum (ignoring dynamics) ##########################################MAKE SHORTER##################
+        stats_dict_opt_train = calculate_optimum(self.dict_price_data['el_price_train'], self.dict_price_data['gas_price_train'],
+                                                self.dict_price_data['eua_price_train'], "Train")
+        stats_dict_opt_cv = calculate_optimum(self.dict_price_data['el_price_cv'], self.dict_price_data['gas_price_cv'],
+                                                self.dict_price_data['eua_price_cv'], "CV")
+        stats_dict_opt_test = calculate_optimum(self.dict_price_data['el_price_test'], self.dict_price_data['gas_price_test'],
+                                                self.dict_price_data['eua_price_test'], "Test")
+        stats_dict_opt_level = calculate_optimum(self.dict_price_data['el_price_reward_level'], self.dict_price_data['gas_price_reward_level'],
+                                                self.dict_price_data['eua_price_reward_level'], "reward_Level")
 
-    # Multi-Dimensional Array (3D) which stores day-ahead electricity price data as well as day-ahead potential reward
-    # and boolean identifier for the entire training and test set
-    # e.g. e_r_b_train[0, 5, 156] represents the future value of the electricity price [0,-,-] in 4 hours [-,5,-] at the
-    # 156ths entry of the electricity price data set
-    e_r_b_train = np.zeros((3, ENV_PARAMS.price_ahead, dict_price_data['el_price_train'].shape[0] - ENV_PARAMS.price_ahead))
-    e_r_b_cv = np.zeros((3, ENV_PARAMS.price_ahead, dict_price_data['el_price_cv'].shape[0] - ENV_PARAMS.price_ahead))
-    e_r_b_test = np.zeros((3, ENV_PARAMS.price_ahead, dict_price_data['el_price_test'].shape[0] - ENV_PARAMS.price_ahead))
+        # Store data sets with future values of the potential reward on the two different load levels and
+        # data sets of a boolean identifier of future values of the potential reward in a dictionary
+        # Pseudo code for part_full_b_... calculation:
+        #       if pot_rew_... <= 0:
+        #           part_full_b_... = -1
+        #       else:
+        #           if (pot_rew_... in full load) < (pot_rew... in partial load):
+        #               part_full_b_... = 0
+        #           else:
+        #               part_full_b_... = 1
+        self.dict_pot_r_b = {                                                                       ##########################################MAKE SHORTER##################
+            'pot_rew_train': stats_dict_opt_train['Meth_reward_stats'],
+            'part_full_b_train': stats_dict_opt_train['partial_full_b'],
+            'pot_rew_cv': stats_dict_opt_cv['Meth_reward_stats'],
+            'part_full_b_cv': stats_dict_opt_cv['partial_full_b'],
+            'pot_rew_test': stats_dict_opt_test['Meth_reward_stats'],
+            'part_full_b_test': stats_dict_opt_test['partial_full_b'],
+        }
 
-    for i in range(ENV_PARAMS.price_ahead):     ##########################################MAKE SHORTER##################
-        e_r_b_train[0, i, :] = dict_price_data['el_price_train'][i:(-ENV_PARAMS.price_ahead + i)]
-        e_r_b_train[1, i, :] = dict_pot_r_b['pot_rew_train'][i:(-ENV_PARAMS.price_ahead + i)]
-        e_r_b_train[2, i, :] = dict_pot_r_b['part_full_b_train'][i:(-ENV_PARAMS.price_ahead + i)]
-        e_r_b_cv[0, i, :] = dict_price_data['el_price_cv'][i:(-ENV_PARAMS.price_ahead + i)]
-        e_r_b_cv[1, i, :] = dict_pot_r_b['pot_rew_cv'][i:(-ENV_PARAMS.price_ahead + i)]
-        e_r_b_cv[2, i, :] = dict_pot_r_b['part_full_b_cv'][i:(-ENV_PARAMS.price_ahead + i)]
-        e_r_b_test[0, i, :] = dict_price_data['el_price_test'][i:(-ENV_PARAMS.price_ahead + i)]
-        e_r_b_test[1, i, :] = dict_pot_r_b['pot_rew_test'][i:(-ENV_PARAMS.price_ahead + i)]
-        e_r_b_test[2, i, :] = dict_pot_r_b['part_full_b_test'][i:(-ENV_PARAMS.price_ahead + i)]
-
-    # Multi-Dimensional Array (3D) which stores day-ahead gas and eua price data for the entire training and test set
-    g_e_train = np.zeros((2, 2, dict_price_data['gas_price_train'].shape[0] - 1))
-    g_e_cv = np.zeros((2, 2, dict_price_data['gas_price_cv'].shape[0] - 1))
-    g_e_test = np.zeros((2, 2, dict_price_data['gas_price_test'].shape[0] - 1))
-
-    g_e_train[0, 0, :] = dict_price_data['gas_price_train'][:-1]     ##########################################MAKE SHORTER##################
-    g_e_train[1, 0, :] = dict_price_data['eua_price_train'][:-1]
-    g_e_cv[0, 0, :] = dict_price_data['gas_price_cv'][:-1]
-    g_e_cv[1, 0, :] = dict_price_data['eua_price_cv'][:-1]
-    g_e_test[0, 0, :] = dict_price_data['gas_price_test'][:-1]
-    g_e_test[1, 0, :] = dict_price_data['eua_price_test'][:-1]
-    g_e_train[0, 1, :] = dict_price_data['gas_price_train'][1:]
-    g_e_train[1, 1, :] = dict_price_data['eua_price_train'][1:]
-    g_e_cv[0, 1, :] = dict_price_data['gas_price_cv'][1:]
-    g_e_cv[1, 1, :] = dict_price_data['eua_price_cv'][1:]
-    g_e_test[0, 1, :] = dict_price_data['gas_price_test'][1:]
-    g_e_test[1, 1, :] = dict_price_data['eua_price_test'][1:]
-
-    return e_r_b_train, e_r_b_cv, e_r_b_test, g_e_train, g_e_cv, g_e_test
+        self.r_level = stats_dict_opt_level['Meth_reward_stats']
+        # multiple_plots(stats_dict_opt_train, 3600, "Opt_Training_set_sen" + str(ENV_PARAMS.scenario))         ################# Include Graphics as default ##############
+        # multiple_plots(stats_dict_opt_test, 3600, "Opt_Test_set_sen" + str(ENV_PARAMS.scenario))              ################# Include Graphics as default ##############
 
 
-def define_episodes(dict_price_data, seed_train):
-    """
-    Defines specifications for training and evaluation episodes
-    :param dict_price_data: dictionary with market data
-    :param seed_train: random seed for training
-    :return eps_sim_steps_train: Number of steps in the training set per episode
-            eps_sim_steps_test: Number of steps in the test set per episode
-            eps_ind: contains indexes of the training subsets
-            total_n_steps: total number of steps for all workers together
-            n_eps_loops: No. of training subsets times No. of loops
-    """
+    def preprocessing_array(self):
+        """
+        Transforms dictionaries to np.arrays for computational purposes
+        """
 
-    ENV_PARAMS = EnvParams()
-    AGENT_PARAMS = AgentParams()
+        # Multi-Dimensional Array (3D) which stores day-ahead electricity price data as well as day-ahead potential reward
+        # and boolean identifier for the entire training and test set
+        # e.g. e_r_b_train[0, 5, 156] represents the future value of the electricity price [0,-,-] in 4 hours [-,5,-] at the
+        # 156ths entry of the electricity price data set             ##########################################MAKE SHORTER##################
+        e_r_b_train = np.zeros((3, self.ENV_PARAMS.price_ahead, self.dict_price_data['el_price_train'].shape[0] - self.ENV_PARAMS.price_ahead))
+        e_r_b_cv = np.zeros((3, self.ENV_PARAMS.price_ahead, self.dict_price_data['el_price_cv'].shape[0] - self.ENV_PARAMS.price_ahead))
+        e_r_b_test = np.zeros((3, self.ENV_PARAMS.price_ahead, self.dict_price_data['el_price_test'].shape[0] - self.ENV_PARAMS.price_ahead))
 
-    print("Define episodes and step size limits...")
-    # No. of days in the total training set
-    train_len_d = ENV_PARAMS.train_len_d
-    # No. of days in the test set ("-1" excludes the day-ahead overhead)
-    cv_len_d = len(dict_price_data['gas_price_cv']) - 1
-    test_len_d = len(dict_price_data['gas_price_test']) - 1
+        for i in range(ENV_PARAMS.price_ahead):     ##########################################MAKE SHORTER##################
+            e_r_b_train[0, i, :] = self.dict_price_data['el_price_train'][i:(-self.ENV_PARAMS.price_ahead + i)]
+            e_r_b_train[1, i, :] = self.dict_pot_r_b['pot_rew_train'][i:(-self.ENV_PARAMS.price_ahead + i)]
+            e_r_b_train[2, i, :] = self.dict_pot_r_b['part_full_b_train'][i:(-self.ENV_PARAMS.price_ahead + i)]
+            e_r_b_cv[0, i, :] = self.dict_price_data['el_price_cv'][i:(-self.ENV_PARAMS.price_ahead + i)]
+            e_r_b_cv[1, i, :] = self.dict_pot_r_b['pot_rew_cv'][i:(-self.ENV_PARAMS.price_ahead + i)]
+            e_r_b_cv[2, i, :] = self.dict_pot_r_b['part_full_b_cv'][i:(-self.ENV_PARAMS.price_ahead + i)]
+            e_r_b_test[0, i, :] = self.dict_price_data['el_price_test'][i:(-self.ENV_PARAMS.price_ahead + i)]
+            e_r_b_test[1, i, :] = self.dict_pot_r_b['pot_rew_test'][i:(-self.ENV_PARAMS.price_ahead + i)]
+            e_r_b_test[2, i, :] = self.dict_pot_r_b['part_full_b_test'][i:(-self.ENV_PARAMS.price_ahead + i)]
 
-    # Split up the entire training set into several smaller subsets which represents an own episodes
-    n_eps = int(train_len_d / AGENT_PARAMS.eps_len_d)  # number of training subsets
-    
-    eps_len = 24 * 3600 * AGENT_PARAMS.eps_len_d  # episode length in seconds
+        # Multi-Dimensional Array (3D) which stores day-ahead gas and eua price data for the entire training and test set        ##########################################MAKE SHORTER##################
+        g_e_train = np.zeros((2, 2, self.dict_price_data['gas_price_train'].shape[0] - 1))
+        g_e_cv = np.zeros((2, 2, self.dict_price_data['gas_price_cv'].shape[0] - 1))
+        g_e_test = np.zeros((2, 2, self.dict_price_data['gas_price_test'].shape[0] - 1))
 
-    # Number of steps in train and test set per episode
-    eps_sim_steps_train = int(eps_len / AGENT_PARAMS.sim_step)
-    eps_sim_steps_cv = int(24 * 3600 * cv_len_d / AGENT_PARAMS.sim_step)
-    eps_sim_steps_test = int(24 * 3600 * test_len_d / AGENT_PARAMS.sim_step)
-
-    # Define total number of steps for all workers together
-    num_loops = ENV_PARAMS.num_loops  # number of loops over the total training set
-    overhead = 2000  # small overhead for training
-    total_n_steps = int(math.ceil(eps_sim_steps_train * n_eps * num_loops) + overhead)
-    print("--- Total number of training steps =", total_n_steps)
-    print("--- Training steps per episode =", eps_sim_steps_train)
-    print("--- Steps in the evaluation set =", eps_sim_steps_test)
-
-    eps_ind = rand_eps_ind(train_len_d, AGENT_PARAMS.eps_len_d, n_eps, num_loops, seed_train)
-
-    n_eps_loops = n_eps * num_loops
-
-    return eps_sim_steps_train, eps_sim_steps_cv, eps_sim_steps_test, eps_ind, total_n_steps, n_eps_loops
+        g_e_train[0, 0, :] = self.dict_price_data['gas_price_train'][:-1]     ##########################################MAKE SHORTER##################
+        g_e_train[1, 0, :] = self.dict_price_data['eua_price_train'][:-1]
+        g_e_cv[0, 0, :] = self.dict_price_data['gas_price_cv'][:-1]
+        g_e_cv[1, 0, :] = self.dict_price_data['eua_price_cv'][:-1]
+        g_e_test[0, 0, :] = self.dict_price_data['gas_price_test'][:-1]
+        g_e_test[1, 0, :] = self.dict_price_data['eua_price_test'][:-1]
+        g_e_train[0, 1, :] = self.dict_price_data['gas_price_train'][1:]
+        g_e_train[1, 1, :] = self.dict_price_data['eua_price_train'][1:]
+        g_e_cv[0, 1, :] = self.dict_price_data['gas_price_cv'][1:]
+        g_e_cv[1, 1, :] = self.dict_price_data['eua_price_cv'][1:]
+        g_e_test[0, 1, :] = self.dict_price_data['gas_price_test'][1:]
+        g_e_test[1, 1, :] = self.dict_price_data['eua_price_test'][1:]
 
 
-def rand_eps_ind(train_len_d: int, eps_len_d: int, n_eps: int, num_loops: int, seed: int):
-    """
-    The agent can either use the total training set in one episode (train_len_d == eps_len_d) or
-    divide the total training set into smaller subsets (train_len_d_i > eps_len_d). In the latter case, the
-    subsets where selected randomly
-    :param train_len_d: Total number of days in the training set
-    :param eps_len_d: Number of days in one training episode
-    :param n_eps: Number of training subsets
-    :param num_loops: Number of loops over the total training set
-    :param seed: random seed of the trainings set
-    :return: eps_ind: contains indexes of the training subsets
-    """
+    def define_episodes(self):
+        """
+        Defines specifications for training and evaluation episodes
+        :return eps_sim_steps_train: Number of steps in the training set per episode
+                eps_sim_steps_test: Number of steps in the test set per episode
+                eps_ind: contains indexes of the training subsets
+                n_eps_loops: No. of training subsets times No. of loops
+        """
 
-    np.random.seed(seed)
+        print("Define episodes and step size limits...")
+        # No. of days in the test set ("-1" excludes the day-ahead overhead)
+        cv_len_d = len(self.dict_price_data['gas_price_cv']) - 1
+        test_len_d = len(self.dict_price_data['gas_price_test']) - 1
 
-    overhead_factor = 3     # to account for randomn selection of ep_index of the different processes in multiprocessing
+        # Split up the entire training set into several smaller subsets which represents an own episodes
+        self.n_eps = int(self.ENV_PARAMS.train_len_d / self.ENV_PARAMS.eps_len_d)  # number of training subsets
+        
+        eps_len = 24 * 3600 * self.ENV_PARAMS.eps_len_d  # episode length in seconds
 
-    if train_len_d == eps_len_d:
-        eps_ind = np.zeros(int(n_eps*num_loops*overhead_factor))
-    elif train_len_d > eps_len_d:
-        # random selection with sampling with replacement
-        num_ep = np.linspace(start=0, stop=n_eps-1, num=n_eps)
-        random_ep = np.zeros((num_loops*overhead_factor, n_eps))
-        for i in range(num_loops*overhead_factor):
-            random_ep[i, :] = num_ep
-            np.random.shuffle(random_ep[i, :])
-        eps_ind = random_ep.reshape(int(n_eps*num_loops*overhead_factor)).astype(int)
-    else:
-        assert False, "train_len_d >= eps_len_d!"
+        # Number of steps in train and test sets per episode
+        self.eps_sim_steps_train = int(eps_len / self.ENV_PARAMS.sim_step)
+        self.eps_sim_steps_cv = int(24 * 3600 * cv_len_d / self.ENV_PARAMS.sim_step)
+        self.eps_sim_steps_test = int(24 * 3600 * test_len_d /self. ENV_PARAMS.sim_step)
 
-    return eps_ind
+        # Define total number of steps for all workers together
+        self.num_loops = int(self.TRAIN_PARAMS.total_steps / (self.eps_sim_steps_train * self.n_eps))  # Number of loops over the total training set
+        print("--- Total number of training steps =", self.TRAIN_PARAMS.total_steps)
+        print("--- No. of loops over the entire training set =", self.num_loops)
+        print("--- Training steps per episode =", self.eps_sim_steps_train)
+        print("--- Steps in the evaluation set =", self.eps_sim_steps_test)
+
+        self.eps_ind = self.rand_eps_ind()
+
+        self.n_eps_loops = self.n_eps * self.num_loops
 
 
-def dict_env_kwargs(eps_ind, e_r_b, g_e, dict_op_data, eps_sim_steps, n_eps, r_level, type="train"):
-    """
-    Returns global model parameters and hyper parameters applied in the PtG environment as a dictionary
-    :param eps_ind: contains indexes of the training subsets
-    :param e_r_b: np.array which stores elec. price data, potential reward, and boolean identifier
-    :param g_e: np.array which stores gas and eua price data
-    :param dict_op_data: dictionary with potential reward [pot_rew...] and boolean reward identifier [part_full_b...]
-    :param eps_sim_steps: training/test episode length
-    :param n_eps: No. of training subsets
-    :param type: specifies either the training set "train" or the cv/ test set "cv_test"
-    :return: env_kwargs: dictionary with global parameters and hyperparameters
-    """
+    def rand_eps_ind(train_len_d: int, eps_len_d: int, n_eps: int, num_loops: int, seed: int):
+        """
+        The agent can either use the total training set in one episode (train_len_d == eps_len_d) or
+        divide the total training set into smaller subsets (train_len_d_i > eps_len_d). In the latter case, the
+        subsets where selected randomly
+        :param train_len_d: Total number of days in the training set
+        :param eps_len_d: Number of days in one training episode
+        :param n_eps: Number of training subsets
+        :param num_loops: Number of loops over the total training set
+        :param seed: random seed of the trainings set
+        :return: eps_ind: contains indexes of the training subsets
+        """
 
-    ENV_PARAMS = EnvParams()
-    AGENT_PARAMS = AgentParams()
+        np.random.seed(seed)
 
-    env_kwargs = {}
+        overhead_factor = 3     # to account for randomn selection of ep_index of the different processes in multiprocessing
 
-    env_kwargs["ptg_state_space['standby']"] = ENV_PARAMS.ptg_state_space['standby']
-    env_kwargs["ptg_state_space['cooldown']"] = ENV_PARAMS.ptg_state_space['cooldown']
-    env_kwargs["ptg_state_space['startup']"] = ENV_PARAMS.ptg_state_space['startup']
-    env_kwargs["ptg_state_space['partial_load']"] = ENV_PARAMS.ptg_state_space['partial_load']
-    env_kwargs["ptg_state_space['full_load']"] = ENV_PARAMS.ptg_state_space['full_load']
+        if train_len_d == eps_len_d:
+            eps_ind = np.zeros(int(n_eps*num_loops*overhead_factor))
+        elif train_len_d > eps_len_d:
+            # random selection with sampling with replacement
+            num_ep = np.linspace(start=0, stop=n_eps-1, num=n_eps)
+            random_ep = np.zeros((num_loops*overhead_factor, n_eps))
+            for i in range(num_loops*overhead_factor):
+                random_ep[i, :] = num_ep
+                np.random.shuffle(random_ep[i, :])
+            eps_ind = random_ep.reshape(int(n_eps*num_loops*overhead_factor)).astype(int)
+        else:
+            assert False, "train_len_d >= eps_len_d!"
 
-    env_kwargs["noise"] = ENV_PARAMS.noise
-    env_kwargs["parallel"] = ENV_PARAMS.parallel
-    env_kwargs["eps_ind"] = eps_ind                     # differ in train and test set
-    env_kwargs["eps_len_d"] = AGENT_PARAMS.eps_len_d
-    env_kwargs["sim_step"] = AGENT_PARAMS.sim_step
-    env_kwargs["time_step_op"] = ENV_PARAMS.time_step_op
-    env_kwargs["price_ahead"] = ENV_PARAMS.price_ahead
-    env_kwargs["n_eps_loops"] = n_eps
+        return eps_ind
 
-    env_kwargs["e_r_b"] = e_r_b                         # differ in train and test set
-    env_kwargs["g_e"] = g_e                             # differ in train and test set
 
-    env_kwargs["dict_op_data['startup_cold']"] = dict_op_data['startup_cold']
-    env_kwargs["dict_op_data['startup_hot']"] = dict_op_data['startup_hot']
-    env_kwargs["dict_op_data['cooldown']"] = dict_op_data['cooldown']
-    env_kwargs["dict_op_data['standby_down']"] = dict_op_data['standby_down']
-    env_kwargs["dict_op_data['standby_up']"] = dict_op_data['standby_up']
-    env_kwargs["dict_op_data['op1_start_p']"] = dict_op_data['op1_start_p']
-    env_kwargs["dict_op_data['op2_start_f']"] = dict_op_data['op2_start_f']
-    env_kwargs["dict_op_data['op3_p_f']"] = dict_op_data['op3_p_f']
-    env_kwargs["dict_op_data['op4_p_f_p_5']"] = dict_op_data['op4_p_f_p_5']
-    env_kwargs["dict_op_data['op5_p_f_p_10']"] = dict_op_data['op5_p_f_p_10']
-    env_kwargs["dict_op_data['op6_p_f_p_15']"] = dict_op_data['op6_p_f_p_15']
-    env_kwargs["dict_op_data['op7_p_f_p_22']"] = dict_op_data['op7_p_f_p_22']
-    env_kwargs["dict_op_data['op8_f_p']"] = dict_op_data['op8_f_p']
-    env_kwargs["dict_op_data['op9_f_p_f_5']"] = dict_op_data['op9_f_p_f_5']
-    env_kwargs["dict_op_data['op10_f_p_f_10']"] = dict_op_data['op10_f_p_f_10']
-    env_kwargs["dict_op_data['op11_f_p_f_15']"] = dict_op_data['op11_f_p_f_15']
-    env_kwargs["dict_op_data['op12_f_p_f_20']"] = dict_op_data['op12_f_p_f_20']
+    def dict_env_kwargs(eps_ind, e_r_b, g_e, dict_op_data, eps_sim_steps, n_eps, r_level, type="train"):
+        """
+        Returns global model parameters and hyper parameters applied in the PtG environment as a dictionary
+        :param eps_ind: contains indexes of the training subsets
+        :param e_r_b: np.array which stores elec. price data, potential reward, and boolean identifier
+        :param g_e: np.array which stores gas and eua price data
+        :param dict_op_data: dictionary with potential reward [pot_rew...] and boolean reward identifier [part_full_b...]
+        :param eps_sim_steps: training/test episode length
+        :param n_eps: No. of training subsets
+        :param type: specifies either the training set "train" or the cv/ test set "cv_test"
+        :return: env_kwargs: dictionary with global parameters and hyperparameters
+        """
 
-    env_kwargs["scenario"] = ENV_PARAMS.scenario
+        env_kwargs = {}
 
-    env_kwargs["convert_mol_to_Nm3"] = ENV_PARAMS.convert_mol_to_Nm3
-    env_kwargs["H_u_CH4"] = ENV_PARAMS.H_u_CH4
-    env_kwargs["H_u_H2"] = ENV_PARAMS.H_u_H2
-    env_kwargs["dt_water"] = ENV_PARAMS.dt_water
-    env_kwargs["cp_water"] = ENV_PARAMS.cp_water
-    env_kwargs["rho_water"] = ENV_PARAMS.rho_water
-    env_kwargs["Molar_mass_CO2"] = ENV_PARAMS.Molar_mass_CO2
-    env_kwargs["Molar_mass_H2O"] = ENV_PARAMS.Molar_mass_H2O
-    env_kwargs["h_H2O_evap"] = ENV_PARAMS.h_H2O_evap
-    env_kwargs["eeg_el_price"] = ENV_PARAMS.eeg_el_price
-    env_kwargs["heat_price"] = ENV_PARAMS.heat_price
-    env_kwargs["o2_price"] = ENV_PARAMS.o2_price
-    env_kwargs["water_price"] = ENV_PARAMS.water_price
-    env_kwargs["min_load_electrolyzer"] = ENV_PARAMS.min_load_electrolyzer
-    env_kwargs["max_h2_volumeflow"] = ENV_PARAMS.max_h2_volumeflow
-    env_kwargs["eta_BHKW"] = ENV_PARAMS.eta_BHKW
+        env_kwargs["ptg_state_space['standby']"] = ENV_PARAMS.ptg_state_space['standby']
+        env_kwargs["ptg_state_space['cooldown']"] = ENV_PARAMS.ptg_state_space['cooldown']
+        env_kwargs["ptg_state_space['startup']"] = ENV_PARAMS.ptg_state_space['startup']
+        env_kwargs["ptg_state_space['partial_load']"] = ENV_PARAMS.ptg_state_space['partial_load']
+        env_kwargs["ptg_state_space['full_load']"] = ENV_PARAMS.ptg_state_space['full_load']
 
-    env_kwargs["t_cat_standby"] = ENV_PARAMS.t_cat_standby
-    env_kwargs["t_cat_startup_cold"] = ENV_PARAMS.t_cat_startup_cold
-    env_kwargs["t_cat_startup_hot"] = ENV_PARAMS.t_cat_startup_hot
-    env_kwargs["time1_start_p_f"] = ENV_PARAMS.time1_start_p_f
-    env_kwargs["time2_start_f_p"] = ENV_PARAMS.time2_start_f_p
-    env_kwargs["time_p_f"] = ENV_PARAMS.time_p_f
-    env_kwargs["time_f_p"] = ENV_PARAMS.time_f_p
-    env_kwargs["time1_p_f_p"] = ENV_PARAMS.time1_p_f_p
-    env_kwargs["time2_p_f_p"] = ENV_PARAMS.time2_p_f_p
-    env_kwargs["time23_p_f_p"] = ENV_PARAMS.time23_p_f_p
-    env_kwargs["time3_p_f_p"] = ENV_PARAMS.time3_p_f_p
-    env_kwargs["time34_p_f_p"] = ENV_PARAMS.time34_p_f_p
-    env_kwargs["time4_p_f_p"] = ENV_PARAMS.time4_p_f_p
-    env_kwargs["time45_p_f_p"] = ENV_PARAMS.time45_p_f_p
-    env_kwargs["time5_p_f_p"] = ENV_PARAMS.time5_p_f_p
-    env_kwargs["time1_f_p_f"] = ENV_PARAMS.time1_f_p_f
-    env_kwargs["time2_f_p_f"] = ENV_PARAMS.time2_f_p_f
-    env_kwargs["time23_f_p_f"] = ENV_PARAMS.time23_f_p_f
-    env_kwargs["time3_f_p_f"] = ENV_PARAMS.time3_f_p_f
-    env_kwargs["time34_f_p_f"] = ENV_PARAMS.time34_f_p_f
-    env_kwargs["time4_f_p_f"] = ENV_PARAMS.time4_f_p_f
-    env_kwargs["time45_f_p_f"] = ENV_PARAMS.time45_f_p_f
-    env_kwargs["time5_f_p_f"] = ENV_PARAMS.time5_f_p_f
-    env_kwargs["i_fully_developed"] = ENV_PARAMS.i_fully_developed
-    env_kwargs["j_fully_developed"] = ENV_PARAMS.j_fully_developed
+        env_kwargs["noise"] = ENV_PARAMS.noise
+        env_kwargs["parallel"] = ENV_PARAMS.parallel
+        env_kwargs["eps_ind"] = eps_ind                     # differ in train and test set
+        env_kwargs["eps_len_d"] = AGENT_PARAMS.eps_len_d
+        env_kwargs["sim_step"] = AGENT_PARAMS.sim_step
+        env_kwargs["time_step_op"] = ENV_PARAMS.time_step_op
+        env_kwargs["price_ahead"] = ENV_PARAMS.price_ahead
+        env_kwargs["n_eps_loops"] = n_eps
 
-    env_kwargs["t_cat_startup_cold"] = ENV_PARAMS.t_cat_startup_cold
-    env_kwargs["t_cat_startup_hot"] = ENV_PARAMS.t_cat_startup_hot
+        env_kwargs["e_r_b"] = e_r_b                         # differ in train and test set
+        env_kwargs["g_e"] = g_e                             # differ in train and test set
 
-    env_kwargs["rew_l_b"] = np.min(e_r_b[1, 0, :])
-    env_kwargs["rew_u_b"] = np.max(e_r_b[1, 0, :])
-    env_kwargs["T_l_b"] = ENV_PARAMS.T_l_b
-    env_kwargs["T_u_b"] = ENV_PARAMS.T_u_b
-    env_kwargs["h2_l_b"] = ENV_PARAMS.h2_l_b
-    env_kwargs["h2_u_b"] = ENV_PARAMS.h2_u_b
-    env_kwargs["ch4_l_b"] = ENV_PARAMS.ch4_l_b
-    env_kwargs["ch4_u_b"] = ENV_PARAMS.ch4_u_b
-    env_kwargs["h2_res_l_b"] = ENV_PARAMS.h2_res_l_b
-    env_kwargs["h2_res_u_b"] = ENV_PARAMS.h2_res_u_b
-    env_kwargs["h2o_l_b"] = ENV_PARAMS.h2o_l_b
-    env_kwargs["h2o_u_b"] = ENV_PARAMS.h2o_u_b
-    env_kwargs["heat_l_b"] = ENV_PARAMS.heat_l_b
-    env_kwargs["heat_u_b"] = ENV_PARAMS.heat_u_b
+        env_kwargs["dict_op_data['startup_cold']"] = dict_op_data['startup_cold']
+        env_kwargs["dict_op_data['startup_hot']"] = dict_op_data['startup_hot']
+        env_kwargs["dict_op_data['cooldown']"] = dict_op_data['cooldown']
+        env_kwargs["dict_op_data['standby_down']"] = dict_op_data['standby_down']
+        env_kwargs["dict_op_data['standby_up']"] = dict_op_data['standby_up']
+        env_kwargs["dict_op_data['op1_start_p']"] = dict_op_data['op1_start_p']
+        env_kwargs["dict_op_data['op2_start_f']"] = dict_op_data['op2_start_f']
+        env_kwargs["dict_op_data['op3_p_f']"] = dict_op_data['op3_p_f']
+        env_kwargs["dict_op_data['op4_p_f_p_5']"] = dict_op_data['op4_p_f_p_5']
+        env_kwargs["dict_op_data['op5_p_f_p_10']"] = dict_op_data['op5_p_f_p_10']
+        env_kwargs["dict_op_data['op6_p_f_p_15']"] = dict_op_data['op6_p_f_p_15']
+        env_kwargs["dict_op_data['op7_p_f_p_22']"] = dict_op_data['op7_p_f_p_22']
+        env_kwargs["dict_op_data['op8_f_p']"] = dict_op_data['op8_f_p']
+        env_kwargs["dict_op_data['op9_f_p_f_5']"] = dict_op_data['op9_f_p_f_5']
+        env_kwargs["dict_op_data['op10_f_p_f_10']"] = dict_op_data['op10_f_p_f_10']
+        env_kwargs["dict_op_data['op11_f_p_f_15']"] = dict_op_data['op11_f_p_f_15']
+        env_kwargs["dict_op_data['op12_f_p_f_20']"] = dict_op_data['op12_f_p_f_20']
 
-    env_kwargs["eps_sim_steps"] = eps_sim_steps         # differ in train and test set
+        env_kwargs["scenario"] = ENV_PARAMS.scenario
 
-    if type == "train":
-        env_kwargs["state_change_penalty"] = AGENT_PARAMS.state_change_penalty
-    elif type == "cv_test":
-        env_kwargs["state_change_penalty"] = 0.0        # no state change penalty during validation
+        env_kwargs["convert_mol_to_Nm3"] = ENV_PARAMS.convert_mol_to_Nm3
+        env_kwargs["H_u_CH4"] = ENV_PARAMS.H_u_CH4
+        env_kwargs["H_u_H2"] = ENV_PARAMS.H_u_H2
+        env_kwargs["dt_water"] = ENV_PARAMS.dt_water
+        env_kwargs["cp_water"] = ENV_PARAMS.cp_water
+        env_kwargs["rho_water"] = ENV_PARAMS.rho_water
+        env_kwargs["Molar_mass_CO2"] = ENV_PARAMS.Molar_mass_CO2
+        env_kwargs["Molar_mass_H2O"] = ENV_PARAMS.Molar_mass_H2O
+        env_kwargs["h_H2O_evap"] = ENV_PARAMS.h_H2O_evap
+        env_kwargs["eeg_el_price"] = ENV_PARAMS.eeg_el_price
+        env_kwargs["heat_price"] = ENV_PARAMS.heat_price
+        env_kwargs["o2_price"] = ENV_PARAMS.o2_price
+        env_kwargs["water_price"] = ENV_PARAMS.water_price
+        env_kwargs["min_load_electrolyzer"] = ENV_PARAMS.min_load_electrolyzer
+        env_kwargs["max_h2_volumeflow"] = ENV_PARAMS.max_h2_volumeflow
+        env_kwargs["eta_BHKW"] = ENV_PARAMS.eta_BHKW
 
-    env_kwargs["reward_level"] = r_level
-    env_kwargs["action_type"] = ENV_PARAMS.action_type
+        env_kwargs["t_cat_standby"] = ENV_PARAMS.t_cat_standby
+        env_kwargs["t_cat_startup_cold"] = ENV_PARAMS.t_cat_startup_cold
+        env_kwargs["t_cat_startup_hot"] = ENV_PARAMS.t_cat_startup_hot
+        env_kwargs["time1_start_p_f"] = ENV_PARAMS.time1_start_p_f
+        env_kwargs["time2_start_f_p"] = ENV_PARAMS.time2_start_f_p
+        env_kwargs["time_p_f"] = ENV_PARAMS.time_p_f
+        env_kwargs["time_f_p"] = ENV_PARAMS.time_f_p
+        env_kwargs["time1_p_f_p"] = ENV_PARAMS.time1_p_f_p
+        env_kwargs["time2_p_f_p"] = ENV_PARAMS.time2_p_f_p
+        env_kwargs["time23_p_f_p"] = ENV_PARAMS.time23_p_f_p
+        env_kwargs["time3_p_f_p"] = ENV_PARAMS.time3_p_f_p
+        env_kwargs["time34_p_f_p"] = ENV_PARAMS.time34_p_f_p
+        env_kwargs["time4_p_f_p"] = ENV_PARAMS.time4_p_f_p
+        env_kwargs["time45_p_f_p"] = ENV_PARAMS.time45_p_f_p
+        env_kwargs["time5_p_f_p"] = ENV_PARAMS.time5_p_f_p
+        env_kwargs["time1_f_p_f"] = ENV_PARAMS.time1_f_p_f
+        env_kwargs["time2_f_p_f"] = ENV_PARAMS.time2_f_p_f
+        env_kwargs["time23_f_p_f"] = ENV_PARAMS.time23_f_p_f
+        env_kwargs["time3_f_p_f"] = ENV_PARAMS.time3_f_p_f
+        env_kwargs["time34_f_p_f"] = ENV_PARAMS.time34_f_p_f
+        env_kwargs["time4_f_p_f"] = ENV_PARAMS.time4_f_p_f
+        env_kwargs["time45_f_p_f"] = ENV_PARAMS.time45_f_p_f
+        env_kwargs["time5_f_p_f"] = ENV_PARAMS.time5_f_p_f
+        env_kwargs["i_fully_developed"] = ENV_PARAMS.i_fully_developed
+        env_kwargs["j_fully_developed"] = ENV_PARAMS.j_fully_developed
 
-    return env_kwargs
+        env_kwargs["t_cat_startup_cold"] = ENV_PARAMS.t_cat_startup_cold
+        env_kwargs["t_cat_startup_hot"] = ENV_PARAMS.t_cat_startup_hot
+
+        env_kwargs["rew_l_b"] = np.min(e_r_b[1, 0, :])
+        env_kwargs["rew_u_b"] = np.max(e_r_b[1, 0, :])
+        env_kwargs["T_l_b"] = ENV_PARAMS.T_l_b
+        env_kwargs["T_u_b"] = ENV_PARAMS.T_u_b
+        env_kwargs["h2_l_b"] = ENV_PARAMS.h2_l_b
+        env_kwargs["h2_u_b"] = ENV_PARAMS.h2_u_b
+        env_kwargs["ch4_l_b"] = ENV_PARAMS.ch4_l_b
+        env_kwargs["ch4_u_b"] = ENV_PARAMS.ch4_u_b
+        env_kwargs["h2_res_l_b"] = ENV_PARAMS.h2_res_l_b
+        env_kwargs["h2_res_u_b"] = ENV_PARAMS.h2_res_u_b
+        env_kwargs["h2o_l_b"] = ENV_PARAMS.h2o_l_b
+        env_kwargs["h2o_u_b"] = ENV_PARAMS.h2o_u_b
+        env_kwargs["heat_l_b"] = ENV_PARAMS.heat_l_b
+        env_kwargs["heat_u_b"] = ENV_PARAMS.heat_u_b
+
+        env_kwargs["eps_sim_steps"] = eps_sim_steps         # differ in train and test set
+
+        if type == "train":
+            env_kwargs["state_change_penalty"] = AGENT_PARAMS.state_change_penalty
+        elif type == "cv_test":
+            env_kwargs["state_change_penalty"] = 0.0        # no state change penalty during validation
+
+        env_kwargs["reward_level"] = r_level
+        env_kwargs["action_type"] = ENV_PARAMS.action_type
+
+        return env_kwargs
 
 
 def multiple_plots(stats_dict: dict, time_step_size: int, plot_name: str):
