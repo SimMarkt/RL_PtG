@@ -143,6 +143,7 @@ class Preprocessing():
         self.ENV_PARAMS = EnvParams()
         self.TRAIN_PARAMS = TrainParams()
         self.dict_price_data = dict_price_data
+        self.dict_op_data = dict_op_data
         self.seed_train = seed_train
         self.dict_pot_r_b = None                    # dictionary with potential reward [pot_rew...] and boolean reward identifier [part_full_b...]
         self.r_level = None                         # Sets the general height of the reward penalty according to electricity, (S)NG, and EUA price levels
@@ -175,6 +176,10 @@ class Preprocessing():
 
         # For Multiprocessing: self.n_eps_loops allows for definition of different eps_ind for different processes (see RL_PtG\env\ptg_gym_env.py)
         self.n_eps_loops = None                 # Total No. of episodes over the entire training procedure 
+
+        self.preprocessing_rew()                                           # Calculate potential reward and boolean identifier
+        self.preprocessing_array()                                         # Transform Day-ahead datasets into np.arrays for calculation purposes
+        self.define_episodes()                                             # define episodes and indices for choosing subsets of the training set randomly          
         
 
     def preprocessing_rew(self):
@@ -265,7 +270,7 @@ class Preprocessing():
 
     def define_episodes(self):
         """
-        Defines specifications for training and evaluation episodes
+            Defines settings for training and evaluation episodes
         """
 
         print("Define episodes and step size limits...")
@@ -318,7 +323,7 @@ class Preprocessing():
             self.eps_ind = random_ep.reshape(int(self.n_eps*self.num_loops*self.overhead_factor)).astype(int)
 
 
-    def dict_env_kwargs(self, dict_op_data, type="train"):
+    def dict_env_kwargs(self, type="train"):
         """
         Returns global model parameters and hyper parameters applied in the PtG environment as a dictionary
         :param dict_op_data: Dictionary with data of dynamic methanation operation
@@ -344,23 +349,23 @@ class Preprocessing():
         env_kwargs["price_ahead"] = self.ENV_PARAMS.price_ahead
         env_kwargs["n_eps_loops"] = self.n_eps_loops
 
-        env_kwargs["dict_op_data['startup_cold']"] = dict_op_data['startup_cold']
-        env_kwargs["dict_op_data['startup_hot']"] = dict_op_data['startup_hot']
-        env_kwargs["dict_op_data['cooldown']"] = dict_op_data['cooldown']
-        env_kwargs["dict_op_data['standby_down']"] = dict_op_data['standby_down']
-        env_kwargs["dict_op_data['standby_up']"] = dict_op_data['standby_up']
-        env_kwargs["dict_op_data['op1_start_p']"] = dict_op_data['op1_start_p']
-        env_kwargs["dict_op_data['op2_start_f']"] = dict_op_data['op2_start_f']
-        env_kwargs["dict_op_data['op3_p_f']"] = dict_op_data['op3_p_f']
-        env_kwargs["dict_op_data['op4_p_f_p_5']"] = dict_op_data['op4_p_f_p_5']
-        env_kwargs["dict_op_data['op5_p_f_p_10']"] = dict_op_data['op5_p_f_p_10']
-        env_kwargs["dict_op_data['op6_p_f_p_15']"] = dict_op_data['op6_p_f_p_15']
-        env_kwargs["dict_op_data['op7_p_f_p_22']"] = dict_op_data['op7_p_f_p_22']
-        env_kwargs["dict_op_data['op8_f_p']"] = dict_op_data['op8_f_p']
-        env_kwargs["dict_op_data['op9_f_p_f_5']"] = dict_op_data['op9_f_p_f_5']
-        env_kwargs["dict_op_data['op10_f_p_f_10']"] = dict_op_data['op10_f_p_f_10']
-        env_kwargs["dict_op_data['op11_f_p_f_15']"] = dict_op_data['op11_f_p_f_15']
-        env_kwargs["dict_op_data['op12_f_p_f_20']"] = dict_op_data['op12_f_p_f_20']
+        env_kwargs["dict_op_data['startup_cold']"] = self.dict_op_data['startup_cold']
+        env_kwargs["dict_op_data['startup_hot']"] = self.dict_op_data['startup_hot']
+        env_kwargs["dict_op_data['cooldown']"] = self.dict_op_data['cooldown']
+        env_kwargs["dict_op_data['standby_down']"] = self.dict_op_data['standby_down']
+        env_kwargs["dict_op_data['standby_up']"] = self.dict_op_data['standby_up']
+        env_kwargs["dict_op_data['op1_start_p']"] = self.dict_op_data['op1_start_p']
+        env_kwargs["dict_op_data['op2_start_f']"] = self.dict_op_data['op2_start_f']
+        env_kwargs["dict_op_data['op3_p_f']"] = self.dict_op_data['op3_p_f']
+        env_kwargs["dict_op_data['op4_p_f_p_5']"] = self.dict_op_data['op4_p_f_p_5']
+        env_kwargs["dict_op_data['op5_p_f_p_10']"] = self.dict_op_data['op5_p_f_p_10']
+        env_kwargs["dict_op_data['op6_p_f_p_15']"] = self.dict_op_data['op6_p_f_p_15']
+        env_kwargs["dict_op_data['op7_p_f_p_22']"] = self.dict_op_data['op7_p_f_p_22']
+        env_kwargs["dict_op_data['op8_f_p']"] = self.dict_op_data['op8_f_p']
+        env_kwargs["dict_op_data['op9_f_p_f_5']"] = self.dict_op_data['op9_f_p_f_5']
+        env_kwargs["dict_op_data['op10_f_p_f_10']"] = self.dict_op_data['op10_f_p_f_10']
+        env_kwargs["dict_op_data['op11_f_p_f_15']"] = self.dict_op_data['op11_f_p_f_15']
+        env_kwargs["dict_op_data['op12_f_p_f_20']"] = self.dict_op_data['op12_f_p_f_20']
 
         env_kwargs["scenario"] = self.ENV_PARAMS.scenario
 
@@ -453,7 +458,7 @@ class Preprocessing():
         env_kwargs["action_type"] = self.AGENT_PARAMS.rl_alg_hyp["action_type"]     # Action type of the algorithm, discrete or continuous
 
         return env_kwargs
-
+    
 
 def multiple_plots(stats_dict: dict, time_step_size: int, plot_name: str):
     """
