@@ -123,6 +123,8 @@ def load_data():
         divisors = [i for i in range(1, ENV_PARAMS.train_len_d + 1) if ENV_PARAMS.train_len_d % i == 0]
         assert False, f'The training set size {ENV_PARAMS.train_len_d} must be divisible by the episode length - data/config_env.yaml -> eps_len_d : {ENV_PARAMS.eps_len_d}; 
                         Possible divisors are: {divisors}'
+    # Ensure that the training set is larger or at least equal to the defined episode length  
+    assert ENV_PARAMS.train_len_d >= ENV_PARAMS.eps_len_d, f'Training set size ({ENV_PARAMS.train_len_d}) must be larger or at least equal to the defined episode length ({ENV_PARAMS.eps_len_d})!'
 
     return dict_price_data, dict_op_data
 
@@ -162,7 +164,17 @@ class Preprocessing():
         self.g_e_train = None
         self.g_e_cv = None
         self.g_e_test = None
+        # Variables for division of the entire training set into different, randomly picked subsets for episodic learing
+        self.eps_sim_steps_train = None         # Number of steps in the training set per episode
+        self.eps_sim_steps_test = None          # Number of steps in the test set
+        self.eps_ind = None                     # Contains indexes of the randomly ordered training subsets
+        self.overhead_factor = 3                # Overhead of self.eps_ind - To account for randomn selection of the different processes in multiprocessing
+        self.n_eps = None                       # Episode length in seconds
+        self.num_loops = None                   # No. of loops over the total training set during training
 
+        # For Multiprocessing: self.n_eps_loops allows for definition of different eps_ind for different processes (see RL_PtG\env\ptg_gym_env.py)
+        self.n_eps_loops = None                 # Total No. of episodes over the entire training procedure 
+        
 
     def preprocessing_rew(self):
         """
@@ -172,7 +184,8 @@ class Preprocessing():
             :return r_level: ###################################################################################################################################?????????
         """
 
-        # compute methanation operation data for theoretical optimum (ignoring dynamics) ##########################################MAKE SHORTER##################
+        # Compute methanation operation data for theoretical optimum (ignoring dynamics) ##########################################MAKE SHORTER##################
+        # calculate_optimum() had been excluded from Preprocessing() and placed in the different rl_opt.py file for the sake of clarity
         stats_dict_opt_train = calculate_optimum(self.dict_price_data['el_price_train'], self.dict_price_data['gas_price_train'],
                                                 self.dict_price_data['eua_price_train'], "Train")
         stats_dict_opt_cv = calculate_optimum(self.dict_price_data['el_price_cv'], self.dict_price_data['gas_price_cv'],
@@ -219,7 +232,7 @@ class Preprocessing():
         e_r_b_cv = np.zeros((3, self.ENV_PARAMS.price_ahead, self.dict_price_data['el_price_cv'].shape[0] - self.ENV_PARAMS.price_ahead))
         e_r_b_test = np.zeros((3, self.ENV_PARAMS.price_ahead, self.dict_price_data['el_price_test'].shape[0] - self.ENV_PARAMS.price_ahead))
 
-        for i in range(ENV_PARAMS.price_ahead):     ##########################################MAKE SHORTER##################
+        for i in range(self.ENV_PARAMS.price_ahead):     ##########################################MAKE SHORTER##################
             e_r_b_train[0, i, :] = self.dict_price_data['el_price_train'][i:(-self.ENV_PARAMS.price_ahead + i)]
             e_r_b_train[1, i, :] = self.dict_pot_r_b['pot_rew_train'][i:(-self.ENV_PARAMS.price_ahead + i)]
             e_r_b_train[2, i, :] = self.dict_pot_r_b['part_full_b_train'][i:(-self.ENV_PARAMS.price_ahead + i)]
@@ -252,10 +265,6 @@ class Preprocessing():
     def define_episodes(self):
         """
         Defines specifications for training and evaluation episodes
-        :return eps_sim_steps_train: Number of steps in the training set per episode
-                eps_sim_steps_test: Number of steps in the test set per episode
-                eps_ind: contains indexes of the training subsets
-                n_eps_loops: No. of training subsets times No. of loops
         """
 
         print("Define episodes and step size limits...")
@@ -264,12 +273,12 @@ class Preprocessing():
         test_len_d = len(self.dict_price_data['gas_price_test']) - 1
 
         # Split up the entire training set into several smaller subsets which represents an own episodes
-        self.n_eps = int(self.ENV_PARAMS.train_len_d / self.ENV_PARAMS.eps_len_d)  # number of training subsets
+        self.n_eps = int(self.ENV_PARAMS.train_len_d / self.ENV_PARAMS.eps_len_d)  # Number of training subsets/episodes per training procedure
         
-        eps_len = 24 * 3600 * self.ENV_PARAMS.eps_len_d  # episode length in seconds
+        self.eps_len = 24 * 3600 * self.ENV_PARAMS.eps_len_d  # episode length in seconds
 
         # Number of steps in train and test sets per episode
-        self.eps_sim_steps_train = int(eps_len / self.ENV_PARAMS.sim_step)
+        self.eps_sim_steps_train = int(self.eps_len / self.ENV_PARAMS.sim_step)
         self.eps_sim_steps_cv = int(24 * 3600 * cv_len_d / self.ENV_PARAMS.sim_step)
         self.eps_sim_steps_test = int(24 * 3600 * test_len_d /self. ENV_PARAMS.sim_step)
 
@@ -280,76 +289,61 @@ class Preprocessing():
         print("--- Training steps per episode =", self.eps_sim_steps_train)
         print("--- Steps in the evaluation set =", self.eps_sim_steps_test)
 
-        self.eps_ind = self.rand_eps_ind()
+        # Create random selection routine with replacement for the different training subsets
+        self.rand_eps_ind()
 
-        self.n_eps_loops = self.n_eps * self.num_loops
+        # For Multiprocessing, eps_ind should not shared between different processes
+        self.n_eps_loops = self.n_eps * self.num_loops  # Allows for definition of different eps_ind in Multiprocessing (see RL_PtG\env\ptg_gym_env.py)
 
 
-    def rand_eps_ind(train_len_d: int, eps_len_d: int, n_eps: int, num_loops: int, seed: int):
+    def rand_eps_ind(self):
         """
         The agent can either use the total training set in one episode (train_len_d == eps_len_d) or
         divide the total training set into smaller subsets (train_len_d_i > eps_len_d). In the latter case, the
         subsets where selected randomly
-        :param train_len_d: Total number of days in the training set
-        :param eps_len_d: Number of days in one training episode
-        :param n_eps: Number of training subsets
-        :param num_loops: Number of loops over the total training set
-        :param seed: random seed of the trainings set
-        :return: eps_ind: contains indexes of the training subsets
         """
 
-        np.random.seed(seed)
+        np.random.seed(self.seed_train)     # Set the random seed for random episode selection
 
-        overhead_factor = 3     # to account for randomn selection of ep_index of the different processes in multiprocessing
-
-        if train_len_d == eps_len_d:
-            eps_ind = np.zeros(int(n_eps*num_loops*overhead_factor))
-        elif train_len_d > eps_len_d:
-            # random selection with sampling with replacement
-            num_ep = np.linspace(start=0, stop=n_eps-1, num=n_eps)
-            random_ep = np.zeros((num_loops*overhead_factor, n_eps))
-            for i in range(num_loops*overhead_factor):
+        if self.ENV_PARAMS.train_len_d == self.ENV_PARAMS.eps_len_d:
+            self.eps_ind = np.zeros(int(self.n_eps*self.num_loops*self.overhead_factor))
+        else:           # self.ENV_PARAMS.train_len_d > self.ENV_PARAMS.eps_len_d:
+            # Random selection with sampling with replacement
+            num_ep = np.linspace(start=0, stop=self.n_eps-1, num=self.n_eps)
+            random_ep = np.zeros((self.num_loops*self.overhead_factor, self.n_eps))
+            for i in range(self.num_loops*self.overhead_factor):
                 random_ep[i, :] = num_ep
                 np.random.shuffle(random_ep[i, :])
-            eps_ind = random_ep.reshape(int(n_eps*num_loops*overhead_factor)).astype(int)
-        else:
-            assert False, "train_len_d >= eps_len_d!"
-
-        return eps_ind
+            self.eps_ind = random_ep.reshape(int(self.n_eps*self.num_loops*self.overhead_factor)).astype(int)
 
 
-    def dict_env_kwargs(eps_ind, e_r_b, g_e, dict_op_data, eps_sim_steps, n_eps, r_level, type="train"):
+    def dict_env_kwargs(self, dict_op_data, type="train"):
         """
         Returns global model parameters and hyper parameters applied in the PtG environment as a dictionary
-        :param eps_ind: contains indexes of the training subsets
-        :param e_r_b: np.array which stores elec. price data, potential reward, and boolean identifier
-        :param g_e: np.array which stores gas and eua price data
-        :param dict_op_data: dictionary with potential reward [pot_rew...] and boolean reward identifier [part_full_b...]
-        :param eps_sim_steps: training/test episode length
-        :param n_eps: No. of training subsets
-        :param type: specifies either the training set "train" or the cv/ test set "cv_test"
-        :return: env_kwargs: dictionary with global parameters and hyperparameters
+        :param dict_op_data: Dictionary with data of dynamic methanation operation
+        :param type: Specifies either the training set "train" or the cv/ test set "cv_test"
+        :return: env_kwargs: Dictionary with global parameters and hyperparameters
         """
 
         env_kwargs = {}
 
-        env_kwargs["ptg_state_space['standby']"] = ENV_PARAMS.ptg_state_space['standby']
-        env_kwargs["ptg_state_space['cooldown']"] = ENV_PARAMS.ptg_state_space['cooldown']
-        env_kwargs["ptg_state_space['startup']"] = ENV_PARAMS.ptg_state_space['startup']
-        env_kwargs["ptg_state_space['partial_load']"] = ENV_PARAMS.ptg_state_space['partial_load']
-        env_kwargs["ptg_state_space['full_load']"] = ENV_PARAMS.ptg_state_space['full_load']
+        env_kwargs["ptg_state_space['standby']"] = self.ENV_PARAMS.ptg_state_space['standby'] ###################MAKE SHORTER #####################
+        env_kwargs["ptg_state_space['cooldown']"] = self.ENV_PARAMS.ptg_state_space['cooldown']
+        env_kwargs["ptg_state_space['startup']"] = self.ENV_PARAMS.ptg_state_space['startup']
+        env_kwargs["ptg_state_space['partial_load']"] = self.ENV_PARAMS.ptg_state_space['partial_load']
+        env_kwargs["ptg_state_space['full_load']"] = self.ENV_PARAMS.ptg_state_space['full_load']
 
-        env_kwargs["noise"] = ENV_PARAMS.noise
-        env_kwargs["parallel"] = ENV_PARAMS.parallel
-        env_kwargs["eps_ind"] = eps_ind                     # differ in train and test set
-        env_kwargs["eps_len_d"] = AGENT_PARAMS.eps_len_d
-        env_kwargs["sim_step"] = AGENT_PARAMS.sim_step
-        env_kwargs["time_step_op"] = ENV_PARAMS.time_step_op
-        env_kwargs["price_ahead"] = ENV_PARAMS.price_ahead
-        env_kwargs["n_eps_loops"] = n_eps
+        env_kwargs["noise"] = self.ENV_PARAMS.noise
+        env_kwargs["parallel"] = self.TRAIN_PARAMS.parallel
+        env_kwargs["eps_len_d"] = self.ENV_PARAMS.eps_len_d
+        env_kwargs["sim_step"] = self.ENV_PARAMS.sim_step
+        env_kwargs["time_step_op"] = self.ENV_PARAMS.time_step_op
+        env_kwargs["price_ahead"] = self.ENV_PARAMS.price_ahead
+        env_kwargs["n_eps_loops"] = self.n_eps_loops
 
-        env_kwargs["e_r_b"] = e_r_b                         # differ in train and test set
-        env_kwargs["g_e"] = g_e                             # differ in train and test set
+        env_kwargs["eps_ind"] = self.eps_ind                     # differ in train and test set
+        env_kwargs["e_r_b"] = self.e_r_b                         # differ in train and test set
+        env_kwargs["g_e"] = self.g_e                             # differ in train and test set
 
         env_kwargs["dict_op_data['startup_cold']"] = dict_op_data['startup_cold']
         env_kwargs["dict_op_data['startup_hot']"] = dict_op_data['startup_hot']
