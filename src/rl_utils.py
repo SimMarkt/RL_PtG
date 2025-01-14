@@ -132,7 +132,7 @@ class Preprocessing():
     """
         A class that contains variables and functions for preprocessing of energy market and process data
     """
-    def __init__(self, dict_price_data, seed_train):
+    def __init__(self, dict_price_data, dict_op_data, seed_train):
         """
             Initialization of variables
             :param dict_price_data: dictionary with market data
@@ -166,6 +166,7 @@ class Preprocessing():
         self.g_e_test = None
         # Variables for division of the entire training set into different, randomly picked subsets for episodic learing
         self.eps_sim_steps_train = None         # Number of steps in the training set per episode
+        self.eps_sim_steps_cv = None            # Number of steps in the validation set
         self.eps_sim_steps_test = None          # Number of steps in the test set
         self.eps_ind = None                     # Contains indexes of the randomly ordered training subsets
         self.overhead_factor = 3                # Overhead of self.eps_ind - To account for randomn selection of the different processes in multiprocessing
@@ -326,8 +327,10 @@ class Preprocessing():
         """
 
         env_kwargs = {}
+        ###################MAKE SHORTER #####################
+        # More information on the environment's parameters are present in RL_PtG/src/rl_param_env.py
 
-        env_kwargs["ptg_state_space['standby']"] = self.ENV_PARAMS.ptg_state_space['standby'] ###################MAKE SHORTER #####################
+        env_kwargs["ptg_state_space['standby']"] = self.ENV_PARAMS.ptg_state_space['standby'] 
         env_kwargs["ptg_state_space['cooldown']"] = self.ENV_PARAMS.ptg_state_space['cooldown']
         env_kwargs["ptg_state_space['startup']"] = self.ENV_PARAMS.ptg_state_space['startup']
         env_kwargs["ptg_state_space['partial_load']"] = self.ENV_PARAMS.ptg_state_space['partial_load']
@@ -340,10 +343,6 @@ class Preprocessing():
         env_kwargs["time_step_op"] = self.ENV_PARAMS.time_step_op
         env_kwargs["price_ahead"] = self.ENV_PARAMS.price_ahead
         env_kwargs["n_eps_loops"] = self.n_eps_loops
-
-        env_kwargs["eps_ind"] = self.eps_ind                     # differ in train and test set
-        env_kwargs["e_r_b"] = self.e_r_b                         # differ in train and test set
-        env_kwargs["g_e"] = self.g_e                             # differ in train and test set
 
         env_kwargs["dict_op_data['startup_cold']"] = dict_op_data['startup_cold']
         env_kwargs["dict_op_data['startup_hot']"] = dict_op_data['startup_hot']
@@ -363,78 +362,95 @@ class Preprocessing():
         env_kwargs["dict_op_data['op11_f_p_f_15']"] = dict_op_data['op11_f_p_f_15']
         env_kwargs["dict_op_data['op12_f_p_f_20']"] = dict_op_data['op12_f_p_f_20']
 
-        env_kwargs["scenario"] = ENV_PARAMS.scenario
+        env_kwargs["scenario"] = self.ENV_PARAMS.scenario
 
-        env_kwargs["convert_mol_to_Nm3"] = ENV_PARAMS.convert_mol_to_Nm3
-        env_kwargs["H_u_CH4"] = ENV_PARAMS.H_u_CH4
-        env_kwargs["H_u_H2"] = ENV_PARAMS.H_u_H2
-        env_kwargs["dt_water"] = ENV_PARAMS.dt_water
-        env_kwargs["cp_water"] = ENV_PARAMS.cp_water
-        env_kwargs["rho_water"] = ENV_PARAMS.rho_water
-        env_kwargs["Molar_mass_CO2"] = ENV_PARAMS.Molar_mass_CO2
-        env_kwargs["Molar_mass_H2O"] = ENV_PARAMS.Molar_mass_H2O
-        env_kwargs["h_H2O_evap"] = ENV_PARAMS.h_H2O_evap
-        env_kwargs["eeg_el_price"] = ENV_PARAMS.eeg_el_price
-        env_kwargs["heat_price"] = ENV_PARAMS.heat_price
-        env_kwargs["o2_price"] = ENV_PARAMS.o2_price
-        env_kwargs["water_price"] = ENV_PARAMS.water_price
-        env_kwargs["min_load_electrolyzer"] = ENV_PARAMS.min_load_electrolyzer
-        env_kwargs["max_h2_volumeflow"] = ENV_PARAMS.max_h2_volumeflow
-        env_kwargs["eta_BHKW"] = ENV_PARAMS.eta_BHKW
+        env_kwargs["convert_mol_to_Nm3"] = self.ENV_PARAMS.convert_mol_to_Nm3
+        env_kwargs["H_u_CH4"] = self.ENV_PARAMS.H_u_CH4
+        env_kwargs["H_u_H2"] = self.ENV_PARAMS.H_u_H2
+        env_kwargs["dt_water"] = self.ENV_PARAMS.dt_water
+        env_kwargs["cp_water"] = self.ENV_PARAMS.cp_water
+        env_kwargs["rho_water"] = self.ENV_PARAMS.rho_water
+        env_kwargs["Molar_mass_CO2"] = self.ENV_PARAMS.Molar_mass_CO2
+        env_kwargs["Molar_mass_H2O"] = self.ENV_PARAMS.Molar_mass_H2O
+        env_kwargs["h_H2O_evap"] = self.ENV_PARAMS.h_H2O_evap
+        env_kwargs["eeg_el_price"] = self.ENV_PARAMS.eeg_el_price
+        env_kwargs["heat_price"] = self.ENV_PARAMS.heat_price
+        env_kwargs["o2_price"] = self.ENV_PARAMS.o2_price
+        env_kwargs["water_price"] = self.ENV_PARAMS.water_price
+        env_kwargs["min_load_electrolyzer"] = self.ENV_PARAMS.min_load_electrolyzer
+        env_kwargs["max_h2_volumeflow"] = self.ENV_PARAMS.max_h2_volumeflow
+        env_kwargs["eta_CHP"] = self.ENV_PARAMS.eta_CHP
 
-        env_kwargs["t_cat_standby"] = ENV_PARAMS.t_cat_standby
-        env_kwargs["t_cat_startup_cold"] = ENV_PARAMS.t_cat_startup_cold
-        env_kwargs["t_cat_startup_hot"] = ENV_PARAMS.t_cat_startup_hot
-        env_kwargs["time1_start_p_f"] = ENV_PARAMS.time1_start_p_f
-        env_kwargs["time2_start_f_p"] = ENV_PARAMS.time2_start_f_p
-        env_kwargs["time_p_f"] = ENV_PARAMS.time_p_f
-        env_kwargs["time_f_p"] = ENV_PARAMS.time_f_p
-        env_kwargs["time1_p_f_p"] = ENV_PARAMS.time1_p_f_p
-        env_kwargs["time2_p_f_p"] = ENV_PARAMS.time2_p_f_p
-        env_kwargs["time23_p_f_p"] = ENV_PARAMS.time23_p_f_p
-        env_kwargs["time3_p_f_p"] = ENV_PARAMS.time3_p_f_p
-        env_kwargs["time34_p_f_p"] = ENV_PARAMS.time34_p_f_p
-        env_kwargs["time4_p_f_p"] = ENV_PARAMS.time4_p_f_p
-        env_kwargs["time45_p_f_p"] = ENV_PARAMS.time45_p_f_p
-        env_kwargs["time5_p_f_p"] = ENV_PARAMS.time5_p_f_p
-        env_kwargs["time1_f_p_f"] = ENV_PARAMS.time1_f_p_f
-        env_kwargs["time2_f_p_f"] = ENV_PARAMS.time2_f_p_f
-        env_kwargs["time23_f_p_f"] = ENV_PARAMS.time23_f_p_f
-        env_kwargs["time3_f_p_f"] = ENV_PARAMS.time3_f_p_f
-        env_kwargs["time34_f_p_f"] = ENV_PARAMS.time34_f_p_f
-        env_kwargs["time4_f_p_f"] = ENV_PARAMS.time4_f_p_f
-        env_kwargs["time45_f_p_f"] = ENV_PARAMS.time45_f_p_f
-        env_kwargs["time5_f_p_f"] = ENV_PARAMS.time5_f_p_f
-        env_kwargs["i_fully_developed"] = ENV_PARAMS.i_fully_developed
-        env_kwargs["j_fully_developed"] = ENV_PARAMS.j_fully_developed
+        env_kwargs["t_cat_standby"] = self.ENV_PARAMS.t_cat_standby
+        env_kwargs["t_cat_startup_cold"] = self.ENV_PARAMS.t_cat_startup_cold
+        env_kwargs["t_cat_startup_hot"] = self.ENV_PARAMS.t_cat_startup_hot
+        env_kwargs["time1_start_p_f"] = self.ENV_PARAMS.time1_start_p_f
+        env_kwargs["time2_start_f_p"] = self.ENV_PARAMS.time2_start_f_p
+        env_kwargs["time_p_f"] = self.ENV_PARAMS.time_p_f
+        env_kwargs["time_f_p"] = self.ENV_PARAMS.time_f_p
+        env_kwargs["time1_p_f_p"] = self.ENV_PARAMS.time1_p_f_p
+        env_kwargs["time2_p_f_p"] = self.ENV_PARAMS.time2_p_f_p
+        env_kwargs["time23_p_f_p"] = self.ENV_PARAMS.time23_p_f_p
+        env_kwargs["time3_p_f_p"] = self.ENV_PARAMS.time3_p_f_p
+        env_kwargs["time34_p_f_p"] = self.ENV_PARAMS.time34_p_f_p
+        env_kwargs["time4_p_f_p"] = self.ENV_PARAMS.time4_p_f_p
+        env_kwargs["time45_p_f_p"] = self.ENV_PARAMS.time45_p_f_p
+        env_kwargs["time5_p_f_p"] = self.ENV_PARAMS.time5_p_f_p
+        env_kwargs["time1_f_p_f"] = self.ENV_PARAMS.time1_f_p_f
+        env_kwargs["time2_f_p_f"] = self.ENV_PARAMS.time2_f_p_f
+        env_kwargs["time23_f_p_f"] = self.ENV_PARAMS.time23_f_p_f
+        env_kwargs["time3_f_p_f"] = self.ENV_PARAMS.time3_f_p_f
+        env_kwargs["time34_f_p_f"] = self.ENV_PARAMS.time34_f_p_f
+        env_kwargs["time4_f_p_f"] = self.ENV_PARAMS.time4_f_p_f
+        env_kwargs["time45_f_p_f"] = self.ENV_PARAMS.time45_f_p_f
+        env_kwargs["time5_f_p_f"] = self.ENV_PARAMS.time5_f_p_f
+        env_kwargs["i_fully_developed"] = self.ENV_PARAMS.i_fully_developed
+        env_kwargs["j_fully_developed"] = self.ENV_PARAMS.j_fully_developed
 
-        env_kwargs["t_cat_startup_cold"] = ENV_PARAMS.t_cat_startup_cold
-        env_kwargs["t_cat_startup_hot"] = ENV_PARAMS.t_cat_startup_hot
+        env_kwargs["t_cat_startup_cold"] = self.ENV_PARAMS.t_cat_startup_cold
+        env_kwargs["t_cat_startup_hot"] = self.ENV_PARAMS.t_cat_startup_hot
 
-        env_kwargs["rew_l_b"] = np.min(e_r_b[1, 0, :])
-        env_kwargs["rew_u_b"] = np.max(e_r_b[1, 0, :])
-        env_kwargs["T_l_b"] = ENV_PARAMS.T_l_b
-        env_kwargs["T_u_b"] = ENV_PARAMS.T_u_b
-        env_kwargs["h2_l_b"] = ENV_PARAMS.h2_l_b
-        env_kwargs["h2_u_b"] = ENV_PARAMS.h2_u_b
-        env_kwargs["ch4_l_b"] = ENV_PARAMS.ch4_l_b
-        env_kwargs["ch4_u_b"] = ENV_PARAMS.ch4_u_b
-        env_kwargs["h2_res_l_b"] = ENV_PARAMS.h2_res_l_b
-        env_kwargs["h2_res_u_b"] = ENV_PARAMS.h2_res_u_b
-        env_kwargs["h2o_l_b"] = ENV_PARAMS.h2o_l_b
-        env_kwargs["h2o_u_b"] = ENV_PARAMS.h2o_u_b
-        env_kwargs["heat_l_b"] = ENV_PARAMS.heat_l_b
-        env_kwargs["heat_u_b"] = ENV_PARAMS.heat_u_b
-
-        env_kwargs["eps_sim_steps"] = eps_sim_steps         # differ in train and test set
+        env_kwargs["T_l_b"] = self.ENV_PARAMS.T_l_b
+        env_kwargs["T_u_b"] = self.ENV_PARAMS.T_u_b
+        env_kwargs["h2_l_b"] = self.ENV_PARAMS.h2_l_b
+        env_kwargs["h2_u_b"] = self.ENV_PARAMS.h2_u_b
+        env_kwargs["ch4_l_b"] = self.ENV_PARAMS.ch4_l_b
+        env_kwargs["ch4_u_b"] = self.ENV_PARAMS.ch4_u_b
+        env_kwargs["h2_res_l_b"] = self.ENV_PARAMS.h2_res_l_b
+        env_kwargs["h2_res_u_b"] = self.ENV_PARAMS.h2_res_u_b
+        env_kwargs["h2o_l_b"] = self.ENV_PARAMS.h2o_l_b
+        env_kwargs["h2o_u_b"] = self.ENV_PARAMS.h2o_u_b
+        env_kwargs["heat_l_b"] = self.ENV_PARAMS.heat_l_b
+        env_kwargs["heat_u_b"] = self.ENV_PARAMS.heat_u_b
 
         if type == "train":
-            env_kwargs["state_change_penalty"] = AGENT_PARAMS.state_change_penalty
-        elif type == "cv_test":
+            env_kwargs["eps_ind"] = self.eps_ind
+            env_kwargs["state_change_penalty"] = self.ENV_PARAMS.state_change_penalty
+            env_kwargs["eps_sim_steps"] = self.eps_sim_steps_train
+            env_kwargs["e_r_b"] = self.e_r_b_train                         
+            env_kwargs["g_e"] = self.g_e_train 
+            env_kwargs["rew_l_b"] = np.min(self.e_r_b_train[1, 0, :]) 
+            env_kwargs["rew_u_b"] = np.max(self.e_r_b_train[1, 0, :])                            
+        else:   # Evaluation 
+            env_kwargs["eps_ind"] = np.zeros(len(self.eps_ind), dtype=int)          # Simply use the one validation or test set, no indexing required
             env_kwargs["state_change_penalty"] = 0.0        # no state change penalty during validation
+            if type == "cv":    # Validation
+                env_kwargs["eps_sim_steps"] = self.eps_sim_steps_cv
+                env_kwargs["e_r_b"] = self.e_r_b_cv                        
+                env_kwargs["g_e"] = self.g_e_cv
+                env_kwargs["rew_l_b"] = np.min(self.e_r_b_cv[1, 0, :]) 
+                env_kwargs["rew_u_b"] = np.max(self.e_r_b_cv[1, 0, :])  
+            elif type == "test":    # Testing
+                env_kwargs["eps_sim_steps"] = self.eps_sim_steps_test
+                env_kwargs["e_r_b"] = self.e_r_b_test                         
+                env_kwargs["g_e"] = self.g_e_test
+                env_kwargs["rew_l_b"] = np.min(self.e_r_b_test[1, 0, :]) 
+                env_kwargs["rew_u_b"] = np.max(self.e_r_b_test[1, 0, :])  
+            else:
+                assert False, f'The type argument ({type}) of dict_env_kwargs() needs to be "train" (training), "cv" (validation) or "test" (testing)!'
 
-        env_kwargs["reward_level"] = r_level
-        env_kwargs["action_type"] = ENV_PARAMS.action_type
+        env_kwargs["reward_level"] = self.r_level
+        env_kwargs["action_type"] = self.AGENT_PARAMS.rl_alg_hyp["action_type"]     # Action type of the algorithm, discrete or continuous
 
         return env_kwargs
 

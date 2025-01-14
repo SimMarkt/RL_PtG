@@ -20,11 +20,11 @@ class AgentParams:
         with open("config/config_agent.yaml", "r") as env_file:
             agent_config = yaml.safe_load(env_file)
 
-        self.n_envs = agent_config['n_envs']            # Number environments/workers for training
+        self.n_envs = agent_config['n_envs']                                # Number environments/workers for training
         assert agent_config['rl_alg'] in agent_config['hyperparameters'], f'Wrong algorithm specified - data/config_agent.yaml -> 
                                                                             model_conf : {agent_config['rl_alg']} must match {agent_config['hyperparameters'].keys()}'
-        self.rl_alg = agent_config['rl_alg']            # selected RL algorithm - already implemented [DQN, A2C, PPO, TD3, SAC, TQC]
-        self.rl_alg_hyp = agent_config['hyperparameters'][self.rl_alg]     # hyperparameters of the algorithm
+        self.rl_alg = agent_config['rl_alg']                                # selected RL algorithm - already implemented [DQN, A2C, PPO, TD3, SAC, TQC]
+        self.rl_alg_hyp = agent_config['hyperparameters'][self.rl_alg]      # hyperparameters of the algorithm
         
 
     def set_model(self, env, tb_log):
