@@ -116,7 +116,7 @@ class PTGEnv(gym.Env):
 
         # Initialize reward constituent and methanation dynamic thresholds
         self.ch4_volumeflow, self.h2_res_volumeflow, self.Q_ch4, self.Q_h2_res, self.ch4_revenues = (0.0,) * 5
-        self.power_bhkw, self.bhkw_revenues, self.Q_steam, self.steam_revenues, self.h2_volumeflow = (0.0,) * 5
+        self.power_chp, self.chp_revenues, self.Q_steam, self.steam_revenues, self.h2_volumeflow = (0.0,) * 5
         self.o2_volumeflow, self.o2_revenues, self.Meth_CO2_mass_flow, self.eua_revenues = (0.0,) * 4
         self.elec_costs_heating, self.load_elec, self.elec_costs_electrolyzer, self.elec_costs = (0.0,) * 4
         self.water_elec, self.water_costs, self.rew, self.cum_rew = (0.0,) * 4
@@ -136,7 +136,7 @@ class PTGEnv(gym.Env):
         self.water_price = dict_input["water_price"]
         self.min_load_electrolyzer = dict_input["min_load_electrolyzer"]
         self.max_h2_volumeflow = dict_input["max_h2_volumeflow"]
-        self.eta_BHKW = dict_input["eta_BHKW"]
+        self.eta_CHP = dict_input["eta_CHP"]
 
         self.t_cat_standby = dict_input["t_cat_standby"]
         self.t_cat_startup_cold = dict_input["t_cat_startup_cold"]
@@ -340,7 +340,7 @@ class PTGEnv(gym.Env):
             "steam_revenues [ct/h]": self.steam_revenues,
             "o2_revenues [ct/h]": self.o2_revenues,
             "eua_revenues [ct/h]": self.eua_revenues,
-            "bhkw_revenues [ct/h]": self.bhkw_revenues,
+            "chp_revenues [ct/h]": self.chp_revenues,
             "elec_costs_heating [ct/h]": -self.elec_costs_heating,
             "elec_costs_electrolyzer [ct/h]": -self.elec_costs_electrolyzer,
             "water_costs [ct/h]": -self.water_costs,
@@ -364,14 +364,14 @@ class PTGEnv(gym.Env):
         self.Q_h2_res = self.h2_res_volumeflow * self.H_u_H2 * 1000
         self.ch4_revenues = (self.Q_ch4 + self.Q_h2_res) * self.g_e_act[0, 0]  # in ct/h
 
-        # BHKW revenues (Scenario 3):               If Scenario == 3: self.b_s3 = 1 else self.b_s3 = 0
-        self.power_bhkw = self.Q_ch4 * self.eta_BHKW * self.b_s3  # in kW
-        self.Q_bhkw = self.Q_ch4 * (1 - self.eta_BHKW) * self.b_s3  # in kW
-        self.bhkw_revenues = self.power_bhkw * self.eeg_el_price  # in ct/h
+        # CHP revenues (Scenario 3):               If Scenario == 3: self.b_s3 = 1 else self.b_s3 = 0
+        self.power_chp = self.Q_ch4 * self.eta_CHP * self.b_s3  # in kW
+        self.Q_chp = self.Q_ch4 * (1 - self.eta_CHP) * self.b_s3  # in kW
+        self.chp_revenues = self.power_chp * self.eeg_el_price  # in ct/h
 
-        # Steam revenues (Scenario 1+2+3):          If Scenario != 3: self.Q_bhkw = 0
+        # Steam revenues (Scenario 1+2+3):          If Scenario != 3: self.Q_chp = 0
         self.Q_steam = self.Meth_H2O_flow * (self.dt_water * self.cp_water + self.h_H2O_evap) / 3600  # in kW
-        self.steam_revenues = (self.Q_steam + self.Q_bhkw) * self.heat_price  # in ct/h
+        self.steam_revenues = (self.Q_steam + self.Q_chp) * self.heat_price  # in ct/h
 
         # Oxygen revenues (Scenario 1+2+3):
         self.h2_volumeflow = self.Meth_H2_flow * self.convert_mol_to_Nm3  # in Nm³/s
@@ -402,7 +402,7 @@ class PTGEnv(gym.Env):
         self.water_costs = (self.Meth_H2O_flow + self.water_elec) / self.rho_water * self.water_price  # in ct/h = kg/h / kg/m³ * ct/m³
 
         # Reward:
-        self.rew = (self.ch4_revenues + self.bhkw_revenues + self.steam_revenues + self.eua_revenues +
+        self.rew = (self.ch4_revenues + self.chp_revenues + self.steam_revenues + self.eua_revenues +
                     self.o2_revenues - self.elec_costs - self.water_costs) * self.time_step_size_sim / 3600
 
         self.cum_rew += self.rew
@@ -601,7 +601,7 @@ class PTGEnv(gym.Env):
 
         # Initialize reward constituent and methanation dynamic thresholds
         self.ch4_volumeflow, self.h2_res_volumeflow, self.Q_ch4, self.Q_h2_res, self.ch4_revenues = (0.0,) * 5
-        self.power_bhkw, self.bhkw_revenues, self.Q_steam, self.steam_revenues, self.h2_volumeflow = (0.0,) * 5
+        self.power_chp, self.chp_revenues, self.Q_steam, self.steam_revenues, self.h2_volumeflow = (0.0,) * 5
         self.o2_volumeflow, self.o2_revenues, self.Meth_CO2_mass_flow, self.eua_revenues = (0.0,) * 4
         self.elec_costs_heating, self.load_elec, self.elec_costs_electrolyzer, self.elec_costs = (0.0,) * 4
         self.water_elec, self.water_costs, self.rew, self.cum_rew = (0.0,) * 4
