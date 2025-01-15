@@ -6,9 +6,9 @@ from matplotlib.path import Path
 import matplotlib.patches as patches
 import math
 
-from src.rl_param_agent import AgentParams
-from src.rl_param_env import EnvParams
-from src.rl_param_train import TrainParams
+from src.rl_config_agent import AgentConfig
+from src.rl_config_env import EnvConfig
+from src.rl_config_train import TrainConfig
 from src.rl_opt import calculate_optimum
 
 def import_market_data(csvfile: str, type: str):
@@ -65,43 +65,43 @@ def load_data():
                 dict_op_data: dictionary with data of dynamic methanation operation
     """
 
-    ENV_PARAMS = EnvParams()
+    EnvConfig = EnvConfig()
 
     # Load historical market data for electricity, gas and EUA ##########################################MAKE SHORTER##################
-    dict_price_data = {'el_price_train': import_market_data(ENV_PARAMS.datafile_path_train_el, "elec"),     # Electricity prices of the training set
-                       'el_price_cv': import_market_data(ENV_PARAMS.datafile_path_cv_el, "elec"),           # Electricity prices of the validation set
-                       'el_price_test': import_market_data(ENV_PARAMS.datafile_path_test_el, "elec"),       # Electricity prices of the test set
-                       'gas_price_train': import_market_data(ENV_PARAMS.datafile_path_train_gas, "gas"),    # Gas prices of the training set
-                       'gas_price_cv': import_market_data(ENV_PARAMS.datafile_path_cv_gas, "gas"),          # Gas prices of the validation set
-                       'gas_price_test': import_market_data(ENV_PARAMS.datafile_path_test_gas, "gas"),      # Gas prices of the test set
-                       'eua_price_train': import_market_data(ENV_PARAMS.datafile_path_train_eua, "eua"),    # EUA prices of the training set
-                       'eua_price_cv': import_market_data(ENV_PARAMS.datafile_path_cv_eua, "eua"),          # EUA prices of the validation set
-                       'eua_price_test': import_market_data(ENV_PARAMS.datafile_path_test_eua, "eua")}      # EUA prices of the test set
+    dict_price_data = {'el_price_train': import_market_data(EnvConfig.datafile_path_train_el, "elec"),     # Electricity prices of the training set
+                       'el_price_cv': import_market_data(EnvConfig.datafile_path_cv_el, "elec"),           # Electricity prices of the validation set
+                       'el_price_test': import_market_data(EnvConfig.datafile_path_test_el, "elec"),       # Electricity prices of the test set
+                       'gas_price_train': import_market_data(EnvConfig.datafile_path_train_gas, "gas"),    # Gas prices of the training set
+                       'gas_price_cv': import_market_data(EnvConfig.datafile_path_cv_gas, "gas"),          # Gas prices of the validation set
+                       'gas_price_test': import_market_data(EnvConfig.datafile_path_test_gas, "gas"),      # Gas prices of the test set
+                       'eua_price_train': import_market_data(EnvConfig.datafile_path_train_eua, "eua"),    # EUA prices of the training set
+                       'eua_price_cv': import_market_data(EnvConfig.datafile_path_cv_eua, "eua"),          # EUA prices of the validation set
+                       'eua_price_test': import_market_data(EnvConfig.datafile_path_test_eua, "eua")}      # EUA prices of the test set
 
     # Load experimental methanation data for state changes  ##########################################MAKE SHORTER##################
-    dict_op_data = {'startup_cold': import_data(ENV_PARAMS.datafile_path2),     # Cold start
-                    'startup_hot': import_data(ENV_PARAMS.datafile_path3),      # Hot start
-                    'cooldown': import_data(ENV_PARAMS.datafile_path4),         # Cooldown
-                    'standby_down': import_data(ENV_PARAMS.datafile_path5),     # Standby dataset for high temperatures to standby
-                    'standby_up': import_data(ENV_PARAMS.datafile_path6),       # Standby dataset for low temperatures to standby
-                    'op1_start_p': import_data(ENV_PARAMS.datafile_path7),      # Partial load - warming up
-                    'op2_start_f': import_data(ENV_PARAMS.datafile_path8),      # Full load - warming up
-                    'op3_p_f': import_data(ENV_PARAMS.datafile_path9),          # Load change: Partial -> Full
-                    'op4_p_f_p_5': import_data(ENV_PARAMS.datafile_path10),     # Load change: Partial -> Full -> Partial (Return after 5 min)
-                    'op5_p_f_p_10': import_data(ENV_PARAMS.datafile_path11),    # Load change: Partial -> Full -> Partial (Return after 10 min)
-                    'op6_p_f_p_15': import_data(ENV_PARAMS.datafile_path12),    # Load change: Partial -> Full -> Partial (Return after 15 min)
-                    'op7_p_f_p_22': import_data(ENV_PARAMS.datafile_path13),    # Load change: Partial -> Full -> Partial (Return after 22 min)
-                    'op8_f_p': import_data(ENV_PARAMS.datafile_path14),         # Load change: Full -> Partial
-                    'op9_f_p_f_5': import_data(ENV_PARAMS.datafile_path15),     # Load change: Full -> Partial -> Full (Return after 5 min)
-                    'op10_f_p_f_10': import_data(ENV_PARAMS.datafile_path16),   # Load change: Full -> Partial -> Full (Return after 10 min)
-                    'op11_f_p_f_15': import_data(ENV_PARAMS.datafile_path17),   # Load change: Full -> Partial -> Full (Return after 15 min)
-                    'op12_f_p_f_20': import_data(ENV_PARAMS.datafile_path18)}   # Load change: Full -> Partial -> Full (Return after 20 min)
+    dict_op_data = {'startup_cold': import_data(EnvConfig.datafile_path2),     # Cold start
+                    'startup_hot': import_data(EnvConfig.datafile_path3),      # Hot start
+                    'cooldown': import_data(EnvConfig.datafile_path4),         # Cooldown
+                    'standby_down': import_data(EnvConfig.datafile_path5),     # Standby dataset for high temperatures to standby
+                    'standby_up': import_data(EnvConfig.datafile_path6),       # Standby dataset for low temperatures to standby
+                    'op1_start_p': import_data(EnvConfig.datafile_path7),      # Partial load - warming up
+                    'op2_start_f': import_data(EnvConfig.datafile_path8),      # Full load - warming up
+                    'op3_p_f': import_data(EnvConfig.datafile_path9),          # Load change: Partial -> Full
+                    'op4_p_f_p_5': import_data(EnvConfig.datafile_path10),     # Load change: Partial -> Full -> Partial (Return after 5 min)
+                    'op5_p_f_p_10': import_data(EnvConfig.datafile_path11),    # Load change: Partial -> Full -> Partial (Return after 10 min)
+                    'op6_p_f_p_15': import_data(EnvConfig.datafile_path12),    # Load change: Partial -> Full -> Partial (Return after 15 min)
+                    'op7_p_f_p_22': import_data(EnvConfig.datafile_path13),    # Load change: Partial -> Full -> Partial (Return after 22 min)
+                    'op8_f_p': import_data(EnvConfig.datafile_path14),         # Load change: Full -> Partial
+                    'op9_f_p_f_5': import_data(EnvConfig.datafile_path15),     # Load change: Full -> Partial -> Full (Return after 5 min)
+                    'op10_f_p_f_10': import_data(EnvConfig.datafile_path16),   # Load change: Full -> Partial -> Full (Return after 10 min)
+                    'op11_f_p_f_15': import_data(EnvConfig.datafile_path17),   # Load change: Full -> Partial -> Full (Return after 15 min)
+                    'op12_f_p_f_20': import_data(EnvConfig.datafile_path18)}   # Load change: Full -> Partial -> Full (Return after 20 min)
 
-    if ENV_PARAMS.scenario == 2:  # Fixed gas prices    ##########################################MAKE SHORTER##################
-        dict_price_data['gas_price_train'] = np.ones(len(dict_price_data['gas_price_train'])) * ENV_PARAMS.ch4_price_fix
-        dict_price_data['gas_price_cv'] = np.ones(len(dict_price_data['gas_price_cv'])) * ENV_PARAMS.ch4_price_fix
-        dict_price_data['gas_price_test'] = np.ones(len(dict_price_data['gas_price_test'])) * ENV_PARAMS.ch4_price_fix
-    elif ENV_PARAMS.scenario == 3:  # Gas and EUA prices = 0
+    if EnvConfig.scenario == 2:  # Fixed gas prices    ##########################################MAKE SHORTER##################
+        dict_price_data['gas_price_train'] = np.ones(len(dict_price_data['gas_price_train'])) * EnvConfig.ch4_price_fix
+        dict_price_data['gas_price_cv'] = np.ones(len(dict_price_data['gas_price_cv'])) * EnvConfig.ch4_price_fix
+        dict_price_data['gas_price_test'] = np.ones(len(dict_price_data['gas_price_test'])) * EnvConfig.ch4_price_fix
+    elif EnvConfig.scenario == 3:  # Gas and EUA prices = 0
         dict_price_data['gas_price_train'] = np.zeros(len(dict_price_data['gas_price_train']))
         dict_price_data['gas_price_cv'] = np.zeros(len(dict_price_data['gas_price_cv']))
         dict_price_data['gas_price_test'] = np.zeros(len(dict_price_data['gas_price_test']))
@@ -110,21 +110,21 @@ def load_data():
         dict_price_data['eua_price_test'] = np.zeros(len(dict_price_data['eua_price_test']))
 
     # For Reward level calculation -> Sets height of the reward penalty
-    dict_price_data['el_price_reward_level'] = ENV_PARAMS.r_0_values['el_price']
-    dict_price_data['gas_price_reward_level'] = ENV_PARAMS.r_0_values['gas_price']
-    dict_price_data['eua_price_reward_level'] = ENV_PARAMS.r_0_values['eua_price']
+    dict_price_data['el_price_reward_level'] = EnvConfig.r_0_values['el_price']
+    dict_price_data['gas_price_reward_level'] = EnvConfig.r_0_values['gas_price']
+    dict_price_data['eua_price_reward_level'] = EnvConfig.r_0_values['eua_price']
 
     # Check if training set is divisible by the episode length
     min_train_len = 5           # Minimum No. of days in the training set 
-    ENV_PARAMS.train_len_d = len(dict_price_data['gas_price_train']) - min_train_len # Training uses min_train_len days less than the data size to always allow enough space for the price forecast of Day-ahead market data
-    assert ENV_PARAMS.train_len_d > 0, f'The training set size must be greater than {min_train_len} days'
-    if ENV_PARAMS.train_len_d % ENV_PARAMS.eps_len_d != 0:
-        # Find all possible divisors of ENV_PARAMS.train_len_d
-        divisors = [i for i in range(1, ENV_PARAMS.train_len_d + 1) if ENV_PARAMS.train_len_d % i == 0]
-        assert False, f'The training set size {ENV_PARAMS.train_len_d} must be divisible by the episode length - data/config_env.yaml -> eps_len_d : {ENV_PARAMS.eps_len_d}; 
+    EnvConfig.train_len_d = len(dict_price_data['gas_price_train']) - min_train_len # Training uses min_train_len days less than the data size to always allow enough space for the price forecast of Day-ahead market data
+    assert EnvConfig.train_len_d > 0, f'The training set size must be greater than {min_train_len} days'
+    if EnvConfig.train_len_d % EnvConfig.eps_len_d != 0:
+        # Find all possible divisors of EnvConfig.train_len_d
+        divisors = [i for i in range(1, EnvConfig.train_len_d + 1) if EnvConfig.train_len_d % i == 0]
+        assert False, f'The training set size {EnvConfig.train_len_d} must be divisible by the episode length - data/config_env.yaml -> eps_len_d : {EnvConfig.eps_len_d}; 
                         Possible divisors are: {divisors}'
     # Ensure that the training set is larger or at least equal to the defined episode length  
-    assert ENV_PARAMS.train_len_d >= ENV_PARAMS.eps_len_d, f'Training set size ({ENV_PARAMS.train_len_d}) must be larger or at least equal to the defined episode length ({ENV_PARAMS.eps_len_d})!'
+    assert EnvConfig.train_len_d >= EnvConfig.eps_len_d, f'Training set size ({EnvConfig.train_len_d}) must be larger or at least equal to the defined episode length ({EnvConfig.eps_len_d})!'
 
     return dict_price_data, dict_op_data
 
@@ -132,26 +132,25 @@ class Preprocessing():
     """
         A class that contains variables and functions for preprocessing of energy market and process data
     """
-    def __init__(self, dict_price_data, dict_op_data, seed_train):
+    def __init__(self, dict_price_data, dict_op_data):
         """
             Initialization of variables
-            :param dict_price_data: dictionary with market data
-            :param seed_train: Random seed of the training set
+            :param dict_price_data: Dictionary with market data
+            :param dict_op_data: Dictionary with dynamic process data
         """
         # Initialization
-        self.AGENT_PARAMS = AgentParams()
-        self.ENV_PARAMS = EnvParams()
-        self.TRAIN_PARAMS = TrainParams()
+        self.AgentConfig = AgentConfig()
+        self.EnvConfig = EnvConfig()
+        self.TrainConfig = TrainConfig()
         self.dict_price_data = dict_price_data
         self.dict_op_data = dict_op_data
-        self.seed_train = seed_train
         self.dict_pot_r_b = None                    # dictionary with potential reward [pot_rew...] and boolean reward identifier [part_full_b...]
         self.r_level = None                         # Sets the general height of the reward penalty according to electricity, (S)NG, and EUA price levels
         # e_r_b_train/e_r_b_cv/e_r_b_test: (hourly values)
         #   np.array which stores elec. price data, potential reward, and boolean identifier
         #   Dimensions = [Type of data] x [No. of day-ahead values] x [historical values]
         #       Type of data = [el_price, pot_rew, part_full_b]
-        #       No. of day-ahead values = ENV_PARAMS.price_ahead
+        #       No. of day-ahead values = EnvConfig.price_ahead
         #       historical values = No. of values in the electricity price data set
         self.e_r_b_train = None
         self.e_r_b_cv = None
@@ -221,8 +220,8 @@ class Preprocessing():
         }
 
         self.r_level = stats_dict_opt_level['Meth_reward_stats']
-        # multiple_plots(stats_dict_opt_train, 3600, "Opt_Training_set_sen" + str(ENV_PARAMS.scenario))         ################# Include Graphics as default ##############
-        # multiple_plots(stats_dict_opt_test, 3600, "Opt_Test_set_sen" + str(ENV_PARAMS.scenario))              ################# Include Graphics as default ##############
+        # multiple_plots(stats_dict_opt_train, 3600, "Opt_Training_set_sen" + str(EnvConfig.scenario))         ################# Include Graphics as default ##############
+        # multiple_plots(stats_dict_opt_test, 3600, "Opt_Test_set_sen" + str(EnvConfig.scenario))              ################# Include Graphics as default ##############
 
 
     def preprocessing_array(self):
@@ -234,20 +233,20 @@ class Preprocessing():
         # and boolean identifier for the entire training and test set
         # e.g. e_r_b_train[0, 5, 156] represents the future value of the electricity price [0,-,-] in 4 hours [-,5,-] at the
         # 156ths entry of the electricity price data set             ##########################################MAKE SHORTER##################
-        e_r_b_train = np.zeros((3, self.ENV_PARAMS.price_ahead, self.dict_price_data['el_price_train'].shape[0] - self.ENV_PARAMS.price_ahead))
-        e_r_b_cv = np.zeros((3, self.ENV_PARAMS.price_ahead, self.dict_price_data['el_price_cv'].shape[0] - self.ENV_PARAMS.price_ahead))
-        e_r_b_test = np.zeros((3, self.ENV_PARAMS.price_ahead, self.dict_price_data['el_price_test'].shape[0] - self.ENV_PARAMS.price_ahead))
+        e_r_b_train = np.zeros((3, self.EnvConfig.price_ahead, self.dict_price_data['el_price_train'].shape[0] - self.EnvConfig.price_ahead))
+        e_r_b_cv = np.zeros((3, self.EnvConfig.price_ahead, self.dict_price_data['el_price_cv'].shape[0] - self.EnvConfig.price_ahead))
+        e_r_b_test = np.zeros((3, self.EnvConfig.price_ahead, self.dict_price_data['el_price_test'].shape[0] - self.EnvConfig.price_ahead))
 
-        for i in range(self.ENV_PARAMS.price_ahead):     ##########################################MAKE SHORTER##################
-            e_r_b_train[0, i, :] = self.dict_price_data['el_price_train'][i:(-self.ENV_PARAMS.price_ahead + i)]
-            e_r_b_train[1, i, :] = self.dict_pot_r_b['pot_rew_train'][i:(-self.ENV_PARAMS.price_ahead + i)]
-            e_r_b_train[2, i, :] = self.dict_pot_r_b['part_full_b_train'][i:(-self.ENV_PARAMS.price_ahead + i)]
-            e_r_b_cv[0, i, :] = self.dict_price_data['el_price_cv'][i:(-self.ENV_PARAMS.price_ahead + i)]
-            e_r_b_cv[1, i, :] = self.dict_pot_r_b['pot_rew_cv'][i:(-self.ENV_PARAMS.price_ahead + i)]
-            e_r_b_cv[2, i, :] = self.dict_pot_r_b['part_full_b_cv'][i:(-self.ENV_PARAMS.price_ahead + i)]
-            e_r_b_test[0, i, :] = self.dict_price_data['el_price_test'][i:(-self.ENV_PARAMS.price_ahead + i)]
-            e_r_b_test[1, i, :] = self.dict_pot_r_b['pot_rew_test'][i:(-self.ENV_PARAMS.price_ahead + i)]
-            e_r_b_test[2, i, :] = self.dict_pot_r_b['part_full_b_test'][i:(-self.ENV_PARAMS.price_ahead + i)]
+        for i in range(self.EnvConfig.price_ahead):     ##########################################MAKE SHORTER##################
+            e_r_b_train[0, i, :] = self.dict_price_data['el_price_train'][i:(-self.EnvConfig.price_ahead + i)]
+            e_r_b_train[1, i, :] = self.dict_pot_r_b['pot_rew_train'][i:(-self.EnvConfig.price_ahead + i)]
+            e_r_b_train[2, i, :] = self.dict_pot_r_b['part_full_b_train'][i:(-self.EnvConfig.price_ahead + i)]
+            e_r_b_cv[0, i, :] = self.dict_price_data['el_price_cv'][i:(-self.EnvConfig.price_ahead + i)]
+            e_r_b_cv[1, i, :] = self.dict_pot_r_b['pot_rew_cv'][i:(-self.EnvConfig.price_ahead + i)]
+            e_r_b_cv[2, i, :] = self.dict_pot_r_b['part_full_b_cv'][i:(-self.EnvConfig.price_ahead + i)]
+            e_r_b_test[0, i, :] = self.dict_price_data['el_price_test'][i:(-self.EnvConfig.price_ahead + i)]
+            e_r_b_test[1, i, :] = self.dict_pot_r_b['pot_rew_test'][i:(-self.EnvConfig.price_ahead + i)]
+            e_r_b_test[2, i, :] = self.dict_pot_r_b['part_full_b_test'][i:(-self.EnvConfig.price_ahead + i)]
 
         # Multi-Dimensional Array (3D) which stores day-ahead gas and eua price data for the entire training and test set        ##########################################MAKE SHORTER##################
         g_e_train = np.zeros((2, 2, self.dict_price_data['gas_price_train'].shape[0] - 1))
@@ -279,18 +278,18 @@ class Preprocessing():
         test_len_d = len(self.dict_price_data['gas_price_test']) - 1
 
         # Split up the entire training set into several smaller subsets which represents an own episodes
-        self.n_eps = int(self.ENV_PARAMS.train_len_d / self.ENV_PARAMS.eps_len_d)  # Number of training subsets/episodes per training procedure
+        self.n_eps = int(self.EnvConfig.train_len_d / self.EnvConfig.eps_len_d)  # Number of training subsets/episodes per training procedure
         
-        self.eps_len = 24 * 3600 * self.ENV_PARAMS.eps_len_d  # episode length in seconds
+        self.eps_len = 24 * 3600 * self.EnvConfig.eps_len_d  # episode length in seconds
 
         # Number of steps in train and test sets per episode
-        self.eps_sim_steps_train = int(self.eps_len / self.ENV_PARAMS.sim_step)
-        self.eps_sim_steps_cv = int(24 * 3600 * cv_len_d / self.ENV_PARAMS.sim_step)
-        self.eps_sim_steps_test = int(24 * 3600 * test_len_d /self. ENV_PARAMS.sim_step)
+        self.eps_sim_steps_train = int(self.eps_len / self.EnvConfig.sim_step)
+        self.eps_sim_steps_cv = int(24 * 3600 * cv_len_d / self.EnvConfig.sim_step)
+        self.eps_sim_steps_test = int(24 * 3600 * test_len_d /self. EnvConfig.sim_step)
 
         # Define total number of steps for all workers together
-        self.num_loops = int(self.TRAIN_PARAMS.total_steps / (self.eps_sim_steps_train * self.n_eps))  # Number of loops over the total training set
-        print("--- Total number of training steps =", self.TRAIN_PARAMS.total_steps)
+        self.num_loops = int(self.TrainConfig.total_steps / (self.eps_sim_steps_train * self.n_eps))  # Number of loops over the total training set
+        print("--- Total number of training steps =", self.TrainConfig.total_steps)
         print("--- No. of loops over the entire training set =", self.num_loops)
         print("--- Training steps per episode =", self.eps_sim_steps_train)
         print("--- Steps in the evaluation set =", self.eps_sim_steps_test)
@@ -309,11 +308,11 @@ class Preprocessing():
         subsets where selected randomly
         """
 
-        np.random.seed(self.seed_train)     # Set the random seed for random episode selection
+        np.random.seed(self.TrainConfig.seed_train)     # Set the random seed for random episode selection
 
-        if self.ENV_PARAMS.train_len_d == self.ENV_PARAMS.eps_len_d:
+        if self.EnvConfig.train_len_d == self.EnvConfig.eps_len_d:
             self.eps_ind = np.zeros(int(self.n_eps*self.num_loops*self.overhead_factor))
-        else:           # self.ENV_PARAMS.train_len_d > self.ENV_PARAMS.eps_len_d:
+        else:           # self.EnvConfig.train_len_d > self.EnvConfig.eps_len_d:
             # Random selection with sampling with replacement
             num_ep = np.linspace(start=0, stop=self.n_eps-1, num=self.n_eps)
             random_ep = np.zeros((self.num_loops*self.overhead_factor, self.n_eps))
@@ -335,18 +334,18 @@ class Preprocessing():
         ###################MAKE SHORTER #####################
         # More information on the environment's parameters are present in RL_PtG/src/rl_param_env.py
 
-        env_kwargs["ptg_state_space['standby']"] = self.ENV_PARAMS.ptg_state_space['standby'] 
-        env_kwargs["ptg_state_space['cooldown']"] = self.ENV_PARAMS.ptg_state_space['cooldown']
-        env_kwargs["ptg_state_space['startup']"] = self.ENV_PARAMS.ptg_state_space['startup']
-        env_kwargs["ptg_state_space['partial_load']"] = self.ENV_PARAMS.ptg_state_space['partial_load']
-        env_kwargs["ptg_state_space['full_load']"] = self.ENV_PARAMS.ptg_state_space['full_load']
+        env_kwargs["ptg_state_space['standby']"] = self.EnvConfig.ptg_state_space['standby'] 
+        env_kwargs["ptg_state_space['cooldown']"] = self.EnvConfig.ptg_state_space['cooldown']
+        env_kwargs["ptg_state_space['startup']"] = self.EnvConfig.ptg_state_space['startup']
+        env_kwargs["ptg_state_space['partial_load']"] = self.EnvConfig.ptg_state_space['partial_load']
+        env_kwargs["ptg_state_space['full_load']"] = self.EnvConfig.ptg_state_space['full_load']
 
-        env_kwargs["noise"] = self.ENV_PARAMS.noise
-        env_kwargs["parallel"] = self.TRAIN_PARAMS.parallel
-        env_kwargs["eps_len_d"] = self.ENV_PARAMS.eps_len_d
-        env_kwargs["sim_step"] = self.ENV_PARAMS.sim_step
-        env_kwargs["time_step_op"] = self.ENV_PARAMS.time_step_op
-        env_kwargs["price_ahead"] = self.ENV_PARAMS.price_ahead
+        env_kwargs["noise"] = self.EnvConfig.noise
+        env_kwargs["parallel"] = self.TrainConfig.parallel
+        env_kwargs["eps_len_d"] = self.EnvConfig.eps_len_d
+        env_kwargs["sim_step"] = self.EnvConfig.sim_step
+        env_kwargs["time_step_op"] = self.EnvConfig.time_step_op
+        env_kwargs["price_ahead"] = self.EnvConfig.price_ahead
         env_kwargs["n_eps_loops"] = self.n_eps_loops
 
         env_kwargs["dict_op_data['startup_cold']"] = self.dict_op_data['startup_cold']
@@ -367,70 +366,70 @@ class Preprocessing():
         env_kwargs["dict_op_data['op11_f_p_f_15']"] = self.dict_op_data['op11_f_p_f_15']
         env_kwargs["dict_op_data['op12_f_p_f_20']"] = self.dict_op_data['op12_f_p_f_20']
 
-        env_kwargs["scenario"] = self.ENV_PARAMS.scenario
+        env_kwargs["scenario"] = self.EnvConfig.scenario
 
-        env_kwargs["convert_mol_to_Nm3"] = self.ENV_PARAMS.convert_mol_to_Nm3
-        env_kwargs["H_u_CH4"] = self.ENV_PARAMS.H_u_CH4
-        env_kwargs["H_u_H2"] = self.ENV_PARAMS.H_u_H2
-        env_kwargs["dt_water"] = self.ENV_PARAMS.dt_water
-        env_kwargs["cp_water"] = self.ENV_PARAMS.cp_water
-        env_kwargs["rho_water"] = self.ENV_PARAMS.rho_water
-        env_kwargs["Molar_mass_CO2"] = self.ENV_PARAMS.Molar_mass_CO2
-        env_kwargs["Molar_mass_H2O"] = self.ENV_PARAMS.Molar_mass_H2O
-        env_kwargs["h_H2O_evap"] = self.ENV_PARAMS.h_H2O_evap
-        env_kwargs["eeg_el_price"] = self.ENV_PARAMS.eeg_el_price
-        env_kwargs["heat_price"] = self.ENV_PARAMS.heat_price
-        env_kwargs["o2_price"] = self.ENV_PARAMS.o2_price
-        env_kwargs["water_price"] = self.ENV_PARAMS.water_price
-        env_kwargs["min_load_electrolyzer"] = self.ENV_PARAMS.min_load_electrolyzer
-        env_kwargs["max_h2_volumeflow"] = self.ENV_PARAMS.max_h2_volumeflow
-        env_kwargs["eta_CHP"] = self.ENV_PARAMS.eta_CHP
+        env_kwargs["convert_mol_to_Nm3"] = self.EnvConfig.convert_mol_to_Nm3
+        env_kwargs["H_u_CH4"] = self.EnvConfig.H_u_CH4
+        env_kwargs["H_u_H2"] = self.EnvConfig.H_u_H2
+        env_kwargs["dt_water"] = self.EnvConfig.dt_water
+        env_kwargs["cp_water"] = self.EnvConfig.cp_water
+        env_kwargs["rho_water"] = self.EnvConfig.rho_water
+        env_kwargs["Molar_mass_CO2"] = self.EnvConfig.Molar_mass_CO2
+        env_kwargs["Molar_mass_H2O"] = self.EnvConfig.Molar_mass_H2O
+        env_kwargs["h_H2O_evap"] = self.EnvConfig.h_H2O_evap
+        env_kwargs["eeg_el_price"] = self.EnvConfig.eeg_el_price
+        env_kwargs["heat_price"] = self.EnvConfig.heat_price
+        env_kwargs["o2_price"] = self.EnvConfig.o2_price
+        env_kwargs["water_price"] = self.EnvConfig.water_price
+        env_kwargs["min_load_electrolyzer"] = self.EnvConfig.min_load_electrolyzer
+        env_kwargs["max_h2_volumeflow"] = self.EnvConfig.max_h2_volumeflow
+        env_kwargs["eta_CHP"] = self.EnvConfig.eta_CHP
 
-        env_kwargs["t_cat_standby"] = self.ENV_PARAMS.t_cat_standby
-        env_kwargs["t_cat_startup_cold"] = self.ENV_PARAMS.t_cat_startup_cold
-        env_kwargs["t_cat_startup_hot"] = self.ENV_PARAMS.t_cat_startup_hot
-        env_kwargs["time1_start_p_f"] = self.ENV_PARAMS.time1_start_p_f
-        env_kwargs["time2_start_f_p"] = self.ENV_PARAMS.time2_start_f_p
-        env_kwargs["time_p_f"] = self.ENV_PARAMS.time_p_f
-        env_kwargs["time_f_p"] = self.ENV_PARAMS.time_f_p
-        env_kwargs["time1_p_f_p"] = self.ENV_PARAMS.time1_p_f_p
-        env_kwargs["time2_p_f_p"] = self.ENV_PARAMS.time2_p_f_p
-        env_kwargs["time23_p_f_p"] = self.ENV_PARAMS.time23_p_f_p
-        env_kwargs["time3_p_f_p"] = self.ENV_PARAMS.time3_p_f_p
-        env_kwargs["time34_p_f_p"] = self.ENV_PARAMS.time34_p_f_p
-        env_kwargs["time4_p_f_p"] = self.ENV_PARAMS.time4_p_f_p
-        env_kwargs["time45_p_f_p"] = self.ENV_PARAMS.time45_p_f_p
-        env_kwargs["time5_p_f_p"] = self.ENV_PARAMS.time5_p_f_p
-        env_kwargs["time1_f_p_f"] = self.ENV_PARAMS.time1_f_p_f
-        env_kwargs["time2_f_p_f"] = self.ENV_PARAMS.time2_f_p_f
-        env_kwargs["time23_f_p_f"] = self.ENV_PARAMS.time23_f_p_f
-        env_kwargs["time3_f_p_f"] = self.ENV_PARAMS.time3_f_p_f
-        env_kwargs["time34_f_p_f"] = self.ENV_PARAMS.time34_f_p_f
-        env_kwargs["time4_f_p_f"] = self.ENV_PARAMS.time4_f_p_f
-        env_kwargs["time45_f_p_f"] = self.ENV_PARAMS.time45_f_p_f
-        env_kwargs["time5_f_p_f"] = self.ENV_PARAMS.time5_f_p_f
-        env_kwargs["i_fully_developed"] = self.ENV_PARAMS.i_fully_developed
-        env_kwargs["j_fully_developed"] = self.ENV_PARAMS.j_fully_developed
+        env_kwargs["t_cat_standby"] = self.EnvConfig.t_cat_standby
+        env_kwargs["t_cat_startup_cold"] = self.EnvConfig.t_cat_startup_cold
+        env_kwargs["t_cat_startup_hot"] = self.EnvConfig.t_cat_startup_hot
+        env_kwargs["time1_start_p_f"] = self.EnvConfig.time1_start_p_f
+        env_kwargs["time2_start_f_p"] = self.EnvConfig.time2_start_f_p
+        env_kwargs["time_p_f"] = self.EnvConfig.time_p_f
+        env_kwargs["time_f_p"] = self.EnvConfig.time_f_p
+        env_kwargs["time1_p_f_p"] = self.EnvConfig.time1_p_f_p
+        env_kwargs["time2_p_f_p"] = self.EnvConfig.time2_p_f_p
+        env_kwargs["time23_p_f_p"] = self.EnvConfig.time23_p_f_p
+        env_kwargs["time3_p_f_p"] = self.EnvConfig.time3_p_f_p
+        env_kwargs["time34_p_f_p"] = self.EnvConfig.time34_p_f_p
+        env_kwargs["time4_p_f_p"] = self.EnvConfig.time4_p_f_p
+        env_kwargs["time45_p_f_p"] = self.EnvConfig.time45_p_f_p
+        env_kwargs["time5_p_f_p"] = self.EnvConfig.time5_p_f_p
+        env_kwargs["time1_f_p_f"] = self.EnvConfig.time1_f_p_f
+        env_kwargs["time2_f_p_f"] = self.EnvConfig.time2_f_p_f
+        env_kwargs["time23_f_p_f"] = self.EnvConfig.time23_f_p_f
+        env_kwargs["time3_f_p_f"] = self.EnvConfig.time3_f_p_f
+        env_kwargs["time34_f_p_f"] = self.EnvConfig.time34_f_p_f
+        env_kwargs["time4_f_p_f"] = self.EnvConfig.time4_f_p_f
+        env_kwargs["time45_f_p_f"] = self.EnvConfig.time45_f_p_f
+        env_kwargs["time5_f_p_f"] = self.EnvConfig.time5_f_p_f
+        env_kwargs["i_fully_developed"] = self.EnvConfig.i_fully_developed
+        env_kwargs["j_fully_developed"] = self.EnvConfig.j_fully_developed
 
-        env_kwargs["t_cat_startup_cold"] = self.ENV_PARAMS.t_cat_startup_cold
-        env_kwargs["t_cat_startup_hot"] = self.ENV_PARAMS.t_cat_startup_hot
+        env_kwargs["t_cat_startup_cold"] = self.EnvConfig.t_cat_startup_cold
+        env_kwargs["t_cat_startup_hot"] = self.EnvConfig.t_cat_startup_hot
 
-        env_kwargs["T_l_b"] = self.ENV_PARAMS.T_l_b
-        env_kwargs["T_u_b"] = self.ENV_PARAMS.T_u_b
-        env_kwargs["h2_l_b"] = self.ENV_PARAMS.h2_l_b
-        env_kwargs["h2_u_b"] = self.ENV_PARAMS.h2_u_b
-        env_kwargs["ch4_l_b"] = self.ENV_PARAMS.ch4_l_b
-        env_kwargs["ch4_u_b"] = self.ENV_PARAMS.ch4_u_b
-        env_kwargs["h2_res_l_b"] = self.ENV_PARAMS.h2_res_l_b
-        env_kwargs["h2_res_u_b"] = self.ENV_PARAMS.h2_res_u_b
-        env_kwargs["h2o_l_b"] = self.ENV_PARAMS.h2o_l_b
-        env_kwargs["h2o_u_b"] = self.ENV_PARAMS.h2o_u_b
-        env_kwargs["heat_l_b"] = self.ENV_PARAMS.heat_l_b
-        env_kwargs["heat_u_b"] = self.ENV_PARAMS.heat_u_b
+        env_kwargs["T_l_b"] = self.EnvConfig.T_l_b
+        env_kwargs["T_u_b"] = self.EnvConfig.T_u_b
+        env_kwargs["h2_l_b"] = self.EnvConfig.h2_l_b
+        env_kwargs["h2_u_b"] = self.EnvConfig.h2_u_b
+        env_kwargs["ch4_l_b"] = self.EnvConfig.ch4_l_b
+        env_kwargs["ch4_u_b"] = self.EnvConfig.ch4_u_b
+        env_kwargs["h2_res_l_b"] = self.EnvConfig.h2_res_l_b
+        env_kwargs["h2_res_u_b"] = self.EnvConfig.h2_res_u_b
+        env_kwargs["h2o_l_b"] = self.EnvConfig.h2o_l_b
+        env_kwargs["h2o_u_b"] = self.EnvConfig.h2o_u_b
+        env_kwargs["heat_l_b"] = self.EnvConfig.heat_l_b
+        env_kwargs["heat_u_b"] = self.EnvConfig.heat_u_b
 
         if type == "train":
             env_kwargs["eps_ind"] = self.eps_ind
-            env_kwargs["state_change_penalty"] = self.ENV_PARAMS.state_change_penalty
+            env_kwargs["state_change_penalty"] = self.EnvConfig.state_change_penalty
             env_kwargs["eps_sim_steps"] = self.eps_sim_steps_train
             env_kwargs["e_r_b"] = self.e_r_b_train                         
             env_kwargs["g_e"] = self.g_e_train 
@@ -455,10 +454,35 @@ class Preprocessing():
                 assert False, f'The type argument ({type}) of dict_env_kwargs() needs to be "train" (training), "cv" (validation) or "test" (testing)!'
 
         env_kwargs["reward_level"] = self.r_level
-        env_kwargs["action_type"] = self.AGENT_PARAMS.rl_alg_hyp["action_type"]     # Action type of the algorithm, discrete or continuous
+        env_kwargs["action_type"] = self.AgentConfig.rl_alg_hyp["action_type"]     # Action type of the algorithm, discrete or continuous
 
         return env_kwargs
-    
+
+def initial_print():
+    print('\n--------------------------------------------------------------------------------------------')    
+    print('---------RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization---------')
+    print('--------------------------------------------------------------------------------------------\n')
+
+def config_print():
+    """
+        Aggregates and prints general settings
+    """
+
+    AgentConfig = AgentConfig()
+    EnvConfig = EnvConfig()
+    TrainConfig = TrainConfig()
+
+    print(f"---Training case details: RL_PtG{TrainConfig.str_inv} | (Pretrained model: RL_PtG{TrainConfig.str_inv_load}) ")
+    if EnvConfig.scenario == 1: print("    > Business case 1: Trading at the electricity, gas, and emission spot markets")
+    elif EnvConfig.scenario == 2: print("    > Business case 2: Fixed synthetic natural gas (SNG) price and trading at the electricity and emission spot markets")
+    else: print("    > Business case 3: Participating in EEG tenders by using a CHP plant and trading at the electricity spot markets")
+    print(f"    > Operational load level : {EnvConfig.operation}")
+    print(f"    > Training episode length : {EnvConfig.eps_len_d} days")
+    print(f"    > Time step size (action frequency) : {EnvConfig.sim_step/60} minutes")
+    print(f"    > Random seed : {TrainConfig.seed_train}")
+    AgentConfig.get_hyper()
+
+
 
 def multiple_plots(stats_dict: dict, time_step_size: int, plot_name: str):
     """
@@ -606,51 +630,5 @@ def multiple_plots_4(stats_dict: dict, time_step_size: int, plot_name: str, pote
     # plt.show()
 
 
-def get_param_str(eps_sim_steps_train, seed):                           ################################------------------------------------------------------------
-    """
-    Returns the hyperparameter setting as a long string
-    :return: hyperparameter setting
-    """
-    AGENT_PARAMS = AgentParams()
 
-    str_params_short = "_ep" + str(AGENT_PARAMS.eps_len_d) + \
-                       "_al" + str(np.round(AGENT_PARAMS.alpha, 6)) + \
-                       "_ga" + str(np.round(AGENT_PARAMS.gamma, 4)) + \
-                       "_bt" + str(AGENT_PARAMS.batch_size) + \
-                       "_bf" + str(AGENT_PARAMS.buffer_size) + \
-                       "_et" + str(np.round(AGENT_PARAMS.ent_coeff, 5)) + \
-                       "_hu" + str(AGENT_PARAMS.hidden_units) + \
-                       "_hl" + str(AGENT_PARAMS.hidden_layers) + \
-                       "_st" + str(AGENT_PARAMS.sim_step) + \
-                       "_ac" + str(AGENT_PARAMS.activation) + \
-                       "_ls" + str(AGENT_PARAMS.learning_starts) + \
-                       "_tf" + str(AGENT_PARAMS.train_freq) + \
-                       "_tau" + str(AGENT_PARAMS.tau) + \
-                       "_cr" + str(AGENT_PARAMS.n_critics) + \
-                       "_qu" + str(AGENT_PARAMS.n_quantiles) + \
-                       "_qd" + str(AGENT_PARAMS.top_quantiles_drop) + \
-                       "_gsd" + str(AGENT_PARAMS.gSDE) + \
-                       "_sd" + str(seed)
-
-    str_params_long = "\n     episode length=" + str(AGENT_PARAMS.eps_len_d) + \
-                      "\n     alpha=" + str(AGENT_PARAMS.alpha) + \
-                      "\n     gamma=" + str(AGENT_PARAMS.gamma) + \
-                      "\n     batchsize=" + str(AGENT_PARAMS.batch_size) + \
-                      "\n     replaybuffer=" + str(AGENT_PARAMS.buffer_size) + \
-                      " (#ofEpisodes=" + str(AGENT_PARAMS.buffer_size / eps_sim_steps_train) + ")" + \
-                      "\n     coeff_ent=" + str(AGENT_PARAMS.ent_coeff) + \
-                      "\n     hiddenunits=" + str(AGENT_PARAMS.hidden_units) + \
-                      "\n     hiddenlayers=" + str(AGENT_PARAMS.hidden_layers) + \
-                      "\n     sim_step=" + str(AGENT_PARAMS.sim_step) + \
-                      "\n     activation=" + str(AGENT_PARAMS.activation) + " (0=Relu, 1=tanh" + ")" + \
-                      "\n     learningstarts=" + str(AGENT_PARAMS.learning_starts) + \
-                      "\n     training_freq=" + str(AGENT_PARAMS.train_freq) + \
-                      "\n     tau=" + str(AGENT_PARAMS.tau) + \
-                      "\n     n_critics=" + str(AGENT_PARAMS.n_critics) + \
-                      "\n     n_quantiles=" + str(AGENT_PARAMS.n_quantiles) + \
-                      "\n     top_quantiles_to_drop_per_net=" + str(AGENT_PARAMS.top_quantiles_drop) + \
-                      "\n     g_SDE=" + str(AGENT_PARAMS.gSDE) + \
-                      "\n     seed=" + str(seed)
-
-    return str_params_short, str_params_long
 
