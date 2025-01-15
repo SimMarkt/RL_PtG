@@ -6,9 +6,8 @@
 # > Configuration file for the training setup
 # ----------------------------------------------------------------------------------------------------------------
           
-com_set : ['pc', 'slurm']   # computational resources: localr personal compute ('pc') or computing cluster with SLURM management ('slurm')
 com_conf : pc               # selected computational resources either 'pc' (local personal computer) or 'slurm' (computing cluster with SLURM management)
-device : auto               # computational device ['cpu', 'gpu', 'auto']
+device : auto               # computational device ['cpu', 'cuda', 'auto'] - 'auto' will run the code on GPU if possible
 str_inv : _training_        # specifies the training results and models to a specific investigation ##################---------------------------------
 str_inv_load: : _pretrain_  # specifies the name of the pretrained model  
 model_conf : simple_train   # simple_train: Train RL from scratch without saving the model afterwards
@@ -21,5 +20,5 @@ parallel : Singleprocessing   # specifies the computation setup: "Singleprocessi
 train_or_eval : train         # specifies whether the environment provides detailed descriptions of the state for evaluation ("eval") or not ("train" - recommended for training)
 
 total_steps : 100000          # total number of training steps
-r_seed_train : [3654, 467, 9327, 5797, 249, 9419]         # random seeds for neural network initialization (and environment randomness) of the training set
-r_seed_test : [605, 5534, 2910, 7653, 8936, 1925]         # random seeds for neural network initialization (and environment randomness) of the validation and test sets
+r_seed_train : [3654, 467, 9327, 5797, 249, 9419]         # random seeds for neural network initialization (and environment randomness) of the training set - for single thread computation, default [3654]
+r_seed_test : [605, 5534, 2910, 7653, 8936, 1925]         # random seeds for neural network initialization (and environment randomness) of the validation and test sets - for single thread computation, default [605]

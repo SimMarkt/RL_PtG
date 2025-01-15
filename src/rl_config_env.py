@@ -2,23 +2,23 @@
 # RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
 # https://github.com/SimMarkt/RL_PtG
 
-# rl_param_env: 
-# > Contains global parameters of the environment (Power-to-Gas Process) 
+# rl_config_env: 
+# > Contains the configuration of the environment (Power-to-Gas Process) 
 # > Converts the config_env.yaml data into a class object for further processing
 # ----------------------------------------------------------------------------------------------------------------
 
 import yaml
 
-class EnvParams:
+class EnvConfig:
     def __init__(self):
         # Load the environment configuration
         with open("config/config_env.yaml", "r") as env_file:
             env_config = yaml.safe_load(env_file)
         
+        assert self.scenario in [1,2,3], f"Specified business scenario ({self.scenario}) must match one of the three implemented scenarios [1,2,3]!"
         self.scenario = env_config['scenario']                  # business case / economic scenario
         operation = env_config['operation']                     # specifies the load level "OP1" or "OP2" of the PtG-CH4 plant
-        # self.num_loops = env_config['num_loops']              # number of loops over the total training set   ###############----------------------------
-        self.train_len_d = None                                 # total number of days in the training set      ###############----------------------------
+        self.train_len_d = None                                 # total number of days in the training set 
         self.price_ahead = env_config['price_ahead']            # number of forecast values for electricity price future data (0-12h)                    
         self.time_step_op = env_config['time_step_op']          # Time step between consecutive entries in the methanation operation data sets in sec
         self.noise = env_config['noise']                        # noise factor when changing the methanation state in the gym env [# of steps in operation data set]                         

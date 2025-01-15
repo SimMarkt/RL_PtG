@@ -18,7 +18,7 @@ rl_alg : TQC                 # selected RL algorithm - already implemented [DQN,
 
 hyperparameters:    # Implemented hyperparameters of the RL algorithms used
     DQN :
-        action_type : discrete        # the type of action: "discrete" or "continuous"
+        action_type : discrete          # the type of action: "discrete" or "continuous"
         alpha : 0.0002                  # learning rate
         gamma : 0.9728                  # discount factor
         buffer_size : 1000000           # replay buffer size
@@ -28,7 +28,7 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         eps_fra : 0.00434               # ratio of the training set for exploration annealing
         hidden_layers : 7               # No. of hidden layers
         hidden_units : 366              # No. of hidden units
-        activation : 0                  # activation function (0: ReLU, 1: Tanh)
+        activation : 0                  # activation function ('ReLU' or 'Tanh')
         train_freq : 5                  # training frequency
         target_update_interval : 113204 # target network update interval
         tau : 1.0                       # soft update parameter
@@ -41,10 +41,10 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         n_steps : 658                   # No. of steps of the n-step TD update
         hidden_layers : 4               # No. of hidden layers
         hidden_units : 808              # No. of hidden units
-        activation : 1                  # activation function (0: ReLU, 1: Tanh)
+        activation : 1                  # activation function ('ReLU' or 'Tanh')
         gae_lambda : 0.9819             # factor for generalized advantage estimation
-        normalize_advantage : 1         # normalize advantage (0: Off, 1: On)
-        gSDE : 0                        # gSDE exploration  (0: False, 1: True)
+        normalize_advantage : True      # normalize advantage ('False' or 'True')
+        gSDE : False                    # gSDE exploration ('False' or 'True')
     PPO : 
         action_type : discrete        # the type of action: "discrete" or "continuous"
         alpha : 0.00005                 # learning rate
@@ -54,11 +54,11 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         batch_size : 203                # batch size
         hidden_layers : 2               # No. of hidden layers
         hidden_units : 358              # No. of hidden units
-        activation : 0                  # activation function (0: ReLU, 1: Tanh)
+        activation : 0                  # activation function ('ReLU' or 'Tanh')
         gae_lambda : 0.8002             # factor for generalized advantage estimation
         n_epoch : 13                    # No. of epochs for mini batch training
-        normalize_advantage : 0         # normalize advantage (0: Off, 1: On)
-        gSDE : 0                        # gSDE exploration  (0: False, 1: True)
+        normalize_advantage : False     # normalize advantage ('False' or 'True')
+        gSDE : False                    # gSDE exploration ('False' or 'True')
     TD3 :
         action_type : continuous      # the type of action: "discrete" or "continuous"
         alpha : 0.00015                 # learning rate
@@ -67,7 +67,7 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         batch_size : 257                # batch size
         hidden_layers : 3               # No. of hidden layers
         hidden_units : 743              # No. of hidden units
-        activation : 0                  # activation function (0: ReLU, 1: Tanh)
+        activation : 0                  # activation function ('ReLU' or 'Tanh')
         train_freq : 9                  # training frequency
         tau : 0.005                     # soft update parameter
         learning_starts : 100           # No. of steps before starting the training of actor/critic networks
@@ -81,11 +81,11 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         batch_size : 470                # batch size
         hidden_layers : 6               # No. of hidden layers
         hidden_units : 233              # No. of hidden units
-        activation : 1                  # activation function (0: ReLU, 1: Tanh)
+        activation : 1                  # activation function ('ReLU' or 'Tanh')
         train_freq : 1                  # training frequency
         tau : 0.005                     # soft update parameter
         learning_starts : 100           # No. of steps before starting the training of actor/critic networks
-        gSDE : 0                        # gSDE exploration  (0: False, 1: True)
+        gSDE : False                    # gSDE exploration ('False' or 'True')
     TQC :
         action_type : continuous      # the type of action: "discrete" or "continuous"
         alpha : 0.00044                 # learning rate
@@ -95,11 +95,11 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         batch_size : 290                # batch size
         hidden_layers : 3               # No. of hidden layers
         hidden_units : 708              # No. of hidden units
-        activation : 0                  # activation function (0: ReLU, 1: Tanh)
+        activation : 0                  # activation function ('ReLU' or 'Tanh')
         top_quantiles_drop : 2          # No. of top quantiles to drop
         n_quantiles : 30                # No. of quantiles for distributed value estimation
         train_freq : 1                  # training frequency
         n_critics : 2                   # No. of critics
         tau : 0.005                     # soft update parameter
         learning_starts : 100           # No. of steps before starting the training of actor/critic networks
-        gSDE : 0                        # gSDE exploration  (0: False, 1: True)
+        gSDE : False                    # gSDE exploration ('False' or 'True')

@@ -9,7 +9,7 @@
 # > scenario: 3 - Involves participating in EEG tenders by using a combined heat and power (CHP) plant and trading at the electricity spot markets
 # ----------------------------------------------------------------------------------------------------------------
 
-scenario: 1                     # business case
+scenario: 1                     # business case, must match [1,2,3]
 operation : OP1                 # specifies the load level "OP1" or "OP2" of the PtG-CH4 plant
 # num_loops : 5                 # number of loops over the total training set ###########################
 # train_len_d : 46496           # total number of days in the training set ####################

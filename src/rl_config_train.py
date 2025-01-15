@@ -2,20 +2,23 @@
 # RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
 # https://github.com/SimMarkt/RL_PtG
 
-# rl_param_train: 
-# > Contains the parameters and settings for RL training 
+# rl_config_train: 
+# > Contains the configuration and settings for RL training 
 # > Converts the config_train.yaml data into a class object for further processing
 # ----------------------------------------------------------------------------------------------------------------
 
 import yaml
+import os
+import torch as th
 
-class TrainParams:
+class TrainConfig:
     def __init__(self):
         # Load the environment configuration
         with open("config/config_train.yaml", "r") as env_file:
             train_config = yaml.safe_load(env_file)
         
-        # Set params
+        # Set configuration
+        print("Set computational resources...")
         com_set = ['pc', 'slurm']
         assert train_config['com_conf'] in com_set, f'Wrong computation setup specified - data/config_train.yaml -> 
                                                                           com_conf : {train_config['com_conf']} must match {com_set}'
@@ -39,6 +42,34 @@ class TrainParams:
         self.r_seed_train = train_config['r_seed_train']         # random seeds for neural network initialization (and environment randomness) of the training set
         self.r_seed_test = train_config['r_seed_test']         # random seeds for neural network initialization (and environment randomness) of the validation and test sets
         assert len(self.r_seed_train) == len(self.r_seed_test), 'Number of random seeds must be equal for the training and test set!'
+        self.seed_train = None              # Random training seed of the present thread
+        self.seed_test = None               # Random validation/test seed of the present thread
+        
+        self.computational_resources()
+
+    def computational_resources(self):
+        """
+            Set computational resources and the random seed of the present thread
+        """
+        if self.com_conf == 'pc': 
+            print("---Computation on local resources")
+            self.slurm_id = None
+            self.seed_train = self.r_seed_train[0]
+            self.seed_test = self.r_seed_test[0]
+        else: 
+            print("---SLURM Task ID:", os.environ['SLURM_PROCID'])
+            self.slurm_id = int(os.environ['SLURM_PROCID'])         # Thread ID of the specific SLURM process in parallel computing on a cluster
+            assert self.slurm_id <= len(self.r_seed_train), f"No. of SLURM threads exceeds the No. of specified random seeds ({len(self.r_seed_train)}) - please add additional seed values to RL_PtG/config/config_train.yaml -> r_seed_train & r_seed_test"
+            self.seed_train = self.r_seed_train[self.slurm_id]
+            self.seed_test = self.r_seed_test[self.slurm_id]
+        if self.device == 'cpu': 
+            print("---Utilization of CPU\n")
+        else:
+            print("---CUDA available:", th.cuda.is_available(), "GPU device:", th.cuda.get_device_name(0), "\n")
+
+
+
+
 
        
 
