@@ -67,6 +67,8 @@ def load_data():
 
     EnvConfig = EnvConfig()
 
+    print("---Load data")
+
     # Load historical market data for electricity, gas and EUA ##########################################MAKE SHORTER##################
     dict_price_data = {'el_price_train': import_market_data(EnvConfig.datafile_path_train_el, "elec"),     # Electricity prices of the training set
                        'el_price_cv': import_market_data(EnvConfig.datafile_path_cv_el, "elec"),           # Electricity prices of the validation set
@@ -466,6 +468,7 @@ def initial_print():
 def config_print():
     """
         Aggregates and prints general settings
+        :return str_id: String for identification of the present training run
     """
 
     AgentConfig = AgentConfig()
@@ -473,16 +476,22 @@ def config_print():
     TrainConfig = TrainConfig()
 
     print(f"---Training case details: RL_PtG{TrainConfig.str_inv} | (Pretrained model: RL_PtG{TrainConfig.str_inv_load}) ")
-    if EnvConfig.scenario == 1: print("    > Business case 1: Trading at the electricity, gas, and emission spot markets")
-    elif EnvConfig.scenario == 2: print("    > Business case 2: Fixed synthetic natural gas (SNG) price and trading at the electricity and emission spot markets")
-    else: print("    > Business case 3: Participating in EEG tenders by using a CHP plant and trading at the electricity spot markets")
-    print(f"    > Operational load level : {EnvConfig.operation}")
-    print(f"    > Training episode length : {EnvConfig.eps_len_d} days")
-    print(f"    > Time step size (action frequency) : {EnvConfig.sim_step/60} minutes")
-    print(f"    > Random seed : {TrainConfig.seed_train}")
-    AgentConfig.get_hyper()
+    str_id = "RL_PtG"
+    if EnvConfig.scenario == 1: print("    > Business case (_BS) 1: Trading at the electricity, gas, and emission spot markets")
+    elif EnvConfig.scenario == 2: print("    > Business case  (_BS) 2: Fixed synthetic natural gas (SNG) price and trading at the electricity and emission spot markets")
+    else: print("    > Business case (_BS) 3: Participating in EEG tenders by using a CHP plant and trading at the electricity spot markets")
+    str_id += "_BS" + str(EnvConfig.scenario)
+    print(f"    > Operational load level (_OP) : {EnvConfig.operation}")
+    str_id += "_OP" + str(EnvConfig.operation)
+    print(f"    > Training episode length (_epl) : {EnvConfig.eps_len_d} days")
+    str_id += "_epl" + str(EnvConfig.eps_len_d)
+    print(f"    > Time step size (action frequency) (_ts) : {EnvConfig.sim_step} seconds")
+    str_id += "_ts" + str(EnvConfig.sim_step)
+    str_id += AgentConfig.get_hyper()
+    print(f"    > Random seed (_rs) : {TrainConfig.seed_train}")
+    str_id += "_ts" + str(TrainConfig.seed_train)
 
-
+    return str_id
 
 def multiple_plots(stats_dict: dict, time_step_size: int, plot_name: str):
     """

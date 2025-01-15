@@ -19,9 +19,9 @@ rl_alg : TQC                 # selected RL algorithm - already implemented [DQN,
 hyperparameters:    # Implemented hyperparameters of the RL algorithms used
     DQN :
         action_type : discrete          # the type of action: "discrete" or "continuous"
-        alpha : 0.0002                  # learning rate
-        gamma : 0.9728                  # discount factor
-        buffer_size : 1000000           # replay buffer size
+        alpha : 0.0002                  # Learning rate (_al)
+        gamma : 0.9728                  # Discount factor (_ga)
+        buffer_size : 1000000           # Replay buffer size (_rbf)
         batch_size : 544                # batch size
         eps_init : 0.1817               # initial exploration coefficient
         eps_fin : 0.00268               # final exploration coefficient
@@ -35,8 +35,8 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         learning_starts : 50000         # No. of steps before starting the training of actor/critic networks
     A2C :
         action_type : discrete        # the type of action: "discrete" or "continuous"
-        alpha : 0.00021                 # learning rate
-        gamma : 0.9393                  # discount factor
+        alpha : 0.00021                 # Learning rate (_al)
+        gamma : 0.9393                  # Discount factor (_ga)
         ent_coeff : 0.00004             # entropy coefficient
         n_steps : 658                   # No. of steps of the n-step TD update
         hidden_layers : 4               # No. of hidden layers
@@ -47,8 +47,8 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         gSDE : False                    # gSDE exploration ('False' or 'True')
     PPO : 
         action_type : discrete        # the type of action: "discrete" or "continuous"
-        alpha : 0.00005                 # learning rate
-        gamma : 0.973                   # discount factor
+        alpha : 0.00005                 # Learning rate (_al)
+        gamma : 0.973                   # Discount factor (_ga)
         ent_coeff : 0.00001             # entropy coefficient 
         n_steps_f : 21                  # factor for determining the No. of steps of the n-step TD update (n_steps = n_steps_f * batch_size)
         batch_size : 203                # batch size
@@ -61,9 +61,9 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         gSDE : False                    # gSDE exploration ('False' or 'True')
     TD3 :
         action_type : continuous      # the type of action: "discrete" or "continuous"
-        alpha : 0.00015                 # learning rate
-        gamma : 0.9595                  # discount factor
-        buffer_size : 19984440          # replay buffer size
+        alpha : 0.00015                 # Learning rate (_al)
+        gamma : 0.9595                  # Discount factor (_ga)
+        buffer_size : 19984440          # Replay buffer size (_rbf)
         batch_size : 257                # batch size
         hidden_layers : 3               # No. of hidden layers
         hidden_units : 743              # No. of hidden units
@@ -74,10 +74,10 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         sigma_exp : 0.19                # exploration noise in the target          
     SAC :
         action_type : continuous      # the type of action: "discrete" or "continuous"
-        alpha : 0.0001                  # learning rate
-        gamma : 0.9628                  # discount factor
+        alpha : 0.0001                  # Learning rate (_al)
+        gamma : 0.9628                  # Discount factor (_ga)
         ent_coeff : auto                # entropy coefficient (choose either values within [0,1] or the automatic adjustment using 'auto')
-        buffer_size : 2267734           # replay buffer size
+        buffer_size : 2267734           # Replay buffer size (_rbf)
         batch_size : 470                # batch size
         hidden_layers : 6               # No. of hidden layers
         hidden_units : 233              # No. of hidden units
@@ -88,10 +88,10 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         gSDE : False                    # gSDE exploration ('False' or 'True')
     TQC :
         action_type : continuous      # the type of action: "discrete" or "continuous"
-        alpha : 0.00044                 # learning rate
-        gamma : 0.9639                  # discount factor
+        alpha : 0.00044                 # Learning rate (_al)
+        gamma : 0.9639                  # Discount factor (_ga)
         ent_coeff : 0.00047             # entropy coefficient  (choose either values within [0,1] or the automatic adjustment using [2])
-        buffer_size : 6165170           # replay buffer size
+        buffer_size : 6165170           # Replay buffer size (_rbf)
         batch_size : 290                # batch size
         hidden_layers : 3               # No. of hidden layers
         hidden_units : 708              # No. of hidden units

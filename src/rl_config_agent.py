@@ -23,7 +23,34 @@ class AgentConfig:
                                                                             model_conf : {agent_config['rl_alg']} must match {agent_config['hyperparameters'].keys()}'
         self.rl_alg = agent_config['rl_alg']                                # selected RL algorithm - already implemented [DQN, A2C, PPO, TD3, SAC, TQC]
         self.rl_alg_hyp = agent_config['hyperparameters'][self.rl_alg]      # hyperparameters of the algorithm
-        
+        self.str_alg = None                                                 # Represents a string containing the hyperparameter settings after completing the initialization, for file identification purposes
+        # Nested dictionary with all possible hyperparameters including an abbreveation ('abb') and the variable name ('var', need to match notation in RL_PtG/config/config_agent.yaml)
+        self.hyper = {'Learning rate': {'abb' :"_al", 'var': 'alpha'},
+                      'Discount factor': {'abb' :"_ga", 'var': 'gamma'},
+                      'Initial exploration coefficient': {'abb' :"_ie", 'var': 'eps_init'},
+                      'Final exploration coefficient': {'abb' :"_fe", 'var': 'eps_fin'},
+                      'Exploration ratio': {'abb' :"_re", 'var': 'eps_fra'},
+                      'Entropy coefficient': {'abb' :"_ec", 'var': 'ent_coeff'},
+                      'Exploration noise': {'abb' :"_en", 'var': 'sigma_exp'},
+                      'n-step TD update': {'abb' :"_ns", 'var': 'n_steps'},
+                      'n-step factor': {'abb' :"_nf", 'var': 'n_steps_f'},
+                      'Replay buffer size': {'abb' :"_rb", 'var': 'buffer_size'},
+                      'Batch size': {'abb' :"_bs", 'var': 'batch_size'},
+                      'Hidden layers': {'abb' :"_hl", 'var': 'hidden_layers'},
+                      'Hidden units': {'abb' :"_hu", 'var': 'hidden_units'},
+                      'Activation function': {'abb' :"_ac", 'var': 'activation'},
+                      'Factor for generalized advantage estimation': {'abb' :"_ge", 'var': 'gae_lambda'},
+                      'No. of epochs': {'abb' :"_ep", 'var': 'n_epoch'},
+                      'Normalize advantage': {'abb' :"_na", 'var': 'normalize_advantage'},
+                      'No. of quantiles': {'abb' :"_nq", 'var': 'n_quantiles'},
+                      'Dropped quantiles': {'abb' :"_dq", 'var': 'top_quantiles_drop'},
+                      'No. of critics': {'abb' :"_cr", 'var': 'n_critics'},
+                      'Soft update': {'abb' :"_ta", 'var': 'tau'},
+                      'Learning starts': {'abb' :"_ls", 'var': 'learning_starts'},
+                      'Training frequency': {'abb' :"_tf", 'var': 'train_freq'},
+                      'Target update interval': {'abb' :"_tu", 'var': 'target_update_interval'},
+                      'gSDE exploration': {'abb' :"_gs", 'var': 'gSDE'},
+                      }
 
     def set_model(self, env, tb_log):
         """
@@ -43,7 +70,7 @@ class AgentConfig:
         elif self.rl_alg_hyp.activation == 'Tanh':
             activation_fn = th.nn.Tanh
         else:
-            assert False, "Type of activation function ({self.rl_alg_hyp.activation}) needs to be 'ReLU' or 'Tanh'! -> Check RL_PtG/config/config_agent.yaml"
+            assert False, f"Type of activation function ({self.rl_alg_hyp.activation}) needs to be 'ReLU' or 'Tanh'! -> Check RL_PtG/config/config_agent.yaml"
         net_arch = np.ones((self.rl_alg_hyp['hidden_layers'],), int) * self.rl_alg_hyp['hidden_units']
         net_arch = net_arch.tolist()
 
@@ -97,7 +124,7 @@ class AgentConfig:
         elif self.rl_alg == 'PPO':                      # import algorithm
             from stable_baselines3 import PPO
             policy_kwargs = dict(activation_fn=activation_fn, net_arch=net_arch)
-            n_steps = int(self.rl_alg_hyp.n_steps_f * self.rl_alg_hyp.batch_size)       # number of steps of the n-step TD update
+            n_steps = int(self.rl_alg_hyp['n_steps_f'] * self.rl_alg_hyp['batch_size'])       # number of steps of the n-step TD update
             assert self.rl_alg_hyp['normalize_advantage'] in [False,True], f"Normalize advantage ({self.rl_alg_hyp['normalize_advantage']}) should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
             assert self.rl_alg_hyp['gSDE'] in [False,True], f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
             model = PPO(
@@ -269,86 +296,52 @@ class AgentConfig:
     def get_hyper(self):
         """
             Gather and print algorithm hyperparameters and returns the values in a string for file identification
-            :return str_set: hyperparameter settings in a string for file identification
+            :return str_alg: hyperparameter settings in a string for file identification
         """
 
-        # Set RL algorithms and specify hyperparameters
+        # Print algorithm and hyperparameters and create identifier string
         print(f"    > Deep RL agorithm : {self.rl_alg}")
-        print(f"        Learning rate : {self.rl_alg_hyp['alpha']}")
-        print(f"        Discount factor : {self.rl_alg_hyp['gamma']}")
+        self.str_alg = self.rl_alg
+        self.hyp_print('Learning rate')
+        self.hyp_print('Discount factor')
         if self.rl_alg == 'DQN': 
-            print(f"        Initial exploration coefficient : {self.rl_alg_hyp['eps_init']}")
-            print(f"        Final exploration coefficient : {self.rl_alg_hyp['eps_fin']}")
-            print(f"        Ratio of the training set for exploration annealing : {self.rl_alg_hyp['eps_fra']}")
-        if self.rl_alg in ['A2C','PPO','SAC','TQC']: print(f"        Entropy coefficient : {self.rl_alg_hyp['ent_coeff']}")
-        if self.rl_alg in ['TD3']: print(f"        Exploration noise in the target   : {self.rl_alg_hyp['sigma_exp']}")
-        if self.rl_alg in ['A2C']: print(f"        No. of steps of the n-step TD update : {int(self.rl_alg_hyp['n_steps'])}")
-        if self.rl_alg in ['PPO']: print(f"        No. of steps of the n-step TD update : {int(self.rl_alg_hyp.n_steps_f * self.rl_alg_hyp.batch_size)} | n_steps_f = {int(self.rl_alg_hyp.n_steps_f)}")
-        if self.rl_alg in ['DQN','TD3','SAC','TQC']: print(f"        Replay buffer size : {int(self.rl_alg_hyp['buffer_size'])}")
-        if self.rl_alg in ['DQN','PPO','TD3','SAC','TQC']: print(f"        Batch size : {int(self.rl_alg_hyp['batch_size'])}")
-        print(f"        No. of hidden layers : {int(self.rl_alg_hyp['hidden_layers'])}")
-        print(f"        No. of hidden units : {int(self.rl_alg_hyp['hidden_units'])}")
-        print(f"        Activation function : {int(self.rl_alg_hyp['activation'])}")
-        if self.rl_alg in ['A2C','PPO']: print(f"        Factor for generalized advantage estimation : {self.rl_alg_hyp['gae_lambda']}")
-        if self.rl_alg == 'PPO': print(f"        No. of epochs for mini batch training : {self.rl_alg_hyp['n_epoch']}")
-        if self.rl_alg in ['A2C','PPO']: print(f"        Normalize advantage : {self.rl_alg_hyp['normalize_advantage']}")
+            self.hyp_print('Initial exploration coefficient')
+            self.hyp_print('Final exploration coefficient')
+            self.hyp_print('Exploration ratio')
+        if self.rl_alg in ['A2C','PPO','SAC','TQC']: self.hyp_print('Entropy coefficient')
+        if self.rl_alg in ['TD3']: self.hyp_print('Exploration noise')
+        if self.rl_alg in ['A2C']: self.hyp_print('n-step TD update')
+        if self.rl_alg in ['PPO']:
+            self.hyp_print('n-step factor')
+            print(f"        No. of steps of the n-step TD update : {int(self.rl_alg_hyp['n_steps_f'] * self.rl_alg_hyp['batch_size'])}")
+        if self.rl_alg in ['DQN','TD3','SAC','TQC']: self.hyp_print('Replay buffer size')
+        if self.rl_alg in ['DQN','PPO','TD3','SAC','TQC']: self.hyp_print('Batch size')
+        self.hyp_print('Hidden layers')
+        self.hyp_print('Hidden units')
+        self.hyp_print('Activation function')
+        if self.rl_alg in ['A2C','PPO']: self.hyp_print('Factor for generalized advantage estimation')
+        if self.rl_alg == 'PPO': self.hyp_print('No. of epochs')
+        if self.rl_alg in ['A2C','PPO']: self.hyp_print('Normalize advantage')
         if self.rl_alg == 'TQC':
-            print(f"        No. of quantiles : {int(self.rl_alg_hyp['n_quantiles'])}")
-            print(f"        Top quantiles to drop : {int(self.rl_alg_hyp['top_quantiles_drop'])}")
-            print(f"        No. of critics : {int(self.rl_alg_hyp['n_critics'])}")
-        if self.rl_alg in ['DQN','TD3','SAC','TQC']: print(f"        Soft update coefficient : {self.rl_alg_hyp['tau']}")
-        if self.rl_alg in ['DQN','TD3','SAC','TQC']: print(f"        Learning starts : {int(self.rl_alg_hyp['learning_starts'])}")
-        if self.rl_alg in ['DQN','TD3','SAC','TQC']: print(f"        Training frequency : {int(self.rl_alg_hyp['train_freq'])}")
-        if self.rl_alg == 'DQN': print(f"        Target network update interval : {int(self.rl_alg_hyp['target_update_interval'])}")
-        if self.rl_alg in ['A2C','PPO','TD3','SAC','TQC']: print(f"        gSDE exploration  (0: False, 1: True) : {int(self.rl_alg_hyp['gSDE'])}")
+            self.hyp_print('No. of quantiles')
+            self.hyp_print('Dropped quantiles')
+            self.hyp_print('No. of critics')
+        if self.rl_alg in ['DQN','TD3','SAC','TQC']: 
+            self.hyp_print('Soft update') 
+            self.hyp_print('Learning starts') 
+            self.hyp_print('Training frequency')
+        if self.rl_alg == 'DQN': self.hyp_print('Target update interval')
+        if self.rl_alg in ['A2C','PPO','TD3','SAC','TQC']: self.hyp_print('gSDE exploration')
+
+        return self.str_alg
 
 
+    def hyp_print(self, hyp_name: str):
+        """
+            Prints a specific hyperparameter to the TUI and adds the value to the string identifier
+            :param hyp_name: Name of the hyperparameter
+        """
 
-def get_param_str(eps_sim_steps_train, seed):                           ################################------------------------------------------------------------
-    """
-    Returns the hyperparameter setting as a long string
-    :return: hyperparameter setting
-    """
-    AgentConfig = AgentConfig()
-
-    str_params_short = "_ep" + str(AgentConfig.eps_len_d) + \
-                       "_al" + str(np.round(AgentConfig.alpha, 6)) + \
-                       "_ga" + str(np.round(AgentConfig.gamma, 4)) + \
-                       "_bt" + str(AgentConfig.batch_size) + \
-                       "_bf" + str(AgentConfig.buffer_size) + \
-                       "_et" + str(np.round(AgentConfig.ent_coeff, 5)) + \
-                       "_hu" + str(AgentConfig.hidden_units) + \
-                       "_hl" + str(AgentConfig.hidden_layers) + \
-                       "_st" + str(AgentConfig.sim_step) + \
-                       "_ac" + str(AgentConfig.activation) + \
-                       "_ls" + str(AgentConfig.learning_starts) + \
-                       "_tf" + str(AgentConfig.train_freq) + \
-                       "_tau" + str(AgentConfig.tau) + \
-                       "_cr" + str(AgentConfig.n_critics) + \
-                       "_qu" + str(AgentConfig.n_quantiles) + \
-                       "_qd" + str(AgentConfig.top_quantiles_drop) + \
-                       "_gsd" + str(AgentConfig.gSDE) + \
-                       "_sd" + str(seed)
-
-    str_params_long = "\n     episode length=" + str(AgentConfig.eps_len_d) + \
-                      "\n     alpha=" + str(AgentConfig.alpha) + \
-                      "\n     gamma=" + str(AgentConfig.gamma) + \
-                      "\n     batchsize=" + str(AgentConfig.batch_size) + \
-                      "\n     replaybuffer=" + str(AgentConfig.buffer_size) + \
-                      " (#ofEpisodes=" + str(AgentConfig.buffer_size / eps_sim_steps_train) + ")" + \
-                      "\n     coeff_ent=" + str(AgentConfig.ent_coeff) + \
-                      "\n     hiddenunits=" + str(AgentConfig.hidden_units) + \
-                      "\n     hiddenlayers=" + str(AgentConfig.hidden_layers) + \
-                      "\n     sim_step=" + str(AgentConfig.sim_step) + \
-                      "\n     activation=" + str(AgentConfig.activation) + " (0=Relu, 1=tanh" + ")" + \
-                      "\n     learningstarts=" + str(AgentConfig.learning_starts) + \
-                      "\n     training_freq=" + str(AgentConfig.train_freq) + \
-                      "\n     tau=" + str(AgentConfig.tau) + \
-                      "\n     n_critics=" + str(AgentConfig.n_critics) + \
-                      "\n     n_quantiles=" + str(AgentConfig.n_quantiles) + \
-                      "\n     top_quantiles_to_drop_per_net=" + str(AgentConfig.top_quantiles_drop) + \
-                      "\n     g_SDE=" + str(AgentConfig.gSDE) + \
-                      "\n     seed=" + str(seed)
-
-    return str_params_short, str_params_long
-
+        assert hyp_name in self.hyper, f"Specified hyperparameter ({hyp_name}) is not part of the possible hyperparameters!"
+        print(f"        {hyp_name} ({self.hyper[hyp_name]['abb']}): {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
+        self.str_alg += self.hyper[hyp_name]['abb']
