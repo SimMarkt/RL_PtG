@@ -123,6 +123,8 @@ def load_data():
         divisors = [i for i in range(1, ENV_PARAMS.train_len_d + 1) if ENV_PARAMS.train_len_d % i == 0]
         assert False, f'The training set size {ENV_PARAMS.train_len_d} must be divisible by the episode length - data/config_env.yaml -> eps_len_d : {ENV_PARAMS.eps_len_d}; 
                         Possible divisors are: {divisors}'
+    # Ensure that the training set is larger or at least equal to the defined episode length  
+    assert ENV_PARAMS.train_len_d >= ENV_PARAMS.eps_len_d, f'Training set size ({ENV_PARAMS.train_len_d}) must be larger or at least equal to the defined episode length ({ENV_PARAMS.eps_len_d})!'
 
     return dict_price_data, dict_op_data
 
@@ -130,7 +132,7 @@ class Preprocessing():
     """
         A class that contains variables and functions for preprocessing of energy market and process data
     """
-    def __init__(self, dict_price_data, seed_train):
+    def __init__(self, dict_price_data, dict_op_data, seed_train):
         """
             Initialization of variables
             :param dict_price_data: dictionary with market data
@@ -141,6 +143,7 @@ class Preprocessing():
         self.ENV_PARAMS = EnvParams()
         self.TRAIN_PARAMS = TrainParams()
         self.dict_price_data = dict_price_data
+        self.dict_op_data = dict_op_data
         self.seed_train = seed_train
         self.dict_pot_r_b = None                    # dictionary with potential reward [pot_rew...] and boolean reward identifier [part_full_b...]
         self.r_level = None                         # Sets the general height of the reward penalty according to electricity, (S)NG, and EUA price levels
@@ -162,7 +165,22 @@ class Preprocessing():
         self.g_e_train = None
         self.g_e_cv = None
         self.g_e_test = None
+        # Variables for division of the entire training set into different, randomly picked subsets for episodic learing
+        self.eps_sim_steps_train = None         # Number of steps in the training set per episode
+        self.eps_sim_steps_cv = None            # Number of steps in the validation set
+        self.eps_sim_steps_test = None          # Number of steps in the test set
+        self.eps_ind = None                     # Contains indexes of the randomly ordered training subsets
+        self.overhead_factor = 3                # Overhead of self.eps_ind - To account for randomn selection of the different processes in multiprocessing
+        self.n_eps = None                       # Episode length in seconds
+        self.num_loops = None                   # No. of loops over the total training set during training
 
+        # For Multiprocessing: self.n_eps_loops allows for definition of different eps_ind for different processes (see RL_PtG\env\ptg_gym_env.py)
+        self.n_eps_loops = None                 # Total No. of episodes over the entire training procedure 
+
+        self.preprocessing_rew()                                           # Calculate potential reward and boolean identifier
+        self.preprocessing_array()                                         # Transform Day-ahead datasets into np.arrays for calculation purposes
+        self.define_episodes()                                             # define episodes and indices for choosing subsets of the training set randomly          
+        
 
     def preprocessing_rew(self):
         """
@@ -172,7 +190,8 @@ class Preprocessing():
             :return r_level: ###################################################################################################################################?????????
         """
 
-        # compute methanation operation data for theoretical optimum (ignoring dynamics) ##########################################MAKE SHORTER##################
+        # Compute methanation operation data for theoretical optimum (ignoring dynamics) ##########################################MAKE SHORTER##################
+        # calculate_optimum() had been excluded from Preprocessing() and placed in the different rl_opt.py file for the sake of clarity
         stats_dict_opt_train = calculate_optimum(self.dict_price_data['el_price_train'], self.dict_price_data['gas_price_train'],
                                                 self.dict_price_data['eua_price_train'], "Train")
         stats_dict_opt_cv = calculate_optimum(self.dict_price_data['el_price_cv'], self.dict_price_data['gas_price_cv'],
@@ -219,7 +238,7 @@ class Preprocessing():
         e_r_b_cv = np.zeros((3, self.ENV_PARAMS.price_ahead, self.dict_price_data['el_price_cv'].shape[0] - self.ENV_PARAMS.price_ahead))
         e_r_b_test = np.zeros((3, self.ENV_PARAMS.price_ahead, self.dict_price_data['el_price_test'].shape[0] - self.ENV_PARAMS.price_ahead))
 
-        for i in range(ENV_PARAMS.price_ahead):     ##########################################MAKE SHORTER##################
+        for i in range(self.ENV_PARAMS.price_ahead):     ##########################################MAKE SHORTER##################
             e_r_b_train[0, i, :] = self.dict_price_data['el_price_train'][i:(-self.ENV_PARAMS.price_ahead + i)]
             e_r_b_train[1, i, :] = self.dict_pot_r_b['pot_rew_train'][i:(-self.ENV_PARAMS.price_ahead + i)]
             e_r_b_train[2, i, :] = self.dict_pot_r_b['part_full_b_train'][i:(-self.ENV_PARAMS.price_ahead + i)]
@@ -251,11 +270,7 @@ class Preprocessing():
 
     def define_episodes(self):
         """
-        Defines specifications for training and evaluation episodes
-        :return eps_sim_steps_train: Number of steps in the training set per episode
-                eps_sim_steps_test: Number of steps in the test set per episode
-                eps_ind: contains indexes of the training subsets
-                n_eps_loops: No. of training subsets times No. of loops
+            Defines settings for training and evaluation episodes
         """
 
         print("Define episodes and step size limits...")
@@ -264,12 +279,12 @@ class Preprocessing():
         test_len_d = len(self.dict_price_data['gas_price_test']) - 1
 
         # Split up the entire training set into several smaller subsets which represents an own episodes
-        self.n_eps = int(self.ENV_PARAMS.train_len_d / self.ENV_PARAMS.eps_len_d)  # number of training subsets
+        self.n_eps = int(self.ENV_PARAMS.train_len_d / self.ENV_PARAMS.eps_len_d)  # Number of training subsets/episodes per training procedure
         
-        eps_len = 24 * 3600 * self.ENV_PARAMS.eps_len_d  # episode length in seconds
+        self.eps_len = 24 * 3600 * self.ENV_PARAMS.eps_len_d  # episode length in seconds
 
         # Number of steps in train and test sets per episode
-        self.eps_sim_steps_train = int(eps_len / self.ENV_PARAMS.sim_step)
+        self.eps_sim_steps_train = int(self.eps_len / self.ENV_PARAMS.sim_step)
         self.eps_sim_steps_cv = int(24 * 3600 * cv_len_d / self.ENV_PARAMS.sim_step)
         self.eps_sim_steps_test = int(24 * 3600 * test_len_d /self. ENV_PARAMS.sim_step)
 
@@ -280,170 +295,170 @@ class Preprocessing():
         print("--- Training steps per episode =", self.eps_sim_steps_train)
         print("--- Steps in the evaluation set =", self.eps_sim_steps_test)
 
-        self.eps_ind = self.rand_eps_ind()
+        # Create random selection routine with replacement for the different training subsets
+        self.rand_eps_ind()
 
-        self.n_eps_loops = self.n_eps * self.num_loops
+        # For Multiprocessing, eps_ind should not shared between different processes
+        self.n_eps_loops = self.n_eps * self.num_loops  # Allows for definition of different eps_ind in Multiprocessing (see RL_PtG\env\ptg_gym_env.py)
 
 
-    def rand_eps_ind(train_len_d: int, eps_len_d: int, n_eps: int, num_loops: int, seed: int):
+    def rand_eps_ind(self):
         """
         The agent can either use the total training set in one episode (train_len_d == eps_len_d) or
         divide the total training set into smaller subsets (train_len_d_i > eps_len_d). In the latter case, the
         subsets where selected randomly
-        :param train_len_d: Total number of days in the training set
-        :param eps_len_d: Number of days in one training episode
-        :param n_eps: Number of training subsets
-        :param num_loops: Number of loops over the total training set
-        :param seed: random seed of the trainings set
-        :return: eps_ind: contains indexes of the training subsets
         """
 
-        np.random.seed(seed)
+        np.random.seed(self.seed_train)     # Set the random seed for random episode selection
 
-        overhead_factor = 3     # to account for randomn selection of ep_index of the different processes in multiprocessing
-
-        if train_len_d == eps_len_d:
-            eps_ind = np.zeros(int(n_eps*num_loops*overhead_factor))
-        elif train_len_d > eps_len_d:
-            # random selection with sampling with replacement
-            num_ep = np.linspace(start=0, stop=n_eps-1, num=n_eps)
-            random_ep = np.zeros((num_loops*overhead_factor, n_eps))
-            for i in range(num_loops*overhead_factor):
+        if self.ENV_PARAMS.train_len_d == self.ENV_PARAMS.eps_len_d:
+            self.eps_ind = np.zeros(int(self.n_eps*self.num_loops*self.overhead_factor))
+        else:           # self.ENV_PARAMS.train_len_d > self.ENV_PARAMS.eps_len_d:
+            # Random selection with sampling with replacement
+            num_ep = np.linspace(start=0, stop=self.n_eps-1, num=self.n_eps)
+            random_ep = np.zeros((self.num_loops*self.overhead_factor, self.n_eps))
+            for i in range(self.num_loops*self.overhead_factor):
                 random_ep[i, :] = num_ep
                 np.random.shuffle(random_ep[i, :])
-            eps_ind = random_ep.reshape(int(n_eps*num_loops*overhead_factor)).astype(int)
-        else:
-            assert False, "train_len_d >= eps_len_d!"
-
-        return eps_ind
+            self.eps_ind = random_ep.reshape(int(self.n_eps*self.num_loops*self.overhead_factor)).astype(int)
 
 
-    def dict_env_kwargs(eps_ind, e_r_b, g_e, dict_op_data, eps_sim_steps, n_eps, r_level, type="train"):
+    def dict_env_kwargs(self, type="train"):
         """
         Returns global model parameters and hyper parameters applied in the PtG environment as a dictionary
-        :param eps_ind: contains indexes of the training subsets
-        :param e_r_b: np.array which stores elec. price data, potential reward, and boolean identifier
-        :param g_e: np.array which stores gas and eua price data
-        :param dict_op_data: dictionary with potential reward [pot_rew...] and boolean reward identifier [part_full_b...]
-        :param eps_sim_steps: training/test episode length
-        :param n_eps: No. of training subsets
-        :param type: specifies either the training set "train" or the cv/ test set "cv_test"
-        :return: env_kwargs: dictionary with global parameters and hyperparameters
+        :param dict_op_data: Dictionary with data of dynamic methanation operation
+        :param type: Specifies either the training set "train" or the cv/ test set "cv_test"
+        :return: env_kwargs: Dictionary with global parameters and hyperparameters
         """
 
         env_kwargs = {}
+        ###################MAKE SHORTER #####################
+        # More information on the environment's parameters are present in RL_PtG/src/rl_param_env.py
 
-        env_kwargs["ptg_state_space['standby']"] = ENV_PARAMS.ptg_state_space['standby']
-        env_kwargs["ptg_state_space['cooldown']"] = ENV_PARAMS.ptg_state_space['cooldown']
-        env_kwargs["ptg_state_space['startup']"] = ENV_PARAMS.ptg_state_space['startup']
-        env_kwargs["ptg_state_space['partial_load']"] = ENV_PARAMS.ptg_state_space['partial_load']
-        env_kwargs["ptg_state_space['full_load']"] = ENV_PARAMS.ptg_state_space['full_load']
+        env_kwargs["ptg_state_space['standby']"] = self.ENV_PARAMS.ptg_state_space['standby'] 
+        env_kwargs["ptg_state_space['cooldown']"] = self.ENV_PARAMS.ptg_state_space['cooldown']
+        env_kwargs["ptg_state_space['startup']"] = self.ENV_PARAMS.ptg_state_space['startup']
+        env_kwargs["ptg_state_space['partial_load']"] = self.ENV_PARAMS.ptg_state_space['partial_load']
+        env_kwargs["ptg_state_space['full_load']"] = self.ENV_PARAMS.ptg_state_space['full_load']
 
-        env_kwargs["noise"] = ENV_PARAMS.noise
-        env_kwargs["parallel"] = ENV_PARAMS.parallel
-        env_kwargs["eps_ind"] = eps_ind                     # differ in train and test set
-        env_kwargs["eps_len_d"] = AGENT_PARAMS.eps_len_d
-        env_kwargs["sim_step"] = AGENT_PARAMS.sim_step
-        env_kwargs["time_step_op"] = ENV_PARAMS.time_step_op
-        env_kwargs["price_ahead"] = ENV_PARAMS.price_ahead
-        env_kwargs["n_eps_loops"] = n_eps
+        env_kwargs["noise"] = self.ENV_PARAMS.noise
+        env_kwargs["parallel"] = self.TRAIN_PARAMS.parallel
+        env_kwargs["eps_len_d"] = self.ENV_PARAMS.eps_len_d
+        env_kwargs["sim_step"] = self.ENV_PARAMS.sim_step
+        env_kwargs["time_step_op"] = self.ENV_PARAMS.time_step_op
+        env_kwargs["price_ahead"] = self.ENV_PARAMS.price_ahead
+        env_kwargs["n_eps_loops"] = self.n_eps_loops
 
-        env_kwargs["e_r_b"] = e_r_b                         # differ in train and test set
-        env_kwargs["g_e"] = g_e                             # differ in train and test set
+        env_kwargs["dict_op_data['startup_cold']"] = self.dict_op_data['startup_cold']
+        env_kwargs["dict_op_data['startup_hot']"] = self.dict_op_data['startup_hot']
+        env_kwargs["dict_op_data['cooldown']"] = self.dict_op_data['cooldown']
+        env_kwargs["dict_op_data['standby_down']"] = self.dict_op_data['standby_down']
+        env_kwargs["dict_op_data['standby_up']"] = self.dict_op_data['standby_up']
+        env_kwargs["dict_op_data['op1_start_p']"] = self.dict_op_data['op1_start_p']
+        env_kwargs["dict_op_data['op2_start_f']"] = self.dict_op_data['op2_start_f']
+        env_kwargs["dict_op_data['op3_p_f']"] = self.dict_op_data['op3_p_f']
+        env_kwargs["dict_op_data['op4_p_f_p_5']"] = self.dict_op_data['op4_p_f_p_5']
+        env_kwargs["dict_op_data['op5_p_f_p_10']"] = self.dict_op_data['op5_p_f_p_10']
+        env_kwargs["dict_op_data['op6_p_f_p_15']"] = self.dict_op_data['op6_p_f_p_15']
+        env_kwargs["dict_op_data['op7_p_f_p_22']"] = self.dict_op_data['op7_p_f_p_22']
+        env_kwargs["dict_op_data['op8_f_p']"] = self.dict_op_data['op8_f_p']
+        env_kwargs["dict_op_data['op9_f_p_f_5']"] = self.dict_op_data['op9_f_p_f_5']
+        env_kwargs["dict_op_data['op10_f_p_f_10']"] = self.dict_op_data['op10_f_p_f_10']
+        env_kwargs["dict_op_data['op11_f_p_f_15']"] = self.dict_op_data['op11_f_p_f_15']
+        env_kwargs["dict_op_data['op12_f_p_f_20']"] = self.dict_op_data['op12_f_p_f_20']
 
-        env_kwargs["dict_op_data['startup_cold']"] = dict_op_data['startup_cold']
-        env_kwargs["dict_op_data['startup_hot']"] = dict_op_data['startup_hot']
-        env_kwargs["dict_op_data['cooldown']"] = dict_op_data['cooldown']
-        env_kwargs["dict_op_data['standby_down']"] = dict_op_data['standby_down']
-        env_kwargs["dict_op_data['standby_up']"] = dict_op_data['standby_up']
-        env_kwargs["dict_op_data['op1_start_p']"] = dict_op_data['op1_start_p']
-        env_kwargs["dict_op_data['op2_start_f']"] = dict_op_data['op2_start_f']
-        env_kwargs["dict_op_data['op3_p_f']"] = dict_op_data['op3_p_f']
-        env_kwargs["dict_op_data['op4_p_f_p_5']"] = dict_op_data['op4_p_f_p_5']
-        env_kwargs["dict_op_data['op5_p_f_p_10']"] = dict_op_data['op5_p_f_p_10']
-        env_kwargs["dict_op_data['op6_p_f_p_15']"] = dict_op_data['op6_p_f_p_15']
-        env_kwargs["dict_op_data['op7_p_f_p_22']"] = dict_op_data['op7_p_f_p_22']
-        env_kwargs["dict_op_data['op8_f_p']"] = dict_op_data['op8_f_p']
-        env_kwargs["dict_op_data['op9_f_p_f_5']"] = dict_op_data['op9_f_p_f_5']
-        env_kwargs["dict_op_data['op10_f_p_f_10']"] = dict_op_data['op10_f_p_f_10']
-        env_kwargs["dict_op_data['op11_f_p_f_15']"] = dict_op_data['op11_f_p_f_15']
-        env_kwargs["dict_op_data['op12_f_p_f_20']"] = dict_op_data['op12_f_p_f_20']
+        env_kwargs["scenario"] = self.ENV_PARAMS.scenario
 
-        env_kwargs["scenario"] = ENV_PARAMS.scenario
+        env_kwargs["convert_mol_to_Nm3"] = self.ENV_PARAMS.convert_mol_to_Nm3
+        env_kwargs["H_u_CH4"] = self.ENV_PARAMS.H_u_CH4
+        env_kwargs["H_u_H2"] = self.ENV_PARAMS.H_u_H2
+        env_kwargs["dt_water"] = self.ENV_PARAMS.dt_water
+        env_kwargs["cp_water"] = self.ENV_PARAMS.cp_water
+        env_kwargs["rho_water"] = self.ENV_PARAMS.rho_water
+        env_kwargs["Molar_mass_CO2"] = self.ENV_PARAMS.Molar_mass_CO2
+        env_kwargs["Molar_mass_H2O"] = self.ENV_PARAMS.Molar_mass_H2O
+        env_kwargs["h_H2O_evap"] = self.ENV_PARAMS.h_H2O_evap
+        env_kwargs["eeg_el_price"] = self.ENV_PARAMS.eeg_el_price
+        env_kwargs["heat_price"] = self.ENV_PARAMS.heat_price
+        env_kwargs["o2_price"] = self.ENV_PARAMS.o2_price
+        env_kwargs["water_price"] = self.ENV_PARAMS.water_price
+        env_kwargs["min_load_electrolyzer"] = self.ENV_PARAMS.min_load_electrolyzer
+        env_kwargs["max_h2_volumeflow"] = self.ENV_PARAMS.max_h2_volumeflow
+        env_kwargs["eta_CHP"] = self.ENV_PARAMS.eta_CHP
 
-        env_kwargs["convert_mol_to_Nm3"] = ENV_PARAMS.convert_mol_to_Nm3
-        env_kwargs["H_u_CH4"] = ENV_PARAMS.H_u_CH4
-        env_kwargs["H_u_H2"] = ENV_PARAMS.H_u_H2
-        env_kwargs["dt_water"] = ENV_PARAMS.dt_water
-        env_kwargs["cp_water"] = ENV_PARAMS.cp_water
-        env_kwargs["rho_water"] = ENV_PARAMS.rho_water
-        env_kwargs["Molar_mass_CO2"] = ENV_PARAMS.Molar_mass_CO2
-        env_kwargs["Molar_mass_H2O"] = ENV_PARAMS.Molar_mass_H2O
-        env_kwargs["h_H2O_evap"] = ENV_PARAMS.h_H2O_evap
-        env_kwargs["eeg_el_price"] = ENV_PARAMS.eeg_el_price
-        env_kwargs["heat_price"] = ENV_PARAMS.heat_price
-        env_kwargs["o2_price"] = ENV_PARAMS.o2_price
-        env_kwargs["water_price"] = ENV_PARAMS.water_price
-        env_kwargs["min_load_electrolyzer"] = ENV_PARAMS.min_load_electrolyzer
-        env_kwargs["max_h2_volumeflow"] = ENV_PARAMS.max_h2_volumeflow
-        env_kwargs["eta_BHKW"] = ENV_PARAMS.eta_BHKW
+        env_kwargs["t_cat_standby"] = self.ENV_PARAMS.t_cat_standby
+        env_kwargs["t_cat_startup_cold"] = self.ENV_PARAMS.t_cat_startup_cold
+        env_kwargs["t_cat_startup_hot"] = self.ENV_PARAMS.t_cat_startup_hot
+        env_kwargs["time1_start_p_f"] = self.ENV_PARAMS.time1_start_p_f
+        env_kwargs["time2_start_f_p"] = self.ENV_PARAMS.time2_start_f_p
+        env_kwargs["time_p_f"] = self.ENV_PARAMS.time_p_f
+        env_kwargs["time_f_p"] = self.ENV_PARAMS.time_f_p
+        env_kwargs["time1_p_f_p"] = self.ENV_PARAMS.time1_p_f_p
+        env_kwargs["time2_p_f_p"] = self.ENV_PARAMS.time2_p_f_p
+        env_kwargs["time23_p_f_p"] = self.ENV_PARAMS.time23_p_f_p
+        env_kwargs["time3_p_f_p"] = self.ENV_PARAMS.time3_p_f_p
+        env_kwargs["time34_p_f_p"] = self.ENV_PARAMS.time34_p_f_p
+        env_kwargs["time4_p_f_p"] = self.ENV_PARAMS.time4_p_f_p
+        env_kwargs["time45_p_f_p"] = self.ENV_PARAMS.time45_p_f_p
+        env_kwargs["time5_p_f_p"] = self.ENV_PARAMS.time5_p_f_p
+        env_kwargs["time1_f_p_f"] = self.ENV_PARAMS.time1_f_p_f
+        env_kwargs["time2_f_p_f"] = self.ENV_PARAMS.time2_f_p_f
+        env_kwargs["time23_f_p_f"] = self.ENV_PARAMS.time23_f_p_f
+        env_kwargs["time3_f_p_f"] = self.ENV_PARAMS.time3_f_p_f
+        env_kwargs["time34_f_p_f"] = self.ENV_PARAMS.time34_f_p_f
+        env_kwargs["time4_f_p_f"] = self.ENV_PARAMS.time4_f_p_f
+        env_kwargs["time45_f_p_f"] = self.ENV_PARAMS.time45_f_p_f
+        env_kwargs["time5_f_p_f"] = self.ENV_PARAMS.time5_f_p_f
+        env_kwargs["i_fully_developed"] = self.ENV_PARAMS.i_fully_developed
+        env_kwargs["j_fully_developed"] = self.ENV_PARAMS.j_fully_developed
 
-        env_kwargs["t_cat_standby"] = ENV_PARAMS.t_cat_standby
-        env_kwargs["t_cat_startup_cold"] = ENV_PARAMS.t_cat_startup_cold
-        env_kwargs["t_cat_startup_hot"] = ENV_PARAMS.t_cat_startup_hot
-        env_kwargs["time1_start_p_f"] = ENV_PARAMS.time1_start_p_f
-        env_kwargs["time2_start_f_p"] = ENV_PARAMS.time2_start_f_p
-        env_kwargs["time_p_f"] = ENV_PARAMS.time_p_f
-        env_kwargs["time_f_p"] = ENV_PARAMS.time_f_p
-        env_kwargs["time1_p_f_p"] = ENV_PARAMS.time1_p_f_p
-        env_kwargs["time2_p_f_p"] = ENV_PARAMS.time2_p_f_p
-        env_kwargs["time23_p_f_p"] = ENV_PARAMS.time23_p_f_p
-        env_kwargs["time3_p_f_p"] = ENV_PARAMS.time3_p_f_p
-        env_kwargs["time34_p_f_p"] = ENV_PARAMS.time34_p_f_p
-        env_kwargs["time4_p_f_p"] = ENV_PARAMS.time4_p_f_p
-        env_kwargs["time45_p_f_p"] = ENV_PARAMS.time45_p_f_p
-        env_kwargs["time5_p_f_p"] = ENV_PARAMS.time5_p_f_p
-        env_kwargs["time1_f_p_f"] = ENV_PARAMS.time1_f_p_f
-        env_kwargs["time2_f_p_f"] = ENV_PARAMS.time2_f_p_f
-        env_kwargs["time23_f_p_f"] = ENV_PARAMS.time23_f_p_f
-        env_kwargs["time3_f_p_f"] = ENV_PARAMS.time3_f_p_f
-        env_kwargs["time34_f_p_f"] = ENV_PARAMS.time34_f_p_f
-        env_kwargs["time4_f_p_f"] = ENV_PARAMS.time4_f_p_f
-        env_kwargs["time45_f_p_f"] = ENV_PARAMS.time45_f_p_f
-        env_kwargs["time5_f_p_f"] = ENV_PARAMS.time5_f_p_f
-        env_kwargs["i_fully_developed"] = ENV_PARAMS.i_fully_developed
-        env_kwargs["j_fully_developed"] = ENV_PARAMS.j_fully_developed
+        env_kwargs["t_cat_startup_cold"] = self.ENV_PARAMS.t_cat_startup_cold
+        env_kwargs["t_cat_startup_hot"] = self.ENV_PARAMS.t_cat_startup_hot
 
-        env_kwargs["t_cat_startup_cold"] = ENV_PARAMS.t_cat_startup_cold
-        env_kwargs["t_cat_startup_hot"] = ENV_PARAMS.t_cat_startup_hot
-
-        env_kwargs["rew_l_b"] = np.min(e_r_b[1, 0, :])
-        env_kwargs["rew_u_b"] = np.max(e_r_b[1, 0, :])
-        env_kwargs["T_l_b"] = ENV_PARAMS.T_l_b
-        env_kwargs["T_u_b"] = ENV_PARAMS.T_u_b
-        env_kwargs["h2_l_b"] = ENV_PARAMS.h2_l_b
-        env_kwargs["h2_u_b"] = ENV_PARAMS.h2_u_b
-        env_kwargs["ch4_l_b"] = ENV_PARAMS.ch4_l_b
-        env_kwargs["ch4_u_b"] = ENV_PARAMS.ch4_u_b
-        env_kwargs["h2_res_l_b"] = ENV_PARAMS.h2_res_l_b
-        env_kwargs["h2_res_u_b"] = ENV_PARAMS.h2_res_u_b
-        env_kwargs["h2o_l_b"] = ENV_PARAMS.h2o_l_b
-        env_kwargs["h2o_u_b"] = ENV_PARAMS.h2o_u_b
-        env_kwargs["heat_l_b"] = ENV_PARAMS.heat_l_b
-        env_kwargs["heat_u_b"] = ENV_PARAMS.heat_u_b
-
-        env_kwargs["eps_sim_steps"] = eps_sim_steps         # differ in train and test set
+        env_kwargs["T_l_b"] = self.ENV_PARAMS.T_l_b
+        env_kwargs["T_u_b"] = self.ENV_PARAMS.T_u_b
+        env_kwargs["h2_l_b"] = self.ENV_PARAMS.h2_l_b
+        env_kwargs["h2_u_b"] = self.ENV_PARAMS.h2_u_b
+        env_kwargs["ch4_l_b"] = self.ENV_PARAMS.ch4_l_b
+        env_kwargs["ch4_u_b"] = self.ENV_PARAMS.ch4_u_b
+        env_kwargs["h2_res_l_b"] = self.ENV_PARAMS.h2_res_l_b
+        env_kwargs["h2_res_u_b"] = self.ENV_PARAMS.h2_res_u_b
+        env_kwargs["h2o_l_b"] = self.ENV_PARAMS.h2o_l_b
+        env_kwargs["h2o_u_b"] = self.ENV_PARAMS.h2o_u_b
+        env_kwargs["heat_l_b"] = self.ENV_PARAMS.heat_l_b
+        env_kwargs["heat_u_b"] = self.ENV_PARAMS.heat_u_b
 
         if type == "train":
-            env_kwargs["state_change_penalty"] = AGENT_PARAMS.state_change_penalty
-        elif type == "cv_test":
+            env_kwargs["eps_ind"] = self.eps_ind
+            env_kwargs["state_change_penalty"] = self.ENV_PARAMS.state_change_penalty
+            env_kwargs["eps_sim_steps"] = self.eps_sim_steps_train
+            env_kwargs["e_r_b"] = self.e_r_b_train                         
+            env_kwargs["g_e"] = self.g_e_train 
+            env_kwargs["rew_l_b"] = np.min(self.e_r_b_train[1, 0, :]) 
+            env_kwargs["rew_u_b"] = np.max(self.e_r_b_train[1, 0, :])                            
+        else:   # Evaluation 
+            env_kwargs["eps_ind"] = np.zeros(len(self.eps_ind), dtype=int)          # Simply use the one validation or test set, no indexing required
             env_kwargs["state_change_penalty"] = 0.0        # no state change penalty during validation
+            if type == "cv":    # Validation
+                env_kwargs["eps_sim_steps"] = self.eps_sim_steps_cv
+                env_kwargs["e_r_b"] = self.e_r_b_cv                        
+                env_kwargs["g_e"] = self.g_e_cv
+                env_kwargs["rew_l_b"] = np.min(self.e_r_b_cv[1, 0, :]) 
+                env_kwargs["rew_u_b"] = np.max(self.e_r_b_cv[1, 0, :])  
+            elif type == "test":    # Testing
+                env_kwargs["eps_sim_steps"] = self.eps_sim_steps_test
+                env_kwargs["e_r_b"] = self.e_r_b_test                         
+                env_kwargs["g_e"] = self.g_e_test
+                env_kwargs["rew_l_b"] = np.min(self.e_r_b_test[1, 0, :]) 
+                env_kwargs["rew_u_b"] = np.max(self.e_r_b_test[1, 0, :])  
+            else:
+                assert False, f'The type argument ({type}) of dict_env_kwargs() needs to be "train" (training), "cv" (validation) or "test" (testing)!'
 
-        env_kwargs["reward_level"] = r_level
-        env_kwargs["action_type"] = ENV_PARAMS.action_type
+        env_kwargs["reward_level"] = self.r_level
+        env_kwargs["action_type"] = self.AGENT_PARAMS.rl_alg_hyp["action_type"]     # Action type of the algorithm, discrete or continuous
 
         return env_kwargs
-
+    
 
 def multiple_plots(stats_dict: dict, time_step_size: int, plot_name: str):
     """
