@@ -2,7 +2,7 @@
 # RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
 # https://github.com/SimMarkt/RL_PtG
 
-# rl_param_agent: 
+# rl_config_agent: 
 # > Contains hyperparameters of the RL agents
 # > Converts the config_agent.yaml data into a class object for further processing
 # > Contains three additional functions to specify, load, and save the Stable-Baselines3 models
@@ -11,10 +11,8 @@
 import numpy as np
 import torch as th
 import yaml
-from src.rl_param_env import EnvParams
 
-
-class AgentParams:
+class AgentConfig:
     def __init__(self):
         # Load the environment configuration
         with open("config/config_agent.yaml", "r") as env_file:
@@ -25,14 +23,40 @@ class AgentParams:
                                                                             model_conf : {agent_config['rl_alg']} must match {agent_config['hyperparameters'].keys()}'
         self.rl_alg = agent_config['rl_alg']                                # selected RL algorithm - already implemented [DQN, A2C, PPO, TD3, SAC, TQC]
         self.rl_alg_hyp = agent_config['hyperparameters'][self.rl_alg]      # hyperparameters of the algorithm
-        
+        self.str_alg = None                                                 # Represents a string containing the hyperparameter settings after completing the initialization, for file identification purposes
+        # Nested dictionary with all possible hyperparameters including an abbreveation ('abb') and the variable name ('var', need to match notation in RL_PtG/config/config_agent.yaml)
+        self.hyper = {'Learning rate': {'abb' :"_al", 'var': 'alpha'},
+                      'Discount factor': {'abb' :"_ga", 'var': 'gamma'},
+                      'Initial exploration coefficient': {'abb' :"_ie", 'var': 'eps_init'},
+                      'Final exploration coefficient': {'abb' :"_fe", 'var': 'eps_fin'},
+                      'Exploration ratio': {'abb' :"_re", 'var': 'eps_fra'},
+                      'Entropy coefficient': {'abb' :"_ec", 'var': 'ent_coeff'},
+                      'Exploration noise': {'abb' :"_en", 'var': 'sigma_exp'},
+                      'n-step TD update': {'abb' :"_ns", 'var': 'n_steps'},
+                      'n-step factor': {'abb' :"_nf", 'var': 'n_steps_f'},
+                      'Replay buffer size': {'abb' :"_rb", 'var': 'buffer_size'},
+                      'Batch size': {'abb' :"_bs", 'var': 'batch_size'},
+                      'Hidden layers': {'abb' :"_hl", 'var': 'hidden_layers'},
+                      'Hidden units': {'abb' :"_hu", 'var': 'hidden_units'},
+                      'Activation function': {'abb' :"_ac", 'var': 'activation'},
+                      'Factor for generalized advantage estimation': {'abb' :"_ge", 'var': 'gae_lambda'},
+                      'No. of epochs': {'abb' :"_ep", 'var': 'n_epoch'},
+                      'Normalize advantage': {'abb' :"_na", 'var': 'normalize_advantage'},
+                      'No. of quantiles': {'abb' :"_nq", 'var': 'n_quantiles'},
+                      'Dropped quantiles': {'abb' :"_dq", 'var': 'top_quantiles_drop'},
+                      'No. of critics': {'abb' :"_cr", 'var': 'n_critics'},
+                      'Soft update': {'abb' :"_ta", 'var': 'tau'},
+                      'Learning starts': {'abb' :"_ls", 'var': 'learning_starts'},
+                      'Training frequency': {'abb' :"_tf", 'var': 'train_freq'},
+                      'Target update interval': {'abb' :"_tu", 'var': 'target_update_interval'},
+                      'gSDE exploration': {'abb' :"_gs", 'var': 'gSDE'},
+                      }
 
     def set_model(self, env, tb_log):
         """
             Specify the Stable-Baselines3 model for RL training
             :param env: environment
-            :param tb_log: # tensorboard log file
-            :device: device for computation (CPU or GPU)
+            :param tb_log: Tensorboard log file
             :seed_train: random seed for training
             :return model: Stable-Baselines3 model for RL training
         """
@@ -41,10 +65,12 @@ class AgentParams:
         #   Custom actor (pi) and value function (vf) networks with the
         #   same architecture net_arch and activation function (th.nn.ReLU, th.nn.Tanh)
         #   Note: an extra linear layer will be added on top of the pi and vf nets
-        if self.rl_alg_hyp.activation == 0:
+        if self.rl_alg_hyp.activation == 'ReLU':
             activation_fn = th.nn.ReLU
-        else:
+        elif self.rl_alg_hyp.activation == 'Tanh':
             activation_fn = th.nn.Tanh
+        else:
+            assert False, f"Type of activation function ({self.rl_alg_hyp.activation}) needs to be 'ReLU' or 'Tanh'! -> Check RL_PtG/config/config_agent.yaml"
         net_arch = np.ones((self.rl_alg_hyp['hidden_layers'],), int) * self.rl_alg_hyp['hidden_units']
         net_arch = net_arch.tolist()
 
@@ -76,14 +102,8 @@ class AgentParams:
         elif self.rl_alg == 'A2C':                      # import algorithm
             from stable_baselines3 import A2C
             policy_kwargs = dict(activation_fn=activation_fn, net_arch=net_arch)
-            if self.rl_alg_hyp['gSDE'] == 0:
-                gSDE = False
-            else:
-                gSDE = True
-            if self.rl_alg_hyp['normalize_advantage'] == 0:
-                normalize_advantage = False
-            else:
-                normalize_advantage = True
+            assert self.rl_alg_hyp['normalize_advantage'] in [False,True], f"Normalize advantage ({self.rl_alg_hyp['normalize_advantage']}) should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
+            assert self.rl_alg_hyp['gSDE'] in [False,True], f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
             model = A2C(
                 "MultiInputPolicy",                                                     # policy type
                 env,                                                                    # environment
@@ -93,10 +113,10 @@ class AgentParams:
                 gamma=self.rl_alg_hyp['gamma'],                                         # discount factor
                 n_steps=self.rl_alg_hyp['n_steps'],                                     # No. of steps of the n-step TD update
                 gae_lambda=self.rl_alg_hyp['gae_lambda'],                               # factor for generalized advantage estimation
-                normalize_advantage=normalize_advantage,                                # normalize advantage (0: Off, 1: On)
+                normalize_advantage=self.rl_alg_hyp['normalize_advantage'],             # normalize advantage
                 ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # entropy coefficient
                 policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
-                use_sde=gSDE,                                                           # gSDE exploration  (0: False, 1: True)
+                use_sde=self.rl_alg_hyp['gSDE'],                                        # gSDE exploration
                 device=self.device,                                                     # CPU or GPU
                 seed=self.r_seed_train,                                                 # random seed
             )
@@ -104,15 +124,9 @@ class AgentParams:
         elif self.rl_alg == 'PPO':                      # import algorithm
             from stable_baselines3 import PPO
             policy_kwargs = dict(activation_fn=activation_fn, net_arch=net_arch)
-            n_steps = int(self.rl_alg_hyp.n_steps_f * self.rl_alg_hyp.batch_size)       # number of steps of the n-step TD update
-            if self.rl_alg_hyp['gSDE'] == 0:
-                gSDE = False
-            else:
-                gSDE = True
-            if self.rl_alg_hyp['normalize_advantage'] == 0:
-                normalize_advantage = False
-            else:
-                normalize_advantage = True
+            n_steps = int(self.rl_alg_hyp['n_steps_f'] * self.rl_alg_hyp['batch_size'])       # number of steps of the n-step TD update
+            assert self.rl_alg_hyp['normalize_advantage'] in [False,True], f"Normalize advantage ({self.rl_alg_hyp['normalize_advantage']}) should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
+            assert self.rl_alg_hyp['gSDE'] in [False,True], f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
             model = PPO(
                 "MultiInputPolicy",                                                     # policy type
                 env,                                                                    # environment
@@ -124,10 +138,10 @@ class AgentParams:
                 n_steps=n_steps,                                                        # No. of steps of the n-step TD update
                 gae_lambda=self.rl_alg_hyp['gae_lambda'],                               # factor for generalized advantage estimation
                 n_epochs=int(self.rl_alg_hyp['n_epoch']),                               # No. of epochs for mini batch training
-                normalize_advantage=normalize_advantage,                                # normalize advantage (0: Off, 1: On)
+                normalize_advantage=self.rl_alg_hyp['normalize_advantage'],             # normalize advantage
                 ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # entropy coefficient
                 policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
-                use_sde=gSDE,                                                           # gSDE exploration  (0: False, 1: True)
+                use_sde=self.rl_alg_hyp['gSDE'],                                        # gSDE exploration
                 device=self.device,                                                     # CPU or GPU
                 seed=self.r_seed_train,                                                 # random seed
             )
@@ -156,10 +170,7 @@ class AgentParams:
         elif self.rl_alg == 'SAC':                      # import algorithm
             from stable_baselines3 import SAC
             policy_kwargs = dict(activation_fn=activation_fn, net_arch=net_arch)
-            if self.rl_alg_hyp['gSDE'] == 0:
-                gSDE = False
-            else:
-                gSDE = True
+            assert self.rl_alg_hyp['gSDE'] in [False,True], f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
             model = SAC(
                 "MultiInputPolicy",                                                     # policy type
                 env,                                                                    # environment
@@ -174,7 +185,7 @@ class AgentParams:
                 train_freq=self.rl_alg_hyp['train_freq'],                               # training frequency
                 ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # entropy coefficient
                 policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
-                use_sde=gSDE,                                                           # gSDE exploration  (0: False, 1: True)
+                use_sde=self.rl_alg_hyp['gSDE'],                                        # gSDE exploration
                 device=self.device,                                                     # CPU or GPU
                 target_update_interval=self.rl_alg_hyp['train_freq'],                   # target network update interval
                 seed=self.r_seed_train,                                                 # random seed
@@ -184,10 +195,7 @@ class AgentParams:
             from sb3_contrib import TQC
             policy_kwargs = dict(activation_fn=activation_fn, net_arch=net_arch,
                             n_critics=int(self.rl_alg_hyp['n_critics']), n_quantiles=int(self.rl_alg_hyp['n_quantiles']))
-            if self.rl_alg_hyp['gSDE'] == 0:
-                gSDE = False
-            else:
-                gSDE = True
+            assert self.rl_alg_hyp['gSDE'] in [False,True], f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
             model = TQC(
                 "MultiInputPolicy",                                                         # policy type
                 env,                                                                        # environment
@@ -203,7 +211,7 @@ class AgentParams:
                 train_freq=self.rl_alg_hyp['train_freq'],                                   # training frequency
                 ent_coef=self.rl_alg_hyp['ent_coeff'],                                      # entropy coefficient
                 policy_kwargs=policy_kwargs,                                                # contain network hyperparameters
-                use_sde=gSDE,                                                               # gSDE exploration  (0: False, 1: True)
+                use_sde=self.rl_alg_hyp['gSDE'],                                            # gSDE exploration
                 device=self.device,                                                         # CPU or GPU
                 target_update_interval=self.rl_alg_hyp['train_freq'],                       # target network update interval
                 seed=self.r_seed_train,                                                     # random seed
@@ -217,11 +225,9 @@ class AgentParams:
         """
             Load pretrained Stable-Baselines3 model for RL training
             :param env: environment
-            :param tb_log: # tensorboard log file
+            :param tb_log: Tensorboard log file
             :return model: Stable-Baselines3 model for RL training
         """
-
-        ENV_PARAMS = EnvParams()
 
         # Load pretrained RL algorithms
         if self.rl_alg == 'DQN':
@@ -287,3 +293,55 @@ class AgentParams:
         if 'buffer_size' in self.rl_alg_hyp.keys():
             model.save_replay_buffer(self.path_files + self.str_inv)
 
+    def get_hyper(self):
+        """
+            Gather and print algorithm hyperparameters and returns the values in a string for file identification
+            :return str_alg: hyperparameter settings in a string for file identification
+        """
+
+        # Print algorithm and hyperparameters and create identifier string
+        print(f"    > Deep RL agorithm : {self.rl_alg}")
+        self.str_alg = self.rl_alg
+        self.hyp_print('Learning rate')
+        self.hyp_print('Discount factor')
+        if self.rl_alg == 'DQN': 
+            self.hyp_print('Initial exploration coefficient')
+            self.hyp_print('Final exploration coefficient')
+            self.hyp_print('Exploration ratio')
+        if self.rl_alg in ['A2C','PPO','SAC','TQC']: self.hyp_print('Entropy coefficient')
+        if self.rl_alg in ['TD3']: self.hyp_print('Exploration noise')
+        if self.rl_alg in ['A2C']: self.hyp_print('n-step TD update')
+        if self.rl_alg in ['PPO']:
+            self.hyp_print('n-step factor')
+            print(f"        No. of steps of the n-step TD update : {int(self.rl_alg_hyp['n_steps_f'] * self.rl_alg_hyp['batch_size'])}")
+        if self.rl_alg in ['DQN','TD3','SAC','TQC']: self.hyp_print('Replay buffer size')
+        if self.rl_alg in ['DQN','PPO','TD3','SAC','TQC']: self.hyp_print('Batch size')
+        self.hyp_print('Hidden layers')
+        self.hyp_print('Hidden units')
+        self.hyp_print('Activation function')
+        if self.rl_alg in ['A2C','PPO']: self.hyp_print('Factor for generalized advantage estimation')
+        if self.rl_alg == 'PPO': self.hyp_print('No. of epochs')
+        if self.rl_alg in ['A2C','PPO']: self.hyp_print('Normalize advantage')
+        if self.rl_alg == 'TQC':
+            self.hyp_print('No. of quantiles')
+            self.hyp_print('Dropped quantiles')
+            self.hyp_print('No. of critics')
+        if self.rl_alg in ['DQN','TD3','SAC','TQC']: 
+            self.hyp_print('Soft update') 
+            self.hyp_print('Learning starts') 
+            self.hyp_print('Training frequency')
+        if self.rl_alg == 'DQN': self.hyp_print('Target update interval')
+        if self.rl_alg in ['A2C','PPO','TD3','SAC','TQC']: self.hyp_print('gSDE exploration')
+
+        return self.str_alg
+
+
+    def hyp_print(self, hyp_name: str):
+        """
+            Prints a specific hyperparameter to the TUI and adds the value to the string identifier
+            :param hyp_name: Name of the hyperparameter
+        """
+
+        assert hyp_name in self.hyper, f"Specified hyperparameter ({hyp_name}) is not part of the possible hyperparameters!"
+        print(f"        {hyp_name} ({self.hyper[hyp_name]['abb']}): {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
+        self.str_alg += self.hyper[hyp_name]['abb']
