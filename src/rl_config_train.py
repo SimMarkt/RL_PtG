@@ -39,6 +39,7 @@ class TrainConfig:
         self.train_or_eval = train_config['train_or_eval']         # specifies whether the environment provides detailed descriptions of the state for evaluation ("eval") or not ("train" - recommended for training)
 
         self.total_steps = train_config['total_steps']          # total number of training steps
+        self.test_steps = train_config['test_steps']            # Validation interval (Number of steps after which the RL agent is evaluated)
         self.r_seed_train = train_config['r_seed_train']         # random seeds for neural network initialization (and environment randomness) of the training set
         self.r_seed_test = train_config['r_seed_test']         # random seeds for neural network initialization (and environment randomness) of the validation and test sets
         assert len(self.r_seed_train) == len(self.r_seed_test), 'Number of random seeds must be equal for the training and test set!'

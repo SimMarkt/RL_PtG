@@ -20,5 +20,6 @@ parallel : Singleprocessing   # specifies the computation setup: "Singleprocessi
 train_or_eval : train         # specifies whether the environment provides detailed descriptions of the state for evaluation ("eval") or not ("train" - recommended for training)
 
 total_steps : 100000          # total number of training steps
+test_steps : 10000            # Validation interval (Number of steps after which the RL agent is evaluated)
 r_seed_train : [3654, 467, 9327, 5797, 249, 9419]         # random seeds for neural network initialization (and environment randomness) of the training set - for single thread computation, default [3654]
-r_seed_test : [605, 5534, 2910, 7653, 8936, 1925]         # random seeds for neural network initialization (and environment randomness) of the validation and test sets - for single thread computation, default [605]
+r_seed_test : [605, 5534, 2910, 7653, 8936, 1925]         # random seeds for neural network initialization (and environment randomness) of the validation set - for single thread computation, default [605]

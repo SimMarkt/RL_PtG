@@ -288,7 +288,6 @@ class AgentConfig:
             :return model: Stable-Baselines3 model for RL training
         """
 
-        print("Save final Model...")
         model.save(self.path_files + self.str_inv)
         if 'buffer_size' in self.rl_alg_hyp.keys():
             model.save_replay_buffer(self.path_files + self.str_inv)
