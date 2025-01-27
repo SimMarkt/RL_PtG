@@ -489,7 +489,7 @@ def config_print():
     str_id += "_ts" + str(EnvConfig.sim_step)
     str_id += AgentConfig.get_hyper()
     print(f"    > Random seed (_rs) : {TrainConfig.seed_train}")
-    str_id += "_ts" + str(TrainConfig.seed_train)
+    str_id += "_rs" + str(TrainConfig.seed_train)
 
     return str_id
 
