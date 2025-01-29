@@ -9,36 +9,36 @@
 # > scenario: 3 - Involves participating in EEG tenders by using a combined heat and power (CHP) plant and trading at the electricity spot markets
 # ----------------------------------------------------------------------------------------------------------------
 
-scenario: 1                     # business case, must match [1,2,3]
+scenario : 1                     # business case, must match [1,2,3]
 operation : OP1                 # specifies the load level "OP1" or "OP2" of the PtG-CH4 plant
 # num_loops : 5                 # number of loops over the total training set ###########################
 # train_len_d : 46496           # total number of days in the training set ####################
 price_ahead : 13                # number of forecast values for electricity price future data (0-12h)
 time_step_op : 2                # time step between consecutive entries in the methanation operation data sets [sec]
 noise : 10                      # noise factor when changing the methanation state in the gym env [# of steps in operation data set]
-eps_len_d : 32                  # No. of days in an episode (episodes are randomly selected from the entire training data set without replacement)
+eps_len_d : 59                  # No. of days in an episode (episodes are randomly selected from the entire training data set without replacement)
 state_change_penalty : 0.0      # Factor which enables reward penalty during training (if state_change_penalty = 0.0: No reward penalty; if state_change_penalty > 0.0: Reward penalty on mode transitions;)
 sim_step : 600                  # Frequency for taking an action in [s]
 
 # file paths of energy spot market data for training and evaluation:
 # (_train: training set; _cv: validation set; _test: test set)
 # _el: electricity spot market data in [hours]
-datafile_path_train_el : ../data/spot_market_data/data-day-ahead-el-train_separate_syn_aug6.csv
-datafile_path_cv_el : ../data/spot_market_data/data-day-ahead-el-cv_separate.csv
-datafile_path_test_el : ../data/spot_market_data/data-day-ahead-el-test_separate.csv
+datafile_path_train_el : /data/spot_market_data/data-day-ahead-el-train_separate_syn_aug6.csv
+datafile_path_cv_el : /data/spot_market_data/data-day-ahead-el-cv_separate.csv
+datafile_path_test_el : /data/spot_market_data/data-day-ahead-el-test_separate.csv
 # _gas: natural gas/SNG spot market data in [days]
-datafile_path_train_gas : ../data/spot_market_data/data-day-ahead-gas-train_separate_syn_aug6.csv
-datafile_path_cv_gas : ../data/spot_market_data/data-day-ahead-gas-cv_separate.csv
-datafile_path_test_gas : ../data/spot_market_data/data-day-ahead-gas-test_separate.csv
+datafile_path_train_gas : /data/spot_market_data/data-day-ahead-gas-train_separate_syn_aug6.csv
+datafile_path_cv_gas : /data/spot_market_data/data-day-ahead-gas-cv_separate.csv
+datafile_path_test_gas : /data/spot_market_data/data-day-ahead-gas-test_separate.csv
 # _eua: European emission allowances (EUA) spot market data in [days]
-datafile_path_train_eua : ../data/spot_market_data/data-day-ahead-eua-train_separate_syn_aug6.csv
-datafile_path_cv_eua : ../data/spot_market_data/data-day-ahead-eua-cv_separate.csv
-datafile_path_test_eua : ../data/spot_market_data/data-day-ahead-eua-test_separate.csv
+datafile_path_train_eua : /data/spot_market_data/data-day-ahead-eua-train_separate_syn_aug6.csv
+datafile_path_cv_eua : /data/spot_market_data/data-day-ahead-eua-cv_separate.csv
+datafile_path_test_eua : /data/spot_market_data/data-day-ahead-eua-test_separate.csv
 
 # file paths of process data for the dynamic data-based process model of the methanation plant:
 # Process data of load level OP1 and OP2
 datafile_path :
-    path : ../data
+    path : data/
     datafile:   # Dynamic process data
         datafile_path2 : data-meth_startup_cold.csv  # cold startup
         datafile_path3 : data-meth_startup_hot.csv   # warm startup
