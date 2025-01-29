@@ -9,15 +9,15 @@
 
 import yaml
 
-class EnvConfig:
+class EnvConfiguration:
     def __init__(self):
         # Load the environment configuration
         with open("config/config_env.yaml", "r") as env_file:
             env_config = yaml.safe_load(env_file)
         
-        assert self.scenario in [1,2,3], f"Specified business scenario ({self.scenario}) must match one of the three implemented scenarios [1,2,3]!"
         self.scenario = env_config['scenario']                  # business case / economic scenario
-        operation = env_config['operation']                     # specifies the load level "OP1" or "OP2" of the PtG-CH4 plant
+        assert self.scenario in [1,2,3], f"Specified business scenario ({self.scenario}) must match one of the three implemented scenarios [1,2,3]!"
+        self.operation = env_config['operation']                     # specifies the load level "OP1" or "OP2" of the PtG-CH4 plant
         self.train_len_d = None                                 # total number of days in the training set 
         self.price_ahead = env_config['price_ahead']            # number of forecast values for electricity price future data (0-12h)                    
         self.time_step_op = env_config['time_step_op']          # Time step between consecutive entries in the methanation operation data sets in sec
@@ -42,13 +42,13 @@ class EnvConfig:
         self.datafile_path_test_eua = env_config['datafile_path_test_eua']
 
         # file paths of process data for the dynamic data-based process model of the methanation plant depending on the load level:
-        assert operation in {'OP1', 'OP2'}, f'Wrong load level specified - data/config_env.yaml -> operation : {env_config['operation']} must match ["OP1", "OP2"]'
-        base_path = env_config['datafile_path']['path'] + operation + env_config['datafile_path']['datafile']
+        assert self.operation in ['OP1', 'OP2'], f"Wrong load level specified - data/config_env.yaml -> operation : {env_config['operation']} must match ['OP1', 'OP2']"
+        base_path = env_config['datafile_path']['path'] + self.operation
         for i in range(2, 19):  # For datafile_path2 to datafile_path18
-            setattr(self, f'datafile_path{i}', f"{base_path}/datafile_path{i}")
+            setattr(self, f'datafile_path{i}', f"{base_path}/{env_config['datafile_path']['datafile'][f'datafile_path{i}']}")
 
         self.ptg_state_space = env_config['ptg_state_space']                            # control and inner state spaces of the Power-to-Gas System (aligned with the programmable logic controller)
-        self.meth_stats_load = env_config['meth_stats_load'][operation]                 # methanation data for steady-state operation for the different load levels
+        self.meth_stats_load = env_config['meth_stats_load'][self.operation]                 # methanation data for steady-state operation for the different load levels
         self.r_0_values = env_config['r_0_values']                                      # Reward level price values -> Sets general height of the Reward penalty
 
         # economic data and parameters

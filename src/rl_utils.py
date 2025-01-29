@@ -1,25 +1,26 @@
 import pandas as pd
 import numpy as np
-import os
 import matplotlib.pyplot as plt
 from matplotlib.path import Path
 import matplotlib.patches as patches
 import math
 
-from src.rl_config_agent import AgentConfig
-from src.rl_config_env import EnvConfig
-from src.rl_config_train import TrainConfig
+from src.rl_config_agent import AgentConfiguration
+from src.rl_config_env import EnvConfiguration
+from src.rl_config_train import TrainConfiguration
 from src.rl_opt import calculate_optimum
 
-def import_market_data(csvfile: str, type: str):
+def import_market_data(csvfile: str, type: str, path: str):
     """
         Import data of day-ahead prices for electricity
-        :param csvfile: Path and name of the .csv files containing energy market data ["Time [s]"; <data>]
+        :param csvfile: Name of the .csv files containing energy market data ["Time [s]"; <data>]
         :param type: market data type
+        :param path: String with the RL_PtG project path
+        :param TrainConfig: Training configuration in a class object
         :return arr: np.array with market data
     """
 
-    file_path = os.path.dirname(__file__) + "/" + csvfile
+    file_path = path + "/" + csvfile
     df = pd.read_csv(file_path, delimiter=";", decimal=".")
     df["Time"] = pd.to_datetime(df["Time"], format="%d-%m-%Y %H:%M")
 
@@ -35,14 +36,15 @@ def import_market_data(csvfile: str, type: str):
     return arr
 
 
-def import_data(csvfile: str):
+def import_data(csvfile: str, path: str):
     """
         Import experimental methanation data for state changes
-        :param csvfile: Path and name of the .csv files containing process data ["Time [s]", "T_cat [°C]", "n_h2 [mol/s]", "n_ch4 [mol/s]", "n_h2_res [mol/s]", "m_DE [kg/h]", "Pel [W]"]
+        :param csvfile: name of the .csv files containing process data ["Time [s]", "T_cat [°C]", "n_h2 [mol/s]", "n_ch4 [mol/s]", "n_h2_res [mol/s]", "m_DE [kg/h]", "Pel [W]"]
+        :param path: String with the RL_PtG project path
         :return arr: Numpy array with operational data
     """
     # Import historic Data from csv file
-    file_path = os.path.dirname(__file__) + "/" + csvfile
+    file_path = path + "/" + csvfile
     df = pd.read_csv(file_path, delimiter=";", decimal=".")
 
     # Transform data to numpy array
@@ -58,46 +60,44 @@ def import_data(csvfile: str):
     return arr
 
 
-def load_data():
+def load_data(EnvConfig, TrainConfig):
     """
         Loads historical market data and experimental data of methanation operation
         :return dict_price_data: dictionary with market data
                 dict_op_data: dictionary with data of dynamic methanation operation
     """
 
-    EnvConfig = EnvConfig()
-
     print("---Load data")
-
+    path = TrainConfig.path
     # Load historical market data for electricity, gas and EUA ##########################################MAKE SHORTER##################
-    dict_price_data = {'el_price_train': import_market_data(EnvConfig.datafile_path_train_el, "elec"),     # Electricity prices of the training set
-                       'el_price_cv': import_market_data(EnvConfig.datafile_path_cv_el, "elec"),           # Electricity prices of the validation set
-                       'el_price_test': import_market_data(EnvConfig.datafile_path_test_el, "elec"),       # Electricity prices of the test set
-                       'gas_price_train': import_market_data(EnvConfig.datafile_path_train_gas, "gas"),    # Gas prices of the training set
-                       'gas_price_cv': import_market_data(EnvConfig.datafile_path_cv_gas, "gas"),          # Gas prices of the validation set
-                       'gas_price_test': import_market_data(EnvConfig.datafile_path_test_gas, "gas"),      # Gas prices of the test set
-                       'eua_price_train': import_market_data(EnvConfig.datafile_path_train_eua, "eua"),    # EUA prices of the training set
-                       'eua_price_cv': import_market_data(EnvConfig.datafile_path_cv_eua, "eua"),          # EUA prices of the validation set
-                       'eua_price_test': import_market_data(EnvConfig.datafile_path_test_eua, "eua")}      # EUA prices of the test set
+    dict_price_data = {'el_price_train': import_market_data(EnvConfig.datafile_path_train_el, "elec", path),     # Electricity prices of the training set
+                       'el_price_cv': import_market_data(EnvConfig.datafile_path_cv_el, "elec", path),           # Electricity prices of the validation set
+                       'el_price_test': import_market_data(EnvConfig.datafile_path_test_el, "elec", path),       # Electricity prices of the test set
+                       'gas_price_train': import_market_data(EnvConfig.datafile_path_train_gas, "gas", path),    # Gas prices of the training set
+                       'gas_price_cv': import_market_data(EnvConfig.datafile_path_cv_gas, "gas", path),          # Gas prices of the validation set
+                       'gas_price_test': import_market_data(EnvConfig.datafile_path_test_gas, "gas", path),      # Gas prices of the test set
+                       'eua_price_train': import_market_data(EnvConfig.datafile_path_train_eua, "eua", path),    # EUA prices of the training set
+                       'eua_price_cv': import_market_data(EnvConfig.datafile_path_cv_eua, "eua", path),          # EUA prices of the validation set
+                       'eua_price_test': import_market_data(EnvConfig.datafile_path_test_eua, "eua", path)}      # EUA prices of the test set
 
     # Load experimental methanation data for state changes  ##########################################MAKE SHORTER##################
-    dict_op_data = {'startup_cold': import_data(EnvConfig.datafile_path2),     # Cold start
-                    'startup_hot': import_data(EnvConfig.datafile_path3),      # Hot start
-                    'cooldown': import_data(EnvConfig.datafile_path4),         # Cooldown
-                    'standby_down': import_data(EnvConfig.datafile_path5),     # Standby dataset for high temperatures to standby
-                    'standby_up': import_data(EnvConfig.datafile_path6),       # Standby dataset for low temperatures to standby
-                    'op1_start_p': import_data(EnvConfig.datafile_path7),      # Partial load - warming up
-                    'op2_start_f': import_data(EnvConfig.datafile_path8),      # Full load - warming up
-                    'op3_p_f': import_data(EnvConfig.datafile_path9),          # Load change: Partial -> Full
-                    'op4_p_f_p_5': import_data(EnvConfig.datafile_path10),     # Load change: Partial -> Full -> Partial (Return after 5 min)
-                    'op5_p_f_p_10': import_data(EnvConfig.datafile_path11),    # Load change: Partial -> Full -> Partial (Return after 10 min)
-                    'op6_p_f_p_15': import_data(EnvConfig.datafile_path12),    # Load change: Partial -> Full -> Partial (Return after 15 min)
-                    'op7_p_f_p_22': import_data(EnvConfig.datafile_path13),    # Load change: Partial -> Full -> Partial (Return after 22 min)
-                    'op8_f_p': import_data(EnvConfig.datafile_path14),         # Load change: Full -> Partial
-                    'op9_f_p_f_5': import_data(EnvConfig.datafile_path15),     # Load change: Full -> Partial -> Full (Return after 5 min)
-                    'op10_f_p_f_10': import_data(EnvConfig.datafile_path16),   # Load change: Full -> Partial -> Full (Return after 10 min)
-                    'op11_f_p_f_15': import_data(EnvConfig.datafile_path17),   # Load change: Full -> Partial -> Full (Return after 15 min)
-                    'op12_f_p_f_20': import_data(EnvConfig.datafile_path18)}   # Load change: Full -> Partial -> Full (Return after 20 min)
+    dict_op_data = {'startup_cold': import_data(EnvConfig.datafile_path2, path),     # Cold start
+                    'startup_hot': import_data(EnvConfig.datafile_path3, path),      # Hot start
+                    'cooldown': import_data(EnvConfig.datafile_path4, path),         # Cooldown
+                    'standby_down': import_data(EnvConfig.datafile_path5, path),     # Standby dataset for high temperatures to standby
+                    'standby_up': import_data(EnvConfig.datafile_path6, path),       # Standby dataset for low temperatures to standby
+                    'op1_start_p': import_data(EnvConfig.datafile_path7, path),      # Partial load - warming up
+                    'op2_start_f': import_data(EnvConfig.datafile_path8, path),      # Full load - warming up
+                    'op3_p_f': import_data(EnvConfig.datafile_path9, path),          # Load change: Partial -> Full
+                    'op4_p_f_p_5': import_data(EnvConfig.datafile_path10, path),     # Load change: Partial -> Full -> Partial (Return after 5 min)
+                    'op5_p_f_p_10': import_data(EnvConfig.datafile_path11, path),    # Load change: Partial -> Full -> Partial (Return after 10 min)
+                    'op6_p_f_p_15': import_data(EnvConfig.datafile_path12, path),    # Load change: Partial -> Full -> Partial (Return after 15 min)
+                    'op7_p_f_p_22': import_data(EnvConfig.datafile_path13, path),    # Load change: Partial -> Full -> Partial (Return after 22 min)
+                    'op8_f_p': import_data(EnvConfig.datafile_path14, path),         # Load change: Full -> Partial
+                    'op9_f_p_f_5': import_data(EnvConfig.datafile_path15, path),     # Load change: Full -> Partial -> Full (Return after 5 min)
+                    'op10_f_p_f_10': import_data(EnvConfig.datafile_path16, path),   # Load change: Full -> Partial -> Full (Return after 10 min)
+                    'op11_f_p_f_15': import_data(EnvConfig.datafile_path17, path),   # Load change: Full -> Partial -> Full (Return after 15 min)
+                    'op12_f_p_f_20': import_data(EnvConfig.datafile_path18, path)}   # Load change: Full -> Partial -> Full (Return after 20 min)
 
     if EnvConfig.scenario == 2:  # Fixed gas prices    ##########################################MAKE SHORTER##################
         dict_price_data['gas_price_train'] = np.ones(len(dict_price_data['gas_price_train'])) * EnvConfig.ch4_price_fix
@@ -117,14 +117,13 @@ def load_data():
     dict_price_data['eua_price_reward_level'] = EnvConfig.r_0_values['eua_price']
 
     # Check if training set is divisible by the episode length
-    min_train_len = 5           # Minimum No. of days in the training set 
+    min_train_len = 6           # Minimum No. of days in the training set 
     EnvConfig.train_len_d = len(dict_price_data['gas_price_train']) - min_train_len # Training uses min_train_len days less than the data size to always allow enough space for the price forecast of Day-ahead market data
     assert EnvConfig.train_len_d > 0, f'The training set size must be greater than {min_train_len} days'
     if EnvConfig.train_len_d % EnvConfig.eps_len_d != 0:
         # Find all possible divisors of EnvConfig.train_len_d
         divisors = [i for i in range(1, EnvConfig.train_len_d + 1) if EnvConfig.train_len_d % i == 0]
-        assert False, f'The training set size {EnvConfig.train_len_d} must be divisible by the episode length - data/config_env.yaml -> eps_len_d : {EnvConfig.eps_len_d}; 
-                        Possible divisors are: {divisors}'
+        assert False, f'The training set size {EnvConfig.train_len_d} must be divisible by the episode length - data/config_env.yaml -> eps_len_d : {EnvConfig.eps_len_d}; Possible divisors are: {divisors}'
     # Ensure that the training set is larger or at least equal to the defined episode length  
     assert EnvConfig.train_len_d >= EnvConfig.eps_len_d, f'Training set size ({EnvConfig.train_len_d}) must be larger or at least equal to the defined episode length ({EnvConfig.eps_len_d})!'
 
@@ -134,16 +133,19 @@ class Preprocessing():
     """
         A class that contains variables and functions for preprocessing of energy market and process data
     """
-    def __init__(self, dict_price_data, dict_op_data):
+    def __init__(self, dict_price_data, dict_op_data, AgentConfig, EnvConfig, TrainConfig):
         """
             Initialization of variables
             :param dict_price_data: Dictionary with market data
             :param dict_op_data: Dictionary with dynamic process data
+            :param AgentConfig: Agent configuration in a class object
+            :param EnvConfig: Environment configuration in a class object
+            :param TrainConfig: Training configuration in a class object
         """
         # Initialization
-        self.AgentConfig = AgentConfig()
-        self.EnvConfig = EnvConfig()
-        self.TrainConfig = TrainConfig()
+        self.AgentConfig = AgentConfig
+        self.EnvConfig = EnvConfig
+        self.TrainConfig = TrainConfig
         self.dict_price_data = dict_price_data
         self.dict_op_data = dict_op_data
         self.dict_pot_r_b = None                    # dictionary with potential reward [pot_rew...] and boolean reward identifier [part_full_b...]
@@ -465,31 +467,33 @@ def initial_print():
     print('---------RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization---------')
     print('--------------------------------------------------------------------------------------------\n')
 
-def config_print():
+def config_print(AgentConfig, EnvConfig, TrainConfig):
     """
         Aggregates and prints general settings
+        :param AgentConfig: Agent configuration in a class object
+        :param EnvConfig: Environment configuration in a class object
+        :param TrainConfig: Training configuration in a class object
         :return str_id: String for identification of the present training run
     """
-
-    AgentConfig = AgentConfig()
-    EnvConfig = EnvConfig()
-    TrainConfig = TrainConfig()
-
-    print(f"---Training case details: RL_PtG{TrainConfig.str_inv} | (Pretrained model: RL_PtG{TrainConfig.str_inv_load}) ")
+    print("Set training case...")
+    if TrainConfig.model_conf == "simple_train" or TrainConfig.model_conf == "save_model":
+        print(f"---Training case details: RL_PtG{TrainConfig.str_inv} | {TrainConfig.model_conf} ")
+    else: 
+        print(f"---Training case details: RL_PtG{TrainConfig.str_inv} | {TrainConfig.model_conf} | (Pretrained model: RL_PtG{TrainConfig.str_inv_load}) ")
     str_id = "RL_PtG"
-    if EnvConfig.scenario == 1: print("    > Business case (_BS) 1: Trading at the electricity, gas, and emission spot markets")
-    elif EnvConfig.scenario == 2: print("    > Business case  (_BS) 2: Fixed synthetic natural gas (SNG) price and trading at the electricity and emission spot markets")
-    else: print("    > Business case (_BS) 3: Participating in EEG tenders by using a CHP plant and trading at the electricity spot markets")
+    if EnvConfig.scenario == 1: print("    > Business case (_BS):\t\t\t 1 - Trading at the electricity, gas, and emission spot markets")
+    elif EnvConfig.scenario == 2: print("    > Business case  (_BS):\t\t\t 2 - Fixed synthetic natural gas (SNG) price and trading at the electricity and emission spot markets")
+    else: print("    > Business case (_BS):\t\t\t 3 - Participating in EEG tenders by using a CHP plant and trading at the electricity spot markets")
     str_id += "_BS" + str(EnvConfig.scenario)
-    print(f"    > Operational load level (_OP) : {EnvConfig.operation}")
+    print(f"    > Operational load level (_OP) :\t\t {EnvConfig.operation}")
     str_id += "_OP" + str(EnvConfig.operation)
-    print(f"    > Training episode length (_epl) : {EnvConfig.eps_len_d} days")
+    print(f"    > Training episode length (_epl) :\t\t {EnvConfig.eps_len_d} days")
     str_id += "_epl" + str(EnvConfig.eps_len_d)
-    print(f"    > Time step size (action frequency) (_ts) : {EnvConfig.sim_step} seconds")
+    print(f"    > Time step size (action frequency) (_ts) :\t {EnvConfig.sim_step} seconds")
     str_id += "_ts" + str(EnvConfig.sim_step)
+    print(f"    > Random seed (_rs) :\t\t\t {TrainConfig.seed_train}")
     str_id += AgentConfig.get_hyper()
-    print(f"    > Random seed (_rs) : {TrainConfig.seed_train}")
-    str_id += "_rs" + str(TrainConfig.seed_train)
+    str_id += "_rs" + str(TrainConfig.seed_train)                       # Random seed at the end of "str_id" for file simplified file
 
     return str_id
 

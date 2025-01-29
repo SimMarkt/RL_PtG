@@ -12,15 +12,14 @@ import numpy as np
 import torch as th
 import yaml
 
-class AgentConfig:
+class AgentConfiguration:
     def __init__(self):
         # Load the environment configuration
         with open("config/config_agent.yaml", "r") as env_file:
             agent_config = yaml.safe_load(env_file)
 
         self.n_envs = agent_config['n_envs']                                # Number environments/workers for training
-        assert agent_config['rl_alg'] in agent_config['hyperparameters'], f'Wrong algorithm specified - data/config_agent.yaml -> 
-                                                                            model_conf : {agent_config['rl_alg']} must match {agent_config['hyperparameters'].keys()}'
+        assert agent_config['rl_alg'] in agent_config['hyperparameters'], f"Wrong algorithm specified - data/config_agent.yaml -> model_conf : {agent_config['rl_alg']} must match {agent_config['hyperparameters'].keys()}"
         self.rl_alg = agent_config['rl_alg']                                # selected RL algorithm - already implemented [DQN, A2C, PPO, TD3, SAC, TQC]
         self.rl_alg_hyp = agent_config['hyperparameters'][self.rl_alg]      # hyperparameters of the algorithm
         self.str_alg = None                                                 # Represents a string containing the hyperparameter settings after completing the initialization, for file identification purposes
@@ -331,6 +330,7 @@ class AgentConfig:
             self.hyp_print('Training frequency')
         if self.rl_alg == 'DQN': self.hyp_print('Target update interval')
         if self.rl_alg in ['A2C','PPO','TD3','SAC','TQC']: self.hyp_print('gSDE exploration')
+        print(' ')
 
         return self.str_alg
 
@@ -342,5 +342,9 @@ class AgentConfig:
         """
 
         assert hyp_name in self.hyper, f"Specified hyperparameter ({hyp_name}) is not part of the possible hyperparameters!"
-        print(f"        {hyp_name} ({self.hyper[hyp_name]['abb']}): {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
+        length_str = len(hyp_name) 
+        if 16 > length_str: print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):\t\t {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
+        else: print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):\t {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
         self.str_alg += self.hyper[hyp_name]['abb']
+
+

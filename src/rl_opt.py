@@ -4,7 +4,7 @@ import numpy as np
 from tqdm import tqdm
 import math
 
-from src.rl_config_env import EnvConfig
+from src.rl_config_env import EnvConfiguration
 
 
 def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_price_data: np.array, data_name: str):
@@ -17,7 +17,7 @@ def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_pri
         :return stats_dict_opt: Dictionary with methanation status values
     """
 
-    EnvConfig = EnvConfig()
+    EnvConfig = EnvConfiguration()
 
     meth_stats = EnvConfig.meth_stats_load
 
