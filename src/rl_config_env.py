@@ -69,6 +69,7 @@ class EnvConfiguration:
         self.Molar_mass_H2O = env_config['Molar_mass_H2O']                  # molar mass of water in [g/mol]
         self.min_load_electrolyzer = env_config['min_load_electrolyzer']    # minimum electrolyzer load = 3.2% (According to static data-based regression model of PEMEL)
         self.eta_CHP = env_config['eta_CHP']                                # gas engine/ CHP efficiency
+        self.max_h2_volumeflow = self.convert_mol_to_Nm3 *  self.meth_stats_load['Meth_H2_flow'][2]
 
         # threshold values for methanation data
         self.t_cat_standby = env_config['t_cat_standby']                # catalyst temperature threshold for changing standby data set in [°C] (If the plant goes to standby from idle state and reaches T_Cat > t_cat_standby, the model uses "data-meth_startup_hot.csv" for the next startup)
@@ -104,21 +105,22 @@ class EnvConfiguration:
         self.el_u_b = env_config['el_u_b']                              # upper bound of electricity prices in [ct/kWh_el]
         self.gas_l_b = env_config['gas_l_b']                            # lower bound of (S)NG prices in [ct/kWh_th]
         self.gas_u_b = env_config['gas_u_b']                            # upper bound of (S)NG prices in [ct/kWh_th]
-        self.eua_l_b = env_config['H_u_CH4']                            # lower bound of EUA prices in [€/t_CO2]
-        self.eua_u_b = env_config['H_u_CH4']                            # upper bound of EUA prices in [€/t_CO2]
-        self.T_l_b = env_config['H_u_CH4']                              # lower bound of catalyst temperatures T_CAT in [°C]
-        self.T_u_b = env_config['H_u_CH4']                              # upper bound of catalyst temperatures T_CAT in [°C]
-        self.h2_l_b = env_config['H_u_CH4']                             # lower bound of hydrogen molar flow in [mol/s]
+        self.eua_l_b = env_config['eua_l_b']                            # lower bound of EUA prices in [€/t_CO2]
+        self.eua_u_b = env_config['eua_u_b']                            # upper bound of EUA prices in [€/t_CO2]
+        self.T_l_b = env_config['T_l_b']                              # lower bound of catalyst temperatures T_CAT in [°C]
+        self.T_u_b = env_config['T_u_b']                              # upper bound of catalyst temperatures T_CAT in [°C]
+        self.h2_l_b = env_config['h2_l_b']                             # lower bound of hydrogen molar flow in [mol/s]
         self.h2_u_b = self.meth_stats_load['Meth_H2_flow'][2]           # upper bound of hydrogen molar flow in [mol/s]
-        self.ch4_l_b = env_config['H_u_CH4']                            # lower bound of methane molar flow in [mol/s]
+        self.ch4_l_b = env_config['ch4_l_b']                            # lower bound of methane molar flow in [mol/s]
         self.ch4_u_b = self.meth_stats_load['Meth_CH4_flow'][2]         # upper bound of methane molar flow in [mol/s]
-        self.h2_res_l_b = env_config['H_u_CH4']                         # lower bound of residual product gas hydrogen molar flow in [mol/s]
+        self.h2_res_l_b = env_config['h2_res_l_b']                         # lower bound of residual product gas hydrogen molar flow in [mol/s]
         self.h2_res_u_b = self.meth_stats_load['Meth_H2_res_flow'][2]   # upper bound of residual product gas hydrogen molar flow in [mol/s]
-        self.h2o_l_b = env_config['H_u_CH4']                            # lower bound of water mass flow in [kg/h]
+        self.h2o_l_b = env_config['h2o_l_b']                            # lower bound of water mass flow in [kg/h]
         self.h2o_u_b = self.meth_stats_load['Meth_H2O_flow'][2]         # upper bound of water mass flow in [kg/h]
         # The upper bound of hydrogen (h2_u_b), methane (ch4_u_b), residual hydrogen (h2_res_u_b), and water (h2o_u_b) equal the full_load values of meth_stats_load of the chosen load level
-        self.heat_l_b = env_config['H_u_CH4']                           # lower bound of the power consumption of methanation in [W]
-        self.heat_u_b = env_config['H_u_CH4']                           # upper bound of the power consumption of methanation in [W]
+        self.heat_l_b = env_config['heat_l_b']                           # lower bound of the power consumption of methanation in [W]
+        self.heat_u_b = env_config['heat_u_b']                           # upper bound of the power consumption of methanation in [W]
+
 
         
 
