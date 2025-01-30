@@ -71,13 +71,13 @@ def load_data(EnvConfig, TrainConfig):
     path = TrainConfig.path
     # Load historical market data for electricity, gas and EUA ##########################################MAKE SHORTER##################
     dict_price_data = {'el_price_train': import_market_data(EnvConfig.datafile_path_train_el, "elec", path),     # Electricity prices of the training set
-                       'el_price_cv': import_market_data(EnvConfig.datafile_path_cv_el, "elec", path),           # Electricity prices of the validation set
+                       'el_price_val': import_market_data(EnvConfig.datafile_path_val_el, "elec", path),           # Electricity prices of the validation set
                        'el_price_test': import_market_data(EnvConfig.datafile_path_test_el, "elec", path),       # Electricity prices of the test set
                        'gas_price_train': import_market_data(EnvConfig.datafile_path_train_gas, "gas", path),    # Gas prices of the training set
-                       'gas_price_cv': import_market_data(EnvConfig.datafile_path_cv_gas, "gas", path),          # Gas prices of the validation set
+                       'gas_price_val': import_market_data(EnvConfig.datafile_path_val_gas, "gas", path),          # Gas prices of the validation set
                        'gas_price_test': import_market_data(EnvConfig.datafile_path_test_gas, "gas", path),      # Gas prices of the test set
                        'eua_price_train': import_market_data(EnvConfig.datafile_path_train_eua, "eua", path),    # EUA prices of the training set
-                       'eua_price_cv': import_market_data(EnvConfig.datafile_path_cv_eua, "eua", path),          # EUA prices of the validation set
+                       'eua_price_val': import_market_data(EnvConfig.datafile_path_val_eua, "eua", path),          # EUA prices of the validation set
                        'eua_price_test': import_market_data(EnvConfig.datafile_path_test_eua, "eua", path)}      # EUA prices of the test set
 
     # Load experimental methanation data for state changes  ##########################################MAKE SHORTER##################
@@ -101,14 +101,14 @@ def load_data(EnvConfig, TrainConfig):
 
     if EnvConfig.scenario == 2:  # Fixed gas prices    ##########################################MAKE SHORTER##################
         dict_price_data['gas_price_train'] = np.ones(len(dict_price_data['gas_price_train'])) * EnvConfig.ch4_price_fix
-        dict_price_data['gas_price_cv'] = np.ones(len(dict_price_data['gas_price_cv'])) * EnvConfig.ch4_price_fix
+        dict_price_data['gas_price_val'] = np.ones(len(dict_price_data['gas_price_val'])) * EnvConfig.ch4_price_fix
         dict_price_data['gas_price_test'] = np.ones(len(dict_price_data['gas_price_test'])) * EnvConfig.ch4_price_fix
     elif EnvConfig.scenario == 3:  # Gas and EUA prices = 0
         dict_price_data['gas_price_train'] = np.zeros(len(dict_price_data['gas_price_train']))
-        dict_price_data['gas_price_cv'] = np.zeros(len(dict_price_data['gas_price_cv']))
+        dict_price_data['gas_price_val'] = np.zeros(len(dict_price_data['gas_price_val']))
         dict_price_data['gas_price_test'] = np.zeros(len(dict_price_data['gas_price_test']))
         dict_price_data['eua_price_train'] = np.zeros(len(dict_price_data['eua_price_train']))
-        dict_price_data['eua_price_cv'] = np.zeros(len(dict_price_data['eua_price_test']))
+        dict_price_data['eua_price_val'] = np.zeros(len(dict_price_data['eua_price_test']))
         dict_price_data['eua_price_test'] = np.zeros(len(dict_price_data['eua_price_test']))
 
     # For Reward level calculation -> Sets height of the reward penalty
@@ -150,30 +150,31 @@ class Preprocessing():
         self.dict_op_data = dict_op_data
         self.dict_pot_r_b = None                    # dictionary with potential reward [pot_rew...] and boolean reward identifier [part_full_b...]
         self.r_level = None                         # Sets the general height of the reward penalty according to electricity, (S)NG, and EUA price levels
-        # e_r_b_train/e_r_b_cv/e_r_b_test: (hourly values)
+        # e_r_b_train/e_r_b_val/e_r_b_test: (hourly values)
         #   np.array which stores elec. price data, potential reward, and boolean identifier
         #   Dimensions = [Type of data] x [No. of day-ahead values] x [historical values]
         #       Type of data = [el_price, pot_rew, part_full_b]
         #       No. of day-ahead values = EnvConfig.price_ahead
         #       historical values = No. of values in the electricity price data set
         self.e_r_b_train = None
-        self.e_r_b_cv = None
+        self.e_r_b_val = None
         self.e_r_b_test = None
-        # g_e_train/g_e_cv/g_e_test: (daily values)
+        # g_e_train/g_e_val/g_e_test: (daily values)
         #   np.array which stores gas and EUA price data
         #   Dimensions = [Type of data] x [No. of day-ahead values] x [historical values]
         #       Type of data = [gas_price, pot_rew, part_full_b]
         #       No. of day-ahead values = 2 (today and tomorrow)
         #       historical values = No. of values in the gas/EUA price data set
         self.g_e_train = None
-        self.g_e_cv = None
+        self.g_e_val = None
         self.g_e_test = None
         # Variables for division of the entire training set into different, randomly picked subsets for episodic learing
         self.eps_sim_steps_train = None         # Number of steps in the training set per episode
-        self.eps_sim_steps_cv = None            # Number of steps in the validation set
+        self.eps_sim_steps_val = None            # Number of steps in the validation set
         self.eps_sim_steps_test = None          # Number of steps in the test set
         self.eps_ind = None                     # Contains indexes of the randomly ordered training subsets
-        self.overhead_factor = 3                # Overhead of self.eps_ind - To account for randomn selection of the different processes in multiprocessing
+        self.overhead_factor = 3                # Overhead of self.eps_ind - To account for randomn selection of the different processes in multiprocessing (need to be an integer)
+        assert isinstance(self.overhead_factor, int), f"Episode overhead ({self.overhead_factor}) must be an integer!"
         self.n_eps = None                       # Episode length in seconds
         self.num_loops = None                   # No. of loops over the total training set during training
 
@@ -195,10 +196,11 @@ class Preprocessing():
 
         # Compute methanation operation data for theoretical optimum (ignoring dynamics) ##########################################MAKE SHORTER##################
         # calculate_optimum() had been excluded from Preprocessing() and placed in the different rl_opt.py file for the sake of clarity
+        print("---Calculate the theoretical optimum, the potential reward, and the load identifier")
         stats_dict_opt_train = calculate_optimum(self.dict_price_data['el_price_train'], self.dict_price_data['gas_price_train'],
-                                                self.dict_price_data['eua_price_train'], "Train")
-        stats_dict_opt_cv = calculate_optimum(self.dict_price_data['el_price_cv'], self.dict_price_data['gas_price_cv'],
-                                                self.dict_price_data['eua_price_cv'], "CV")
+                                                self.dict_price_data['eua_price_train'], "Training")
+        stats_dict_opt_val = calculate_optimum(self.dict_price_data['el_price_val'], self.dict_price_data['gas_price_val'],
+                                                self.dict_price_data['eua_price_val'], "Validation")
         stats_dict_opt_test = calculate_optimum(self.dict_price_data['el_price_test'], self.dict_price_data['gas_price_test'],
                                                 self.dict_price_data['eua_price_test'], "Test")
         stats_dict_opt_level = calculate_optimum(self.dict_price_data['el_price_reward_level'], self.dict_price_data['gas_price_reward_level'],
@@ -217,8 +219,8 @@ class Preprocessing():
         self.dict_pot_r_b = {                                                                       ##########################################MAKE SHORTER##################
             'pot_rew_train': stats_dict_opt_train['Meth_reward_stats'],
             'part_full_b_train': stats_dict_opt_train['partial_full_b'],
-            'pot_rew_cv': stats_dict_opt_cv['Meth_reward_stats'],
-            'part_full_b_cv': stats_dict_opt_cv['partial_full_b'],
+            'pot_rew_val': stats_dict_opt_val['Meth_reward_stats'],
+            'part_full_b_val': stats_dict_opt_val['partial_full_b'],
             'pot_rew_test': stats_dict_opt_test['Meth_reward_stats'],
             'part_full_b_test': stats_dict_opt_test['partial_full_b'],
         }
@@ -237,38 +239,38 @@ class Preprocessing():
         # and boolean identifier for the entire training and test set
         # e.g. e_r_b_train[0, 5, 156] represents the future value of the electricity price [0,-,-] in 4 hours [-,5,-] at the
         # 156ths entry of the electricity price data set             ##########################################MAKE SHORTER##################
-        e_r_b_train = np.zeros((3, self.EnvConfig.price_ahead, self.dict_price_data['el_price_train'].shape[0] - self.EnvConfig.price_ahead))
-        e_r_b_cv = np.zeros((3, self.EnvConfig.price_ahead, self.dict_price_data['el_price_cv'].shape[0] - self.EnvConfig.price_ahead))
-        e_r_b_test = np.zeros((3, self.EnvConfig.price_ahead, self.dict_price_data['el_price_test'].shape[0] - self.EnvConfig.price_ahead))
+        self.e_r_b_train = np.zeros((3, self.EnvConfig.price_ahead, self.dict_price_data['el_price_train'].shape[0] - self.EnvConfig.price_ahead))
+        self.e_r_b_val = np.zeros((3, self.EnvConfig.price_ahead, self.dict_price_data['el_price_val'].shape[0] - self.EnvConfig.price_ahead))
+        self.e_r_b_test = np.zeros((3, self.EnvConfig.price_ahead, self.dict_price_data['el_price_test'].shape[0] - self.EnvConfig.price_ahead))
 
         for i in range(self.EnvConfig.price_ahead):     ##########################################MAKE SHORTER##################
-            e_r_b_train[0, i, :] = self.dict_price_data['el_price_train'][i:(-self.EnvConfig.price_ahead + i)]
-            e_r_b_train[1, i, :] = self.dict_pot_r_b['pot_rew_train'][i:(-self.EnvConfig.price_ahead + i)]
-            e_r_b_train[2, i, :] = self.dict_pot_r_b['part_full_b_train'][i:(-self.EnvConfig.price_ahead + i)]
-            e_r_b_cv[0, i, :] = self.dict_price_data['el_price_cv'][i:(-self.EnvConfig.price_ahead + i)]
-            e_r_b_cv[1, i, :] = self.dict_pot_r_b['pot_rew_cv'][i:(-self.EnvConfig.price_ahead + i)]
-            e_r_b_cv[2, i, :] = self.dict_pot_r_b['part_full_b_cv'][i:(-self.EnvConfig.price_ahead + i)]
-            e_r_b_test[0, i, :] = self.dict_price_data['el_price_test'][i:(-self.EnvConfig.price_ahead + i)]
-            e_r_b_test[1, i, :] = self.dict_pot_r_b['pot_rew_test'][i:(-self.EnvConfig.price_ahead + i)]
-            e_r_b_test[2, i, :] = self.dict_pot_r_b['part_full_b_test'][i:(-self.EnvConfig.price_ahead + i)]
+            self.e_r_b_train[0, i, :] = self.dict_price_data['el_price_train'][i:(-self.EnvConfig.price_ahead + i)]
+            self.e_r_b_train[1, i, :] = self.dict_pot_r_b['pot_rew_train'][i:(-self.EnvConfig.price_ahead + i)]
+            self.e_r_b_train[2, i, :] = self.dict_pot_r_b['part_full_b_train'][i:(-self.EnvConfig.price_ahead + i)]
+            self.e_r_b_val[0, i, :] = self.dict_price_data['el_price_val'][i:(-self.EnvConfig.price_ahead + i)]
+            self.e_r_b_val[1, i, :] = self.dict_pot_r_b['pot_rew_val'][i:(-self.EnvConfig.price_ahead + i)]
+            self.e_r_b_val[2, i, :] = self.dict_pot_r_b['part_full_b_val'][i:(-self.EnvConfig.price_ahead + i)]
+            self.e_r_b_test[0, i, :] = self.dict_price_data['el_price_test'][i:(-self.EnvConfig.price_ahead + i)]
+            self.e_r_b_test[1, i, :] = self.dict_pot_r_b['pot_rew_test'][i:(-self.EnvConfig.price_ahead + i)]
+            self.e_r_b_test[2, i, :] = self.dict_pot_r_b['part_full_b_test'][i:(-self.EnvConfig.price_ahead + i)]
 
         # Multi-Dimensional Array (3D) which stores day-ahead gas and eua price data for the entire training and test set        ##########################################MAKE SHORTER##################
-        g_e_train = np.zeros((2, 2, self.dict_price_data['gas_price_train'].shape[0] - 1))
-        g_e_cv = np.zeros((2, 2, self.dict_price_data['gas_price_cv'].shape[0] - 1))
-        g_e_test = np.zeros((2, 2, self.dict_price_data['gas_price_test'].shape[0] - 1))
+        self.g_e_train = np.zeros((2, 2, self.dict_price_data['gas_price_train'].shape[0] - 1))
+        self.g_e_val = np.zeros((2, 2, self.dict_price_data['gas_price_val'].shape[0] - 1))
+        self.g_e_test = np.zeros((2, 2, self.dict_price_data['gas_price_test'].shape[0] - 1))
 
-        g_e_train[0, 0, :] = self.dict_price_data['gas_price_train'][:-1]     ##########################################MAKE SHORTER##################
-        g_e_train[1, 0, :] = self.dict_price_data['eua_price_train'][:-1]
-        g_e_cv[0, 0, :] = self.dict_price_data['gas_price_cv'][:-1]
-        g_e_cv[1, 0, :] = self.dict_price_data['eua_price_cv'][:-1]
-        g_e_test[0, 0, :] = self.dict_price_data['gas_price_test'][:-1]
-        g_e_test[1, 0, :] = self.dict_price_data['eua_price_test'][:-1]
-        g_e_train[0, 1, :] = self.dict_price_data['gas_price_train'][1:]
-        g_e_train[1, 1, :] = self.dict_price_data['eua_price_train'][1:]
-        g_e_cv[0, 1, :] = self.dict_price_data['gas_price_cv'][1:]
-        g_e_cv[1, 1, :] = self.dict_price_data['eua_price_cv'][1:]
-        g_e_test[0, 1, :] = self.dict_price_data['gas_price_test'][1:]
-        g_e_test[1, 1, :] = self.dict_price_data['eua_price_test'][1:]
+        self.g_e_train[0, 0, :] = self.dict_price_data['gas_price_train'][:-1]     ##########################################MAKE SHORTER##################
+        self.g_e_train[1, 0, :] = self.dict_price_data['eua_price_train'][:-1]
+        self.g_e_val[0, 0, :] = self.dict_price_data['gas_price_val'][:-1]
+        self.g_e_val[1, 0, :] = self.dict_price_data['eua_price_val'][:-1]
+        self.g_e_test[0, 0, :] = self.dict_price_data['gas_price_test'][:-1]
+        self.g_e_test[1, 0, :] = self.dict_price_data['eua_price_test'][:-1]
+        self.g_e_train[0, 1, :] = self.dict_price_data['gas_price_train'][1:]
+        self.g_e_train[1, 1, :] = self.dict_price_data['eua_price_train'][1:]
+        self.g_e_val[0, 1, :] = self.dict_price_data['gas_price_val'][1:]
+        self.g_e_val[1, 1, :] = self.dict_price_data['eua_price_val'][1:]
+        self.g_e_test[0, 1, :] = self.dict_price_data['gas_price_test'][1:]
+        self.g_e_test[1, 1, :] = self.dict_price_data['eua_price_test'][1:]
 
 
     def define_episodes(self):
@@ -276,9 +278,9 @@ class Preprocessing():
             Defines settings for training and evaluation episodes
         """
 
-        print("Define episodes and step size limits...")
+        print("---Define episodes and step size limits")
         # No. of days in the test set ("-1" excludes the day-ahead overhead)
-        cv_len_d = len(self.dict_price_data['gas_price_cv']) - 1
+        val_len_d = len(self.dict_price_data['gas_price_val']) - 1
         test_len_d = len(self.dict_price_data['gas_price_test']) - 1
 
         # Split up the entire training set into several smaller subsets which represents an own episodes
@@ -288,21 +290,21 @@ class Preprocessing():
 
         # Number of steps in train and test sets per episode
         self.eps_sim_steps_train = int(self.eps_len / self.EnvConfig.sim_step)
-        self.eps_sim_steps_cv = int(24 * 3600 * cv_len_d / self.EnvConfig.sim_step)
+        self.eps_sim_steps_val = int(24 * 3600 * val_len_d / self.EnvConfig.sim_step)
         self.eps_sim_steps_test = int(24 * 3600 * test_len_d /self. EnvConfig.sim_step)
 
         # Define total number of steps for all workers together
-        self.num_loops = int(self.TrainConfig.total_steps / (self.eps_sim_steps_train * self.n_eps))  # Number of loops over the total training set
-        print("--- Total number of training steps =", self.TrainConfig.total_steps)
-        print("--- No. of loops over the entire training set =", self.num_loops)
-        print("--- Training steps per episode =", self.eps_sim_steps_train)
-        print("--- Steps in the evaluation set =", self.eps_sim_steps_test)
+        self.num_loops = self.TrainConfig.total_steps / (self.eps_sim_steps_train * self.n_eps)      # Number of loops over the total training set
+        print("    > Total number of training steps =", self.TrainConfig.total_steps)
+        print("    > No. of loops over the entire training set =", round(self.num_loops,3))
+        print("    > Training steps per episode =", self.eps_sim_steps_train)
+        print("    > Steps in the evaluation set =", self.eps_sim_steps_test, "\n")
 
         # Create random selection routine with replacement for the different training subsets
         self.rand_eps_ind()
 
         # For Multiprocessing, eps_ind should not shared between different processes
-        self.n_eps_loops = self.n_eps * self.num_loops  # Allows for definition of different eps_ind in Multiprocessing (see RL_PtG\env\ptg_gym_env.py)
+        self.n_eps_loops = self.n_eps * int(self.num_loops)  # Allows for definition of different eps_ind in Multiprocessing (see RL_PtG\env\ptg_gym_env.py)
 
 
     def rand_eps_ind(self):
@@ -315,22 +317,24 @@ class Preprocessing():
         np.random.seed(self.TrainConfig.seed_train)     # Set the random seed for random episode selection
 
         if self.EnvConfig.train_len_d == self.EnvConfig.eps_len_d:
-            self.eps_ind = np.zeros(int(self.n_eps*self.num_loops*self.overhead_factor))
+            self.eps_ind = np.zeros(self.n_eps*int(self.num_loops)*self.overhead_factor)
         else:           # self.EnvConfig.train_len_d > self.EnvConfig.eps_len_d:
             # Random selection with sampling with replacement
             num_ep = np.linspace(start=0, stop=self.n_eps-1, num=self.n_eps)
-            random_ep = np.zeros((self.num_loops*self.overhead_factor, self.n_eps))
-            for i in range(self.num_loops*self.overhead_factor):
+            if self.num_loops < 1:      num_loops_int = 1
+            else:                       num_loops_int = int(self.num_loops)
+            random_ep = np.zeros((num_loops_int*self.overhead_factor, self.n_eps))
+            for i in range(num_loops_int*self.overhead_factor):
                 random_ep[i, :] = num_ep
                 np.random.shuffle(random_ep[i, :])
-            self.eps_ind = random_ep.reshape(int(self.n_eps*self.num_loops*self.overhead_factor)).astype(int)
+            self.eps_ind = random_ep.reshape(int(self.n_eps*num_loops_int*self.overhead_factor)).astype(int)
 
 
     def dict_env_kwargs(self, type="train"):
         """
         Returns global model parameters and hyper parameters applied in the PtG environment as a dictionary
         :param dict_op_data: Dictionary with data of dynamic methanation operation
-        :param type: Specifies either the training set "train" or the cv/ test set "cv_test"
+        :param type: Specifies either the training set "train" or the val/ test set "val_test"
         :return: env_kwargs: Dictionary with global parameters and hyperparameters
         """
 
@@ -442,12 +446,12 @@ class Preprocessing():
         else:   # Evaluation 
             env_kwargs["eps_ind"] = np.zeros(len(self.eps_ind), dtype=int)          # Simply use the one validation or test set, no indexing required
             env_kwargs["state_change_penalty"] = 0.0        # no state change penalty during validation
-            if type == "cv":    # Validation
-                env_kwargs["eps_sim_steps"] = self.eps_sim_steps_cv
-                env_kwargs["e_r_b"] = self.e_r_b_cv                        
-                env_kwargs["g_e"] = self.g_e_cv
-                env_kwargs["rew_l_b"] = np.min(self.e_r_b_cv[1, 0, :]) 
-                env_kwargs["rew_u_b"] = np.max(self.e_r_b_cv[1, 0, :])  
+            if type == "val":    # Validation
+                env_kwargs["eps_sim_steps"] = self.eps_sim_steps_val
+                env_kwargs["e_r_b"] = self.e_r_b_val                        
+                env_kwargs["g_e"] = self.g_e_val
+                env_kwargs["rew_l_b"] = np.min(self.e_r_b_val[1, 0, :]) 
+                env_kwargs["rew_u_b"] = np.max(self.e_r_b_val[1, 0, :])  
             elif type == "test":    # Testing
                 env_kwargs["eps_sim_steps"] = self.eps_sim_steps_test
                 env_kwargs["e_r_b"] = self.e_r_b_test                         
@@ -455,7 +459,7 @@ class Preprocessing():
                 env_kwargs["rew_l_b"] = np.min(self.e_r_b_test[1, 0, :]) 
                 env_kwargs["rew_u_b"] = np.max(self.e_r_b_test[1, 0, :])  
             else:
-                assert False, f'The type argument ({type}) of dict_env_kwargs() needs to be "train" (training), "cv" (validation) or "test" (testing)!'
+                assert False, f'The type argument ({type}) of dict_env_kwargs() needs to be "train" (training), "val" (validation) or "test" (testing)!'
 
         env_kwargs["reward_level"] = self.r_level
         env_kwargs["action_type"] = self.AgentConfig.rl_alg_hyp["action_type"]     # Action type of the algorithm, discrete or continuous
