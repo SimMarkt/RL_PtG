@@ -27,18 +27,18 @@ class EnvConfiguration:
         self.sim_step = env_config['sim_step']        # Frequency for taking an action in [s] 
 
         # file paths of energy spot market data for training and evaluation:
-        # (_train: training set; _cv: validation set; _test: test set)
+        # (_train: training set; _val: validation set; _test: test set)
         # _el: electricity spot market data
         self.datafile_path_train_el = env_config['datafile_path_train_el']
-        self.datafile_path_cv_el = env_config['datafile_path_cv_el']
+        self.datafile_path_val_el = env_config['datafile_path_val_el']
         self.datafile_path_test_el = env_config['datafile_path_test_el']
         # _gas: natural gas/SNG spot market data
         self.datafile_path_train_gas = env_config['datafile_path_train_gas']
-        self.datafile_path_cv_gas = env_config['datafile_path_cv_gas']
+        self.datafile_path_val_gas = env_config['datafile_path_val_gas']
         self.datafile_path_test_gas = env_config['datafile_path_test_gas']
         # _eua: European emission allowances (EUA) spot market data
         self.datafile_path_train_eua = env_config['datafile_path_train_eua']
-        self.datafile_path_cv_eua = env_config['datafile_path_cv_eua']
+        self.datafile_path_val_eua = env_config['datafile_path_val_eua']
         self.datafile_path_test_eua = env_config['datafile_path_test_eua']
 
         # file paths of process data for the dynamic data-based process model of the methanation plant depending on the load level:

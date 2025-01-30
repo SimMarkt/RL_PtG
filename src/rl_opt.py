@@ -154,14 +154,12 @@ def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_pri
 
     if data_name != "reward_Level":
         max_pot_cum_rew = stats_dict_opt['Meth_cum_reward_stats'][-EnvConfig.price_ahead]
+        print("    > ", data_name, ": Cumulative reward - theoretical optimum T-OPT = ", round(max_pot_cum_rew,2))
     else:
         max_pot_cum_rew = stats_dict_opt['Meth_cum_reward_stats'][0]
 
     # for i in range(400):
     #     print(str(stats_dict_opt['el_price_stats'][i]) + ";" + str(stats_dict_opt['Meth_reward_stats'][i]) + ";" + str(stats_dict_opt['partial_full_b'][i]))
-
-
-    print("--- ", data_name, ": Cumulative reward - theoretical optimum T-OPT = ", max_pot_cum_rew)
 
     return stats_dict_opt
 

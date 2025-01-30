@@ -38,7 +38,6 @@ class PTGEnv(gym.Env):
         self.noise = dict_input["noise"]
         self.eps_ind = dict_input["eps_ind"]
         self.eps_len_d = dict_input["eps_len_d"]
-        # print(ep_index, eps_ind[ep_index])
         self.act_ep_h = int(self.eps_ind[ep_index] * self.eps_len_d * 24)
         self.act_ep_d = int(self.eps_ind[ep_index] * self.eps_len_d)
         self.time_step_size_sim = dict_input["sim_step"]
