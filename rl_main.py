@@ -97,22 +97,22 @@ def main():
     env_train, env_test, eval_callback_val, eval_callback_test, env_test_single = create_vec_envs(env_id, str_id, AgentConfig, TrainConfig, env_kwargs_data)          # Create vectorized environments
     tb_log = "tensorboard/" + str_id                                                                                    # Set path for tensorboard data (for monitoring RL training) 
 
-    # # Set up the RL model with the specified algorithm
-    # if TrainConfig.model_conf == "simple_train" or TrainConfig.model_conf == "save_model":          # Train RL model from scratch
-    #     model = AgentConfig.set_model(env_train, tb_log, TrainConfig)
-    # else:                                                                                           # Load a pretrained model
-    #     model = AgentConfig.load_model(env_train, tb_log, f"{TrainConfig.path}{TrainConfig.path_files}{str_id}", 'train')
+    # Set up the RL model with the specified algorithm
+    if TrainConfig.model_conf == "simple_train" or TrainConfig.model_conf == "save_model":          # Train RL model from scratch
+        model = AgentConfig.set_model(env_train, tb_log, TrainConfig)
+    else:                                                                                           # Load a pretrained model
+        model = AgentConfig.load_model(env_train, tb_log, f"{TrainConfig.path}{TrainConfig.path_files}{str_id}", 'train')
 
-    # # ------------------------------------------------RL Training-------------------------------------------------
-    # print("Training... >>>", str_id, "<<< \n")
-    # if TrainConfig.val_n_test:  model.learn(total_timesteps=TrainConfig.train_steps, callback=[eval_callback_val, eval_callback_test])  # Evaluate the RL agent on both validation and test sets
-    # else:                       model.learn(total_timesteps=TrainConfig.train_steps, callback=[eval_callback_val])                      # Evaluate the RL agent only on the validation set
-    # print("...finished RL training\n")
+    # ------------------------------------------------RL Training-------------------------------------------------
+    print("Training... >>>", str_id, "<<< \n")
+    if TrainConfig.val_n_test:  model.learn(total_timesteps=TrainConfig.train_steps, callback=[eval_callback_val, eval_callback_test])  # Evaluate the RL agent on both validation and test sets
+    else:                       model.learn(total_timesteps=TrainConfig.train_steps, callback=[eval_callback_val])                      # Evaluate the RL agent only on the validation set
+    print("...finished RL training\n")
 
-    # # ------------------------------------------------Save model--------------------------------------------------
-    # if TrainConfig.model_conf == "save_model" or TrainConfig.model_conf == "save_load_model":
-    #     print("Save RL agent under ./logs/ ... \n") 
-    #     AgentConfig.save_model(model)
+    # ------------------------------------------------Save model--------------------------------------------------
+    if TrainConfig.model_conf == "save_model" or TrainConfig.model_conf == "save_load_model":
+        print("Save RL agent under ./logs/ ... \n") 
+        AgentConfig.save_model(model)
     
     # ----------------------------------------------Postprocessing------------------------------------------------
     print("Postprocessing...")

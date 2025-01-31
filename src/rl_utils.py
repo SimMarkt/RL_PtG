@@ -506,11 +506,11 @@ class Preprocessing():
         ###################MAKE SHORTER #####################
         # More information on the environment's parameters are present in RL_PtG/src/rl_param_env.py
 
-        env_kwargs["ptg_state_space['standby']"] = self.EnvConfig.ptg_state_space['standby'] 
-        env_kwargs["ptg_state_space['cooldown']"] = self.EnvConfig.ptg_state_space['cooldown']
-        env_kwargs["ptg_state_space['startup']"] = self.EnvConfig.ptg_state_space['startup']
-        env_kwargs["ptg_state_space['partial_load']"] = self.EnvConfig.ptg_state_space['partial_load']
-        env_kwargs["ptg_state_space['full_load']"] = self.EnvConfig.ptg_state_space['full_load']
+        env_kwargs["ptg_standby"] = self.EnvConfig.ptg_state_space['standby'] 
+        env_kwargs["ptg_cooldown"] = self.EnvConfig.ptg_state_space['cooldown']
+        env_kwargs["ptg_startup"] = self.EnvConfig.ptg_state_space['startup']
+        env_kwargs["ptg_partial_load"] = self.EnvConfig.ptg_state_space['partial_load']
+        env_kwargs["ptg_full_load"] = self.EnvConfig.ptg_state_space['full_load']
 
         env_kwargs["noise"] = self.EnvConfig.noise
         env_kwargs["parallel"] = self.TrainConfig.parallel
@@ -520,23 +520,41 @@ class Preprocessing():
         env_kwargs["price_ahead"] = self.EnvConfig.price_ahead
         env_kwargs["n_eps_loops"] = self.n_eps_loops
 
-        env_kwargs["dict_op_data['startup_cold']"] = self.dict_op_data['startup_cold']
-        env_kwargs["dict_op_data['startup_hot']"] = self.dict_op_data['startup_hot']
-        env_kwargs["dict_op_data['cooldown']"] = self.dict_op_data['cooldown']
-        env_kwargs["dict_op_data['standby_down']"] = self.dict_op_data['standby_down']
-        env_kwargs["dict_op_data['standby_up']"] = self.dict_op_data['standby_up']
-        env_kwargs["dict_op_data['op1_start_p']"] = self.dict_op_data['op1_start_p']
-        env_kwargs["dict_op_data['op2_start_f']"] = self.dict_op_data['op2_start_f']
-        env_kwargs["dict_op_data['op3_p_f']"] = self.dict_op_data['op3_p_f']
-        env_kwargs["dict_op_data['op4_p_f_p_5']"] = self.dict_op_data['op4_p_f_p_5']
-        env_kwargs["dict_op_data['op5_p_f_p_10']"] = self.dict_op_data['op5_p_f_p_10']
-        env_kwargs["dict_op_data['op6_p_f_p_15']"] = self.dict_op_data['op6_p_f_p_15']
-        env_kwargs["dict_op_data['op7_p_f_p_22']"] = self.dict_op_data['op7_p_f_p_22']
-        env_kwargs["dict_op_data['op8_f_p']"] = self.dict_op_data['op8_f_p']
-        env_kwargs["dict_op_data['op9_f_p_f_5']"] = self.dict_op_data['op9_f_p_f_5']
-        env_kwargs["dict_op_data['op10_f_p_f_10']"] = self.dict_op_data['op10_f_p_f_10']
-        env_kwargs["dict_op_data['op11_f_p_f_15']"] = self.dict_op_data['op11_f_p_f_15']
-        env_kwargs["dict_op_data['op12_f_p_f_20']"] = self.dict_op_data['op12_f_p_f_20']
+        # env_kwargs["dict_op_data['startup_cold']"] = self.dict_op_data['startup_cold']
+        # env_kwargs["dict_op_data['startup_hot']"] = self.dict_op_data['startup_hot']
+        # env_kwargs["dict_op_data['cooldown']"] = self.dict_op_data['cooldown']
+        # env_kwargs["dict_op_data['standby_down']"] = self.dict_op_data['standby_down']
+        # env_kwargs["dict_op_data['standby_up']"] = self.dict_op_data['standby_up']
+        # env_kwargs["dict_op_data['op1_start_p']"] = self.dict_op_data['op1_start_p']
+        # env_kwargs["dict_op_data['op2_start_f']"] = self.dict_op_data['op2_start_f']
+        # env_kwargs["dict_op_data['op3_p_f']"] = self.dict_op_data['op3_p_f']
+        # env_kwargs["dict_op_data['op4_p_f_p_5']"] = self.dict_op_data['op4_p_f_p_5']
+        # env_kwargs["dict_op_data['op5_p_f_p_10']"] = self.dict_op_data['op5_p_f_p_10']
+        # env_kwargs["dict_op_data['op6_p_f_p_15']"] = self.dict_op_data['op6_p_f_p_15']
+        # env_kwargs["dict_op_data['op7_p_f_p_22']"] = self.dict_op_data['op7_p_f_p_22']
+        # env_kwargs["dict_op_data['op8_f_p']"] = self.dict_op_data['op8_f_p']
+        # env_kwargs["dict_op_data['op9_f_p_f_5']"] = self.dict_op_data['op9_f_p_f_5']
+        # env_kwargs["dict_op_data['op10_f_p_f_10']"] = self.dict_op_data['op10_f_p_f_10']
+        # env_kwargs["dict_op_data['op11_f_p_f_15']"] = self.dict_op_data['op11_f_p_f_15']
+        # env_kwargs["dict_op_data['op12_f_p_f_20']"] = self.dict_op_data['op12_f_p_f_20']
+
+        env_kwargs['startup_cold'] = self.dict_op_data['startup_cold']
+        env_kwargs['startup_hot'] = self.dict_op_data['startup_hot']
+        env_kwargs['cooldown'] = self.dict_op_data['cooldown']
+        env_kwargs['standby_down'] = self.dict_op_data['standby_down']
+        env_kwargs['standby_up'] = self.dict_op_data['standby_up']
+        env_kwargs['op1_start_p'] = self.dict_op_data['op1_start_p']
+        env_kwargs['op2_start_f'] = self.dict_op_data['op2_start_f']
+        env_kwargs['op3_p_f'] = self.dict_op_data['op3_p_f']
+        env_kwargs['op4_p_f_p_5'] = self.dict_op_data['op4_p_f_p_5']
+        env_kwargs['op5_p_f_p_10'] = self.dict_op_data['op5_p_f_p_10']
+        env_kwargs['op6_p_f_p_15'] = self.dict_op_data['op6_p_f_p_15']
+        env_kwargs['op7_p_f_p_22'] = self.dict_op_data['op7_p_f_p_22']
+        env_kwargs['op8_f_p'] = self.dict_op_data['op8_f_p']
+        env_kwargs['op9_f_p_f_5'] = self.dict_op_data['op9_f_p_f_5']
+        env_kwargs['op10_f_p_f_10'] = self.dict_op_data['op10_f_p_f_10']
+        env_kwargs['op11_f_p_f_15'] = self.dict_op_data['op11_f_p_f_15']
+        env_kwargs['op12_f_p_f_20'] = self.dict_op_data['op12_f_p_f_20']
 
         env_kwargs["scenario"] = self.EnvConfig.scenario
 
@@ -586,6 +604,12 @@ class Preprocessing():
         env_kwargs["t_cat_startup_cold"] = self.EnvConfig.t_cat_startup_cold
         env_kwargs["t_cat_startup_hot"] = self.EnvConfig.t_cat_startup_hot
 
+        env_kwargs["el_l_b"] = self.EnvConfig.el_l_b
+        env_kwargs["el_u_b"] = self.EnvConfig.el_u_b
+        env_kwargs["gas_l_b"] = self.EnvConfig.gas_l_b
+        env_kwargs["gas_u_b"] = self.EnvConfig.gas_u_b
+        env_kwargs["eua_l_b"] = self.EnvConfig.eua_l_b
+        env_kwargs["eua_u_b"] = self.EnvConfig.eua_u_b
         env_kwargs["T_l_b"] = self.EnvConfig.T_l_b
         env_kwargs["T_u_b"] = self.EnvConfig.T_u_b
         env_kwargs["h2_l_b"] = self.EnvConfig.h2_l_b
@@ -747,19 +771,20 @@ class Postprocessing():
         print("---Plot and save RL performance on the test set under ./plots/ ...\n") 
 
         stats_dict = self.stats_dict_test
-        time_sim = stats_dict['steps_stats'] * self.EnvConfig.sim_step * 1 / 3600 / 24  # in days
-        time_sim = time_sim[:-6]                                        # ptg_gym_env.py curtails an episode by 6 time steps to ensure a data overhead
+        time_sim = stats_dict['steps_stats'] * self.EnvConfig.sim_step
+        time_sim *= 1 / 3600 / 24  # Converts the simulation time into days
+        time_sim = time_sim[:-6]                              # ptg_gym_env.py curtails an episode by 6 time steps to ensure a data overhead
         meth_state = stats_dict['Meth_State_stats'][:-6]+1
 
         fig, axs = plt.subplots(3, 1, figsize=(10, 6), sharex=True, sharey=False)
         axs[0].plot(time_sim, stats_dict['el_price_stats'][:-6], label='El.')
         axs[0].plot(time_sim, stats_dict['gas_price_stats'][:-6], 'g', label='(S)NG')
         axs[0].set_ylabel('El. & (S)NG prices\n [ct/kWh]')
-        axs[0].legend(loc="upper left", fontsize='x-small')
+        axs[0].legend(loc="upper left", fontsize='small')
         axs0_1 = axs[0].twinx()
         axs0_1.plot(time_sim, stats_dict['eua_price_stats'][:-6], 'k', label='EUA')
         axs0_1.set_ylabel('EUA prices [€/t$_{CO2}$]')
-        axs0_1.legend(loc="upper right", fontsize='x-small')
+        axs0_1.legend(loc="upper right", fontsize='small')
 
         axs[1].plot(time_sim, meth_state, 'b', label='state')
         axs[1].set_yticks([1,2,3,4,5])
@@ -775,11 +800,11 @@ class Postprocessing():
         axs[2].plot(time_sim, stats_dict['Meth_reward_stats'][:-6]/100, 'g', label='Reward')
         axs[2].set_ylabel('Reward [€]')
         axs[2].set_xlabel('Time [d]')
-        axs[2].legend(loc="upper left", fontsize='x-small')
+        axs[2].legend(loc="upper left", fontsize='small')
         axs2_1 = axs[2].twinx()
         axs2_1.plot(time_sim, stats_dict['Meth_cum_reward_stats'][:-6]/100, 'k', label='Cum. Reward')
         axs2_1.set_ylabel('Cumulative \n reward [€]')
-        axs2_1.legend(loc="upper right", fontsize='x-small')
+        axs2_1.legend(loc="upper right", fontsize='small')
 
         fig.suptitle(f"{self.str_id} \n Rew: {np.round(stats_dict['Meth_cum_reward_stats'][-7]/100, 0)} €", fontsize=9)
         plt.savefig(f'plots/{self.str_id}_plot.png')

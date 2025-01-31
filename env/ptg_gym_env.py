@@ -15,27 +15,26 @@ class PTGEnv(gym.Env):
 
         global ep_index
 
-        if dict_input["parallel"] == "Multiprocessing":
+        # Unpack variables
+        self.__dict__.update(dict_input)
+  
+        if self.parallel == "Multiprocessing":
             # Multiprocessing: ep_index is not shared between different processes -> should be different
-            ep_index = self.np_random.integers(0, dict_input["n_eps_loops"], size=1)[0]
+            ep_index = self.np_random.integers(0, self.n_eps_loops, size=1)[0]
 
-        if train_or_eval == "train" or train_or_eval == "eval":
-            self.train_or_eval = train_or_eval
-        else:
-            assert False, 'train_or_eval == "train" [info empty] or train_or_eval == "eval" [info contains results]!'
+        assert train_or_eval in ["train", "eval"], f'ptg_gym_env.py error: train_or_eval must be "train" [info empty] or "eval" [info contains results].'
+        self.train_or_eval = train_or_eval
 
         # Methanation has 5 states: [0, 1, 2, 3, 4]
         self.M_state = {
-            'standby': dict_input["ptg_state_space['standby']"],
-            'cooldown': dict_input["ptg_state_space['cooldown']"],
-            'startup': dict_input["ptg_state_space['startup']"],
-            'partial_load': dict_input["ptg_state_space['partial_load']"],
-            'full_load': dict_input["ptg_state_space['full_load']"],
+            'standby': self.ptg_standby,
+            'cooldown': self.ptg_cooldown,
+            'startup': self.ptg_startup,
+            'partial_load': self.ptg_partial_load,
+            'full_load': self.ptg_full_load,
         }
 
-        self.noise = dict_input["noise"]
-        self.eps_ind = dict_input["eps_ind"]
-        self.eps_len_d = dict_input["eps_len_d"]
+        # Initialize dynamic variables for simulation and time tracking
         self.act_ep_h = int(self.eps_ind[ep_index] * self.eps_len_d * 24)
         self.act_ep_d = int(self.eps_ind[ep_index] * self.eps_len_d)
         self.time_step_size_sim = dict_input["sim_step"]
@@ -52,43 +51,21 @@ class PTGEnv(gym.Env):
         #           historical values = No. of values in the electricity price data set
         # e.g. e_r_b_train[0, 5, 156] represents the future value of the electricity price [0,-,-] in
         # 5 hours [-,5,-] at the 156ths entry of the electricity price data set
-        self.e_r_b = dict_input["e_r_b"]
         self.e_r_b_act = self.e_r_b[:, :, self.act_ep_h]  # current values
 
         # np.array which stores gas and eua price data
         #       Dimensions = [Type of data] x [No. of day-ahead values] x [historical values]
         #           Type of data = [gas_price, pot_rew, part_full_b]
         #           No. of day-ahead values = 2 (today and tomorrow)
-        self.g_e = dict_input["g_e"]
         self.g_e_act = self.g_e[:, :, self.act_ep_d]  # current values
 
         # Temporal encoding
         # In order to distinguish between time steps within an hour -> sin-cos-transformation
-        self.temp_h_enc = [0, 0]  # determinses simulation time within an hour
         self.temp_h_enc_sin = math.sin(2 * math.pi * self.clock_hours)
         self.temp_h_enc_cos = math.cos(2 * math.pi * self.clock_hours)
 
-        # Load operation data sets
-        self.startup_cold = dict_input["dict_op_data['startup_cold']"]
-        self.startup_hot = dict_input["dict_op_data['startup_hot']"]
-        self.cooldown = dict_input["dict_op_data['cooldown']"]
-        self.standby_down = dict_input["dict_op_data['standby_down']"]
-        self.standby_up = dict_input["dict_op_data['standby_up']"]
-        self.op1_start_p = dict_input["dict_op_data['op1_start_p']"]
-        self.op2_start_f = dict_input["dict_op_data['op2_start_f']"]
-        self.op3_p_f = dict_input["dict_op_data['op3_p_f']"]
-        self.op4_p_f_p_5 = dict_input["dict_op_data['op4_p_f_p_5']"]
-        self.op5_p_f_p_10 = dict_input["dict_op_data['op5_p_f_p_10']"]
-        self.op6_p_f_p_15 = dict_input["dict_op_data['op6_p_f_p_15']"]
-        self.op7_p_f_p_22 = dict_input["dict_op_data['op7_p_f_p_22']"]
-        self.op8_f_p = dict_input["dict_op_data['op8_f_p']"]
-        self.op9_f_p_f_5 = dict_input["dict_op_data['op9_f_p_f_5']"]
-        self.op10_f_p_f_10 = dict_input["dict_op_data['op10_f_p_f_10']"]
-        self.op11_f_p_f_15 = dict_input["dict_op_data['op11_f_p_f_15']"]
-        self.op12_f_p_f_20 = dict_input["dict_op_data['op12_f_p_f_20']"]
-
         self.Meth_State = self.M_state['cooldown']
-        self.Meth_states = ['standby', 'cooldown', 'startup', 'partial_load', 'full_load']  # methanation state space
+        self.Meth_states = list(self.M_state.keys())  # methanation state space
         self.current_state = 'cooldown'  # current state as string
         self.standby = self.standby_down  # current standby data set
         self.startup = self.startup_cold  # current startup data set
@@ -100,82 +77,32 @@ class PTGEnv(gym.Env):
         self.i = self._get_index(self.cooldown, self.Meth_T_cat)  # represents index of row in specific operation mode
         self.j = 0  # counts number steps in specific operation mode (every 10 minutes)
         self.op = self.cooldown[self.i, :]  # operation point in current data set
-        self.Meth_H2_flow = self.op[2]
-        self.Meth_CH4_flow = self.op[3]
-        self.Meth_H2_res_flow = self.op[4]
-        self.Meth_H2O_flow = self.op[5]
-        self.Meth_el_heating = self.op[6]
+        keys = ['H2_flow', 'CH4_flow', 'H2_res_flow', 'H2O_flow', 'el_heating']
+        for i, key in enumerate(keys, start=2): setattr(self, f'Meth_{key}', self.op[i])
+        # self.Meth_H2_flow = self.op[2]
+        # self.Meth_CH4_flow = self.op[3]
+        # self.Meth_H2_res_flow = self.op[4]
+        # self.Meth_H2O_flow = self.op[5]
+        # self.Meth_el_heating = self.op[6]
+        self.hot_cold = 0  # detects whether startup originates from cold or hot conditions (0=cold, 1=hot)
+        # For state change penalty
+        self.state_change = False  # =True: Last action changed the overall methanation state M_state;
+        self.r_0 = self.reward_level[0] 
 
-        if dict_input["scenario"] == 3:
-            self.b_s3 = 1
-        else:
-            self.b_s3 = 0
+        if self.scenario == 3: self.b_s3 = 1
+        else: self.b_s3 = 0
 
-        # Initialize reward constituent and methanation dynamic thresholds
+        # Initialize reward constituents
         self.ch4_volumeflow, self.h2_res_volumeflow, self.Q_ch4, self.Q_h2_res, self.ch4_revenues = (0.0,) * 5
         self.power_chp, self.chp_revenues, self.Q_steam, self.steam_revenues, self.h2_volumeflow = (0.0,) * 5
         self.o2_volumeflow, self.o2_revenues, self.Meth_CO2_mass_flow, self.eua_revenues = (0.0,) * 4
         self.elec_costs_heating, self.load_elec, self.elec_costs_electrolyzer, self.elec_costs = (0.0,) * 4
         self.water_elec, self.water_costs, self.rew, self.cum_rew = (0.0,) * 4
         self.eta_electrolyzer = 0.02
-        self.convert_mol_to_Nm3 = dict_input["convert_mol_to_Nm3"]
-        self.H_u_CH4 = dict_input["H_u_CH4"]
-        self.H_u_H2 = dict_input["H_u_H2"]
-        self.dt_water = dict_input["dt_water"]
-        self.cp_water = dict_input["cp_water"]
-        self.rho_water = dict_input["rho_water"]
-        self.Molar_mass_CO2 = dict_input["Molar_mass_CO2"]
-        self.Molar_mass_H2O = dict_input["Molar_mass_H2O"]
-        self.h_H2O_evap = dict_input["h_H2O_evap"]
-        self.eeg_el_price = dict_input["eeg_el_price"]
-        self.heat_price = dict_input["heat_price"]
-        self.o2_price = dict_input["o2_price"]
-        self.water_price = dict_input["water_price"]
-        self.min_load_electrolyzer = dict_input["min_load_electrolyzer"]
-        self.max_h2_volumeflow = dict_input["max_h2_volumeflow"]
-        self.eta_CHP = dict_input["eta_CHP"]
 
-        self.t_cat_standby = dict_input["t_cat_standby"]
-        self.t_cat_startup_cold = dict_input["t_cat_startup_cold"]
-        self.t_cat_startup_hot = dict_input["t_cat_startup_hot"]
-        # time threshold for load change data set, from time = 0
-        self.time1_start_p_f = dict_input["time1_start_p_f"]
-        self.time2_start_f_p = dict_input["time2_start_f_p"]
-        self.time_p_f = dict_input["time_p_f"]
-        self.time_f_p = dict_input["time_f_p"]
-        self.time1_p_f_p = dict_input["time1_p_f_p"]
-        self.time2_p_f_p = dict_input["time2_p_f_p"]
-        self.time23_p_f_p = dict_input["time23_p_f_p"]
-        self.time3_p_f_p = dict_input["time3_p_f_p"]
-        self.time34_p_f_p = dict_input["time34_p_f_p"]
-        self.time4_p_f_p = dict_input["time4_p_f_p"]
-        self.time45_p_f_p = dict_input["time45_p_f_p"]
-        self.time5_p_f_p = dict_input["time5_p_f_p"]
-        self.time1_f_p_f = dict_input["time1_f_p_f"]
-        self.time2_f_p_f = dict_input["time2_f_p_f"]
-        self.time23_f_p_f = dict_input["time23_f_p_f"]
-        self.time3_f_p_f = dict_input["time3_f_p_f"]
-        self.time34_f_p_f = dict_input["time34_f_p_f"]
-        self.time4_f_p_f = dict_input["time4_f_p_f"]
-        self.time45_f_p_f = dict_input["time45_f_p_f"]
-        self.time5_f_p_f = dict_input["time5_f_p_f"]
-        # simulation steps for fully developed partial / full load
-        self.i_fully_developed = dict_input["i_fully_developed"]
-        self.j_fully_developed = dict_input["j_fully_developed"]
-
-        self.hot_cold = 0  # detects whether startup originates from cold or hot conditions (0=cold, 1=hot)
-        self.t_cat_startup_cold = dict_input["t_cat_startup_cold"]
-        self.t_cat_startup_hot = dict_input["t_cat_startup_hot"]
-        # For state change penalty
-        self.state_change = False  # =True: Action changed state;
-        self.state_change_penalty = dict_input["state_change_penalty"]
-        self.r_0 = dict_input["reward_level"][0] #
-
-        # Define action space
+        # Initialize action space
         self.actions = ['standby', 'cooldown', 'startup', 'partial_load', 'full_load']
         self.current_action = 'cooldown'  # PLC aligned
-        self.action_type = dict_input["action_type"]
-
         if self.action_type == "discrete":
             self.action_space = gym.spaces.Discrete(5)
         elif self.action_type == "continuous":
@@ -190,15 +117,13 @@ class PTGEnv(gym.Env):
                 self.prob_thre[ival] = self.act_b[0] + ival * self.prob_ival
             self.action_space = gym.spaces.Box(low=self.act_b[0], high=self.act_b[1], shape=(1,), dtype=np.float32)
         else:
-            assert False, "Invalid Action Type - ['discrete', 'continuous']!"
+            assert False, f"ptg_gym_env.py error: invalid action type ({self.action_type}) - must match ['discrete', 'continuous']!"
 
         # normalized lower and upper bounds [low, up]
-        b_norm = [0, 1]
-        b_enc = [-1, 1]
+        b_norm, b_enc = [0, 1], [-1, 1]
 
-        self.raw_modified = dict_input["raw_modified"]      # Sepcifies the type of state design using raw energy market prices ('raw') or modified economic metrices ('mod')
         # Define observation/state space features
-        if self.raw_modified == "raw":
+        if self.raw_modified == "raw":            # Specifies the type of state design using raw energy market prices ('raw') or modified economic metrices ('mod')
             self.observation_space = spaces.Dict(
                 {
                     "Elec_Price": spaces.Box(low=b_norm[0] * np.ones((self.price_ahead,)),
@@ -216,9 +141,6 @@ class PTGEnv(gym.Env):
                     "Elec_Heating": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
                     "Temp_hour_enc_sin": spaces.Box(low=b_enc[0], high=b_enc[1], shape=(1,), dtype=np.float64),
                     "Temp_hour_enc_cos": spaces.Box(low=b_enc[0], high=b_enc[1], shape=(1,), dtype=np.float64),
-                    #################################################################################################
-                    # "State_Change": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
-                    #################################################################################################
                 }
             )
         elif self.raw_modified == "mod":
@@ -237,9 +159,6 @@ class PTGEnv(gym.Env):
                     "Elec_Heating": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
                     "Temp_hour_enc_sin": spaces.Box(low=b_enc[0], high=b_enc[1], shape=(1,), dtype=np.float64),
                     "Temp_hour_enc_cos": spaces.Box(low=b_enc[0], high=b_enc[1], shape=(1,), dtype=np.float64),
-                    #################################################################################################
-                    # "State_Change": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
-                    #################################################################################################
                 }
             )
         else:
@@ -249,31 +168,9 @@ class PTGEnv(gym.Env):
         self.info = 0
         self.k = 0  # counts number of agent steps (every 10 minutes)
 
-        # lower and upper bounds of value range
-        self.rew_l_b = dict_input["rew_l_b"]
-        self.rew_u_b = dict_input["rew_u_b"]
-        self.elec_l_b = -8.6
-        self.elec_u_b = 89
-        self.gas_l_b = 0.4
-        self.gas_u_b = 31.6
-        self.eua_l_b = 23
-        self.eua_u_b = 98
-        self.T_l_b = dict_input["T_l_b"]
-        self.T_u_b = dict_input["T_u_b"]
-        self.h2_l_b = dict_input["h2_l_b"]
-        self.h2_u_b = dict_input["h2_u_b"]
-        self.ch4_l_b = dict_input["ch4_l_b"]
-        self.ch4_u_b = dict_input["ch4_u_b"]
-        self.h2_res_l_b = dict_input["h2_res_l_b"]
-        self.h2_res_u_b = dict_input["h2_res_u_b"]
-        self.h2o_l_b = dict_input["h2o_l_b"]
-        self.h2o_u_b = dict_input["h2o_u_b"]
-        self.heat_l_b = dict_input["heat_l_b"]
-        self.heat_u_b = dict_input["heat_u_b"]
-
-        # normalize observations by standardization:    ###############MAKE SHORTER ###########################
+        # normalize observations by standardization:  
         self.pot_rew_n = (self.e_r_b_act[1, :] - self.rew_l_b) / (self.rew_u_b - self.rew_l_b)
-        self.el_n = (self.e_r_b_act[0, :] - self.elec_l_b) / (self.elec_u_b - self.elec_l_b)
+        self.el_n = (self.e_r_b_act[0, :] - self.el_l_b) / (self.el_u_b - self.el_l_b)
         self.gas_n = (self.g_e_act[0, :] - self.gas_l_b) / (self.gas_u_b - self.gas_l_b)
         self.eua_n = (self.g_e_act[1, :] - self.eua_l_b) / (self.eua_u_b - self.eua_l_b)
         self.Meth_T_cat_n = (self.Meth_T_cat - self.T_l_b) / (self.T_u_b - self.T_l_b)
@@ -530,7 +427,7 @@ class PTGEnv(gym.Env):
         self.Meth_el_heating = np.average(self.op[:, 6])
 
         self.pot_rew_n = (self.e_r_b_act[1, :] - self.rew_l_b) / (self.rew_u_b - self.rew_l_b)      ############MAKE SHORTER########################
-        self.el_n = (self.e_r_b_act[0, :] - self.elec_l_b) / (self.elec_u_b - self.elec_l_b)
+        self.el_n = (self.e_r_b_act[0, :] - self.el_l_b) / (self.el_u_b - self.el_l_b)
         self.gas_n = (self.g_e_act[0, :] - self.gas_l_b) / (self.gas_u_b - self.gas_l_b)
         self.eua_n = (self.g_e_act[1, :] - self.eua_l_b) / (self.eua_u_b - self.eua_l_b)
         self.Meth_T_cat_n = (self.Meth_T_cat - self.T_l_b) / (self.T_u_b - self.T_l_b)
@@ -575,7 +472,6 @@ class PTGEnv(gym.Env):
 
         # Temporal encoding
         # In order to distinguish between time steps within an hour -> sin-cos-transformation
-        self.temp_h_enc = [0, 0]  # species time within an hour
         self.temp_h_enc_sin = math.sin(2 * math.pi * self.clock_hours)
         self.temp_h_enc_cos = math.cos(2 * math.pi * self.clock_hours)
 
@@ -615,7 +511,7 @@ class PTGEnv(gym.Env):
 
         # normalize observations by standardization:
         self.pot_rew_n = (self.e_r_b_act[1, :] - self.rew_l_b) / (self.rew_u_b - self.rew_l_b)
-        self.el_n = (self.e_r_b_act[0, :] - self.elec_l_b) / (self.elec_u_b - self.elec_l_b)
+        self.el_n = (self.e_r_b_act[0, :] - self.el_l_b) / (self.el_u_b - self.el_l_b)
         self.gas_n = (self.g_e_act[0, :] - self.gas_l_b) / (self.gas_u_b - self.gas_l_b)
         self.eua_n = (self.g_e_act[1, :] - self.eua_l_b) / (self.eua_u_b - self.eua_l_b)
         self.Meth_T_cat_n = (self.Meth_T_cat - self.T_l_b) / (self.T_u_b - self.T_l_b)
@@ -891,6 +787,9 @@ class PTGEnv(gym.Env):
 
         return self._perform_sim_step(self.full, self.Meth_State, self.full, self.M_state['full_load'],
                                       self.i, self.j, False)
+
+
+
 
 
 
