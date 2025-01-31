@@ -3,20 +3,16 @@
 # https://github.com/SimMarkt/RL_PtG
 
 # rl_main: 
-# > Main programming script for training of deep RL algorithms on the PtG-CH4 dispatch task 
-# > Distinguishes between present computational resources: local personal computer ('pc') or computing cluster with SLURM management ('slurm')
+# > Main script for training deep RL algorithms on the PtG-CH4 dispatch task.
+# > Differentiates between available computational resources: local personal computer ('pc') or a computing cluster with SLURM management ('slurm').
 # ----------------------------------------------------------------------------------------------------------------
 
 # --------------------------------------------Import Python libraries---------------------------------------------
-# Standard libraries
 import os
 import torch as th
 
-# Libraries for gymnasium and stable_baselines
-from gymnasium.envs.registration import registry, register, make
-from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv, SubprocVecEnv
-from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.callbacks import EvalCallback
+# Libraries for RL environment
+from gymnasium.envs.registration import registry, register 
 
 # Libraries with utility functions and classes
 from src.rl_utils import load_data, initial_print, config_print, Preprocessing, Postprocessing, create_vec_envs#, create_vec_envs
@@ -116,7 +112,7 @@ def main():
     
     # ----------------------------------------------Postprocessing------------------------------------------------
     print("Postprocessing...")
-    PostProcess = Postprocessing(str_id, dict_price_data, dict_op_data, AgentConfig, EnvConfig, TrainConfig, env_test_single, Preprocess)
+    PostProcess = Postprocessing(str_id, AgentConfig, EnvConfig, TrainConfig, env_test_single, Preprocess)
     PostProcess.test_performance()
     PostProcess.plot_results()
 

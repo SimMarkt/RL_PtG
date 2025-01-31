@@ -5,7 +5,7 @@ import math
 
 ep_index = 0
 
-# Abbreviation:
+# Abbreviations:
 #   SNG: Synthetic natural gas
 #   EUA: European emission allowances
 #   CHP: Combined heat and power plant
@@ -15,6 +15,7 @@ ep_index = 0
 #   CO2: Carbon dioxide
 #   H2O_DE: Water steam
 #   LHV: Lower heating value
+#   EEG: German renewable energy act
 
 class PTGEnv(gym.Env):
     """Custom Environment that follows gym interface."""
@@ -55,8 +56,8 @@ class PTGEnv(gym.Env):
         self.act_ep_d = int(self.eps_ind[ep_index] * self.eps_len_d)
         self.time_step_size_sim = self.sim_step
         self.step_size = int(self.time_step_size_sim / self.time_step_op)
-        self.clock_hours = 0 * self.time_step_size_sim / 3600   # in hours
-        self.clock_days = self.clock_hours / 24                 # in days
+        self.clock_hours = 0 * self.time_step_size_sim / 3600   # in [h]
+        self.clock_days = self.clock_hours / 24                 # in [d]
 
         self._initialize_datasets()
         self._initialize_op_rew()
