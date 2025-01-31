@@ -25,20 +25,23 @@ class EnvConfiguration:
         self.eps_len_d = env_config['eps_len_d']                # No. of days in an episode (episodes are randomly selected from the entire training data set without replacement)
         self.state_change_penalty = env_config['state_change_penalty'] # Factor which enables reward penalty during training (if state_change_penalty = 0.0: No reward penalty; if state_change_penalty > 0.0: Reward penalty on mode transitions;)
         self.sim_step = env_config['sim_step']        # Frequency for taking an action in [s] 
+        raw_mod_set = ['raw', 'mod']
+        assert env_config["raw_modified"] in raw_mod_set, f"Wrong type of state design specified - data/config_train.yaml -> raw_mod : {env_config['raw_modified']} must match {raw_mod_set}"
+        self.raw_modified = env_config["raw_modified"] # Specifies the type of state design using raw energy market prices ('raw') or modified economic metrices ('mod')
 
         # file paths of energy spot market data for training and evaluation:
-        # (_train: training set; _cv: validation set; _test: test set)
+        # (_train: training set; _val: validation set; _test: test set)
         # _el: electricity spot market data
         self.datafile_path_train_el = env_config['datafile_path_train_el']
-        self.datafile_path_cv_el = env_config['datafile_path_cv_el']
+        self.datafile_path_val_el = env_config['datafile_path_val_el']
         self.datafile_path_test_el = env_config['datafile_path_test_el']
         # _gas: natural gas/SNG spot market data
         self.datafile_path_train_gas = env_config['datafile_path_train_gas']
-        self.datafile_path_cv_gas = env_config['datafile_path_cv_gas']
+        self.datafile_path_val_gas = env_config['datafile_path_val_gas']
         self.datafile_path_test_gas = env_config['datafile_path_test_gas']
         # _eua: European emission allowances (EUA) spot market data
         self.datafile_path_train_eua = env_config['datafile_path_train_eua']
-        self.datafile_path_cv_eua = env_config['datafile_path_cv_eua']
+        self.datafile_path_val_eua = env_config['datafile_path_val_eua']
         self.datafile_path_test_eua = env_config['datafile_path_test_eua']
 
         # file paths of process data for the dynamic data-based process model of the methanation plant depending on the load level:

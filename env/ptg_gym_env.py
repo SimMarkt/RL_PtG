@@ -10,7 +10,7 @@ class PTGEnv(gym.Env):
 
     metadata = {"render_modes": ["None"]}
 
-    def __init__(self, dict_input, train_or_eval = "train", render_mode="None"):
+    def __init__(self, dict_input, train_or_eval = "train", render_mode="None"):        ###########MAKE SHORTER#####################
         super().__init__()
 
         global ep_index
@@ -18,8 +18,6 @@ class PTGEnv(gym.Env):
         if dict_input["parallel"] == "Multiprocessing":
             # Multiprocessing: ep_index is not shared between different processes -> should be different
             ep_index = self.np_random.integers(0, dict_input["n_eps_loops"], size=1)[0]
-
-        # print("init_ep_index=", ep_index)
 
         if train_or_eval == "train" or train_or_eval == "eval":
             self.train_or_eval = train_or_eval
@@ -38,7 +36,6 @@ class PTGEnv(gym.Env):
         self.noise = dict_input["noise"]
         self.eps_ind = dict_input["eps_ind"]
         self.eps_len_d = dict_input["eps_len_d"]
-        # print(ep_index, eps_ind[ep_index])
         self.act_ep_h = int(self.eps_ind[ep_index] * self.eps_len_d * 24)
         self.act_ep_d = int(self.eps_ind[ep_index] * self.eps_len_d)
         self.time_step_size_sim = dict_input["sim_step"]
@@ -54,7 +51,7 @@ class PTGEnv(gym.Env):
         #           No. of day-ahead values = GLOBAL_PARAMS.price_ahead
         #           historical values = No. of values in the electricity price data set
         # e.g. e_r_b_train[0, 5, 156] represents the future value of the electricity price [0,-,-] in
-        # 4 hours [-,5,-] at the 156ths entry of the electricity price data set
+        # 5 hours [-,5,-] at the 156ths entry of the electricity price data set
         self.e_r_b = dict_input["e_r_b"]
         self.e_r_b_act = self.e_r_b[:, :, self.act_ep_h]  # current values
 
@@ -67,7 +64,7 @@ class PTGEnv(gym.Env):
 
         # Temporal encoding
         # In order to distinguish between time steps within an hour -> sin-cos-transformation
-        self.temp_h_enc = [0, 0]  # species time within an hour
+        self.temp_h_enc = [0, 0]  # determinses simulation time within an hour
         self.temp_h_enc_sin = math.sin(2 * math.pi * self.clock_hours)
         self.temp_h_enc_cos = math.cos(2 * math.pi * self.clock_hours)
 
@@ -199,51 +196,54 @@ class PTGEnv(gym.Env):
         b_norm = [0, 1]
         b_enc = [-1, 1]
 
-        # Define observation space
-        self.observation_space = spaces.Dict(
-            {
-                "Pot_Reward": spaces.Box(low=b_norm[0] * np.ones((self.price_ahead,)),
-                                         high=b_norm[1] * np.ones((self.price_ahead,)), dtype=np.float64),
-                "Part_Full": spaces.Box(low=b_enc[0] * np.ones((self.price_ahead,)),
-                                        high=b_enc[1] * np.ones((self.price_ahead,)), dtype=np.float64),
-                "METH_STATUS": spaces.Discrete(6),
-                "T_CAT": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
-                "H2_in_MolarFlow": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
-                "CH4_syn_MolarFlow": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
-                "H2_res_MolarFlow": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
-                "H2O_DE_MassFlow": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
-                "Elec_Heating": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
-                "Temp_hour_enc_sin": spaces.Box(low=b_enc[0], high=b_enc[1], shape=(1,), dtype=np.float64),
-                "Temp_hour_enc_cos": spaces.Box(low=b_enc[0], high=b_enc[1], shape=(1,), dtype=np.float64),
-                #################################################################################################
-                # "State_Change": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
-                #################################################################################################
-            }
-        )
-
-        # # Define observation space
-        # self.observation_space = spaces.Dict(
-        #     {
-        #         "Elec_Price": spaces.Box(low=b_norm[0] * np.ones((self.price_ahead,)),
-        #                                  high=b_norm[1] * np.ones((self.price_ahead,)), dtype=np.float64),
-        #         "Gas_Price": spaces.Box(low=b_norm[0] * np.ones((2,)),
-        #                                  high=b_norm[1] * np.ones((2,)), dtype=np.float64),
-        #         "EUA_Price": spaces.Box(low=b_norm[0] * np.ones((2,)),
-        #                                  high=b_norm[1] * np.ones((2,)), dtype=np.float64),
-        #         "METH_STATUS": spaces.Discrete(6),
-        #         "T_CAT": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
-        #         "H2_in_MolarFlow": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
-        #         "CH4_syn_MolarFlow": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
-        #         "H2_res_MolarFlow": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
-        #         "H2O_DE_MassFlow": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
-        #         "Elec_Heating": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
-        #         "Temp_hour_enc_sin": spaces.Box(low=b_enc[0], high=b_enc[1], shape=(1,), dtype=np.float64),
-        #         "Temp_hour_enc_cos": spaces.Box(low=b_enc[0], high=b_enc[1], shape=(1,), dtype=np.float64),
-        #         #################################################################################################
-        #         # "State_Change": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
-        #         #################################################################################################
-        #     }
-        # )
+        self.raw_modified = dict_input["raw_modified"]      # Sepcifies the type of state design using raw energy market prices ('raw') or modified economic metrices ('mod')
+        # Define observation/state space features
+        if self.raw_modified == "raw":
+            self.observation_space = spaces.Dict(
+                {
+                    "Elec_Price": spaces.Box(low=b_norm[0] * np.ones((self.price_ahead,)),
+                                            high=b_norm[1] * np.ones((self.price_ahead,)), dtype=np.float64),
+                    "Gas_Price": spaces.Box(low=b_norm[0] * np.ones((2,)),
+                                            high=b_norm[1] * np.ones((2,)), dtype=np.float64),
+                    "EUA_Price": spaces.Box(low=b_norm[0] * np.ones((2,)),
+                                            high=b_norm[1] * np.ones((2,)), dtype=np.float64),
+                    "METH_STATUS": spaces.Discrete(6),
+                    "T_CAT": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
+                    "H2_in_MolarFlow": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
+                    "CH4_syn_MolarFlow": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
+                    "H2_res_MolarFlow": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
+                    "H2O_DE_MassFlow": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
+                    "Elec_Heating": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
+                    "Temp_hour_enc_sin": spaces.Box(low=b_enc[0], high=b_enc[1], shape=(1,), dtype=np.float64),
+                    "Temp_hour_enc_cos": spaces.Box(low=b_enc[0], high=b_enc[1], shape=(1,), dtype=np.float64),
+                    #################################################################################################
+                    # "State_Change": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
+                    #################################################################################################
+                }
+            )
+        elif self.raw_modified == "mod":
+            self.observation_space = spaces.Dict(
+                {
+                    "Pot_Reward": spaces.Box(low=b_norm[0] * np.ones((self.price_ahead,)),
+                                            high=b_norm[1] * np.ones((self.price_ahead,)), dtype=np.float64),
+                    "Part_Full": spaces.Box(low=b_enc[0] * np.ones((self.price_ahead,)),
+                                            high=b_enc[1] * np.ones((self.price_ahead,)), dtype=np.float64),
+                    "METH_STATUS": spaces.Discrete(6),
+                    "T_CAT": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
+                    "H2_in_MolarFlow": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
+                    "CH4_syn_MolarFlow": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
+                    "H2_res_MolarFlow": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
+                    "H2O_DE_MassFlow": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
+                    "Elec_Heating": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
+                    "Temp_hour_enc_sin": spaces.Box(low=b_enc[0], high=b_enc[1], shape=(1,), dtype=np.float64),
+                    "Temp_hour_enc_cos": spaces.Box(low=b_enc[0], high=b_enc[1], shape=(1,), dtype=np.float64),
+                    #################################################################################################
+                    # "State_Change": spaces.Box(low=b_norm[0], high=b_norm[1], shape=(1,), dtype=np.float64),
+                    #################################################################################################
+                }
+            )
+        else:
+            assert False, f"ptg_gym_env.py error: state design raw_modified {self.raw_modified} must match 'raw' or 'mod'!"
 
         self.render_mode = render_mode
         self.info = 0
@@ -271,7 +271,7 @@ class PTGEnv(gym.Env):
         self.heat_l_b = dict_input["heat_l_b"]
         self.heat_u_b = dict_input["heat_u_b"]
 
-        # normalize observations by standardization:
+        # normalize observations by standardization:    ###############MAKE SHORTER ###########################
         self.pot_rew_n = (self.e_r_b_act[1, :] - self.rew_l_b) / (self.rew_u_b - self.rew_l_b)
         self.el_n = (self.e_r_b_act[0, :] - self.elec_l_b) / (self.elec_u_b - self.elec_l_b)
         self.gas_n = (self.g_e_act[0, :] - self.gas_l_b) / (self.gas_u_b - self.gas_l_b)
@@ -286,44 +286,38 @@ class PTGEnv(gym.Env):
         ep_index += 1  # Choose next data subset for next episode
 
     def _get_obs(self):
-        return {
-            "Pot_Reward": np.array(self.pot_rew_n, dtype=np.float64),
-            "Part_Full": np.array(self.e_r_b_act[2, :], dtype=np.float64),
-            "METH_STATUS": int(self.Meth_State),
-            "T_CAT": np.array([self.Meth_T_cat_n], dtype=np.float64),
-            "H2_in_MolarFlow": np.array([self.Meth_H2_flow_n], dtype=np.float64),
-            "CH4_syn_MolarFlow": np.array([self.Meth_CH4_flow_n], dtype=np.float64),
-            "H2_res_MolarFlow": np.array([self.Meth_H2_res_flow_n], dtype=np.float64),
-            "H2O_DE_MassFlow": np.array([self.Meth_H2O_flow_n], dtype=np.float64),
-            "Elec_Heating": np.array([self.Meth_el_heating_n], dtype=np.float64),
-            "Temp_hour_enc_sin": np.array([self.temp_h_enc_sin], dtype=np.float64),
-            "Temp_hour_enc_cos": np.array([self.temp_h_enc_cos], dtype=np.float64),
-            ####################################################################################################
-            # "State_Change": np.array([self.state_change], dtype=np.float64),
-            ####################################################################################################
-        }
-
-        # return {
-        #     "Elec_Price": np.array(self.el_n, dtype=np.float64),
-        #     "Gas_Price": np.array(self.gas_n, dtype=np.float64),
-        #     "EUA_Price": np.array(self.eua_n, dtype=np.float64),
-        #     "METH_STATUS": int(self.Meth_State),
-        #     "T_CAT": np.array([self.Meth_T_cat_n], dtype=np.float64),
-        #     "H2_in_MolarFlow": np.array([self.Meth_H2_flow_n], dtype=np.float64),
-        #     "CH4_syn_MolarFlow": np.array([self.Meth_CH4_flow_n], dtype=np.float64),
-        #     "H2_res_MolarFlow": np.array([self.Meth_H2_res_flow_n], dtype=np.float64),
-        #     "H2O_DE_MassFlow": np.array([self.Meth_H2O_flow_n], dtype=np.float64),
-        #     "Elec_Heating": np.array([self.Meth_el_heating_n], dtype=np.float64),
-        #     "Temp_hour_enc_sin": np.array([self.temp_h_enc_sin], dtype=np.float64),
-        #     "Temp_hour_enc_cos": np.array([self.temp_h_enc_cos], dtype=np.float64),
-        #     ####################################################################################################
-        #     # "State_Change": np.array([self.state_change], dtype=np.float64),
-        #     ####################################################################################################
-        # }
+        if self.raw_modified == "raw":
+            return {
+                "Elec_Price": np.array(self.el_n, dtype=np.float64),
+                "Gas_Price": np.array(self.gas_n, dtype=np.float64),
+                "EUA_Price": np.array(self.eua_n, dtype=np.float64),
+                "METH_STATUS": int(self.Meth_State),
+                "T_CAT": np.array([self.Meth_T_cat_n], dtype=np.float64),
+                "H2_in_MolarFlow": np.array([self.Meth_H2_flow_n], dtype=np.float64),
+                "CH4_syn_MolarFlow": np.array([self.Meth_CH4_flow_n], dtype=np.float64),
+                "H2_res_MolarFlow": np.array([self.Meth_H2_res_flow_n], dtype=np.float64),
+                "H2O_DE_MassFlow": np.array([self.Meth_H2O_flow_n], dtype=np.float64),
+                "Elec_Heating": np.array([self.Meth_el_heating_n], dtype=np.float64),
+                "Temp_hour_enc_sin": np.array([self.temp_h_enc_sin], dtype=np.float64),
+                "Temp_hour_enc_cos": np.array([self.temp_h_enc_cos], dtype=np.float64),
+            }
+        else:
+            return {
+                "Pot_Reward": np.array(self.pot_rew_n, dtype=np.float64),
+                "Part_Full": np.array(self.e_r_b_act[2, :], dtype=np.float64),
+                "METH_STATUS": int(self.Meth_State),
+                "T_CAT": np.array([self.Meth_T_cat_n], dtype=np.float64),
+                "H2_in_MolarFlow": np.array([self.Meth_H2_flow_n], dtype=np.float64),
+                "CH4_syn_MolarFlow": np.array([self.Meth_CH4_flow_n], dtype=np.float64),
+                "H2_res_MolarFlow": np.array([self.Meth_H2_res_flow_n], dtype=np.float64),
+                "H2O_DE_MassFlow": np.array([self.Meth_H2O_flow_n], dtype=np.float64),
+                "Elec_Heating": np.array([self.Meth_el_heating_n], dtype=np.float64),
+                "Temp_hour_enc_sin": np.array([self.temp_h_enc_sin], dtype=np.float64),
+                "Temp_hour_enc_cos": np.array([self.temp_h_enc_cos], dtype=np.float64),
+            }
 
     def _get_info(self):
-
-        info_dict = {
+        return {
             "step": self.k,
             "el_price_act": self.e_r_b_act[0, 0],
             "gas_price_act": self.g_e_act[0, 0],
@@ -350,7 +344,6 @@ class PTGEnv(gym.Env):
             "Part_Full": self.e_r_b_act[2, 0],
         }
 
-        return info_dict
 
     def _get_reward(self):
         """
@@ -433,13 +426,17 @@ class PTGEnv(gym.Env):
                     self.current_action = self.actions[int(ival - 1)]
                     break
         else:
-            assert False, "Invalid Action Type - ['discrete', 'continuous']!"
+            assert False, f"ptg_gym_env.py error: invalid action type ({self.action_type}) - ['discrete', 'continuous']!"
 
         self.current_state = self.Meth_states[self.Meth_State]
 
-        # print("\n \n self.k", self.k, "self.current_action", self.current_action, "self.current_state", self.current_state)
-
-        # When the agent takes an action, the env reaction distinguishes between different methanation states
+        # When the agent takes an action, the environment's reaction distinguishes between different methanation states.
+        # NOTE: 
+        # ptg_gym_env uses match-case conditions to decide on the environment's reaction. This resembles simple if-else conditions, but provides a clearer structure.
+        # Although this kind of if-else conditions might slow down code performance in general, preliminary performance studies have revealed that this
+        # approach falls not behind other types of case selection (e.g. by using nested dictionaries) for up to 100 Mio. time steps. 
+        # The main bottleneck for code performance is, in fact, the memory access and data communication for loading the values of 
+        # the energy market data and PtG process data despite optimizing and caching data.
         match self.current_action:
             case 'standby':
                 match self.current_state:
@@ -512,9 +509,9 @@ class PTGEnv(gym.Env):
                     case _:  # Partial Load
                         self.op, self.Meth_State, self.i, self.j = self._full()
             case _:
-                assert False, "Invalid Action - ['standby', 'cooldown', 'startup', 'partial_load', 'full_load']!"
+                assert False, f"ptg_gym_env.py error: invalid action ({self.current_action}) - ['standby', 'cooldown', 'startup', 'partial_load', 'full_load']!"
 
-        self.clock_hours = (k + 1) * self.time_step_size_sim / 3600
+        self.clock_hours = (k + 1) * self.time_step_size_sim / 3600         ############MAKE SHORTER########################
         self.clock_days = self.clock_hours / 24
         h_step = math.floor(self.clock_hours)
         d_step = math.floor(self.clock_days)
@@ -532,7 +529,7 @@ class PTGEnv(gym.Env):
         self.Meth_H2O_flow = np.average(self.op[:, 5])
         self.Meth_el_heating = np.average(self.op[:, 6])
 
-        self.pot_rew_n = (self.e_r_b_act[1, :] - self.rew_l_b) / (self.rew_u_b - self.rew_l_b)
+        self.pot_rew_n = (self.e_r_b_act[1, :] - self.rew_l_b) / (self.rew_u_b - self.rew_l_b)      ############MAKE SHORTER########################
         self.el_n = (self.e_r_b_act[0, :] - self.elec_l_b) / (self.elec_u_b - self.elec_l_b)
         self.gas_n = (self.g_e_act[0, :] - self.gas_l_b) / (self.gas_u_b - self.gas_l_b)
         self.eua_n = (self.g_e_act[1, :] - self.eua_l_b) / (self.eua_u_b - self.eua_l_b)
@@ -628,8 +625,6 @@ class PTGEnv(gym.Env):
         self.Meth_H2O_flow_n = (self.Meth_H2O_flow - self.h2o_l_b) / (self.h2o_u_b - self.h2o_l_b)
         self.Meth_el_heating_n = (self.Meth_el_heating - self.heat_l_b) / (self.heat_u_b - self.heat_l_b)
 
-        # print("ep_index=", ep_index)
-
         ep_index += 1  # Choose next data subset for next episode
 
         observation = self._get_obs()
@@ -642,6 +637,7 @@ class PTGEnv(gym.Env):
         Returns whether the episode ended and thus terminates
         """
         if self.k == self.eps_sim_steps - 6:
+            print(self.cum_rew)
             return True
         else:
             return False
