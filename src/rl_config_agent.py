@@ -23,8 +23,9 @@ class AgentConfiguration:
 
         assert self.rl_alg in self.hyperparameters, f"Wrong algorithm specified - data/config_agent.yaml -> model_conf : {self.rl_alg} must match {self.hyperparameters.keys()}"
         self.rl_alg_hyp = self.hyperparameters[self.rl_alg]      # Hyperparameters of the algorithm
-        self.str_alg = None                                      # Represents a string containing the hyperparameter settings after completing the initialization, for file identification purposes
-        # Nested dictionary with all possible hyperparameters including an abbreveation ('abb') and the variable name ('var', need to match notation in RL_PtG/config/config_agent.yaml)
+        self.str_alg = None                                      # String representing the hyperparameter settings after initialization, used for file identification.
+        # Nested dictionary with all possible hyperparameters including an abbreveation ('abb') and the variable name ('var'). 
+        # 'var' need to match notation in RL_PtG/config/config_agent.yaml
         self.hyper = {'Learning rate': {'abb' :"_al", 'var': 'alpha'},
                       'Discount factor': {'abb' :"_ga", 'var': 'gamma'},
                       'Initial exploration coefficient': {'abb' :"_ie", 'var': 'eps_init'},
@@ -54,7 +55,7 @@ class AgentConfiguration:
 
     def set_model(self, env, tb_log, TrainConfig):
         """
-            Specify the Stable-Baselines3 model for RL training
+            Specifies the Stable-Baselines3 model for RL training
             :param env: environment
             :param tb_log: Tensorboard log file
             :param TrainConfig: Training configuration in a class object
@@ -76,145 +77,145 @@ class AgentConfiguration:
 
         # Set RL algorithms and specify hyperparameters
         if self.rl_alg == 'DQN':
-            from stable_baselines3 import DQN           # import algorithm
+            from stable_baselines3 import DQN           # Import algorithm
             policy_kwargs = dict(activation_fn=activation_fn, net_arch=net_arch)
             model = DQN(
-                "MultiInputPolicy",                                                     # policy type
-                env,                                                                    # environment
-                verbose=0,                                                              # without printing training details to the TUI
-                tensorboard_log=tb_log,                                                 # tensorboard log file
-                learning_rate=self.rl_alg_hyp['alpha'],                                 # learning rate
-                gamma=self.rl_alg_hyp['gamma'],                                         # discount factor
-                buffer_size=int(self.rl_alg_hyp['buffer_size']),                        # replay buffer size
-                batch_size=int(self.rl_alg_hyp['batch_size']),                          # batch size
-                exploration_initial_eps=self.rl_alg_hyp['eps_init'],                    # initial exploration coefficient
-                exploration_final_eps=self.rl_alg_hyp['eps_fin'],                       # final exploration coefficient
-                exploration_fraction=self.rl_alg_hyp['eps_fra'],                        # ratio of the training set for exploration annealing
+                "MultiInputPolicy",                                                     # Policy type
+                env,                                                                    # Environment
+                verbose=0,                                                              # Without printing training details to the TUI
+                tensorboard_log=tb_log,                                                 # Tensorboard log file
+                learning_rate=self.rl_alg_hyp['alpha'],                                 # Learning rate
+                gamma=self.rl_alg_hyp['gamma'],                                         # Discount factor
+                buffer_size=int(self.rl_alg_hyp['buffer_size']),                        # Replay buffer size
+                batch_size=int(self.rl_alg_hyp['batch_size']),                          # Batch size
+                exploration_initial_eps=self.rl_alg_hyp['eps_init'],                    # Initial exploration coefficient
+                exploration_final_eps=self.rl_alg_hyp['eps_fin'],                       # Final exploration coefficient
+                exploration_fraction=self.rl_alg_hyp['eps_fra'],                        # Ratio of the training set for exploration annealing
                 learning_starts=int(self.rl_alg_hyp['learning_starts']),                # No. of steps before starting the training of actor/critic networks
-                tau=self.rl_alg_hyp['tau'],                                             # soft update parameter
-                train_freq=self.rl_alg_hyp['train_freq'],                               # training frequency
-                policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
-                device=TrainConfig.device,                                                     # CPU or GPU
-                target_update_interval=self.rl_alg_hyp['target_update_interval'],       # target network update interval
-                seed=TrainConfig.seed_train,                                                 # random seed
+                tau=self.rl_alg_hyp['tau'],                                             # Soft update parameter
+                train_freq=self.rl_alg_hyp['train_freq'],                               # Training frequency
+                policy_kwargs=policy_kwargs,                                            # Contains network hyperparameters
+                device=TrainConfig.device,                                              # CPU or GPU
+                target_update_interval=self.rl_alg_hyp['target_update_interval'],       # Target network update interval
+                seed=TrainConfig.seed_train,                                            # Random seed
             )
 
-        elif self.rl_alg == 'A2C':                      # import algorithm
+        elif self.rl_alg == 'A2C':                      
             from stable_baselines3 import A2C
             policy_kwargs = dict(activation_fn=activation_fn, net_arch=net_arch)
             assert self.rl_alg_hyp['normalize_advantage'] in [False,True], f"Normalize advantage ({self.rl_alg_hyp['normalize_advantage']}) should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
             assert self.rl_alg_hyp['gSDE'] in [False,True], f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
             model = A2C(
-                "MultiInputPolicy",                                                     # policy type
-                env,                                                                    # environment
-                verbose=0,                                                              # without printing training details to the TUI
-                tensorboard_log=tb_log,                                                 # tensorboard log file
-                learning_rate=self.rl_alg_hyp['alpha'],                                 # learning rate
-                gamma=self.rl_alg_hyp['gamma'],                                         # discount factor
+                "MultiInputPolicy",                                                     # Policy type
+                env,                                                                    # Environment
+                verbose=0,                                                              # Without printing training details to the TUI
+                tensorboard_log=tb_log,                                                 # Tensorboard log file
+                learning_rate=self.rl_alg_hyp['alpha'],                                 # Learning rate
+                gamma=self.rl_alg_hyp['gamma'],                                         # Discount factor
                 n_steps=self.rl_alg_hyp['n_steps'],                                     # No. of steps of the n-step TD update
-                gae_lambda=self.rl_alg_hyp['gae_lambda'],                               # factor for generalized advantage estimation
-                normalize_advantage=self.rl_alg_hyp['normalize_advantage'],             # normalize advantage
-                ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # entropy coefficient
-                policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
+                gae_lambda=self.rl_alg_hyp['gae_lambda'],                               # Factor for generalized advantage estimation
+                normalize_advantage=self.rl_alg_hyp['normalize_advantage'],             # Normalize advantage
+                ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # Entropy coefficient
+                policy_kwargs=policy_kwargs,                                            # Contains network hyperparameters
                 use_sde=self.rl_alg_hyp['gSDE'],                                        # gSDE exploration
-                device=TrainConfig.device,                                                     # CPU or GPU
-                seed=TrainConfig.seed_train,                                                 # random seed
+                device=TrainConfig.device,                                              # CPU or GPU
+                seed=TrainConfig.seed_train,                                            # Random seed
             )
 
-        elif self.rl_alg == 'PPO':                      # import algorithm
+        elif self.rl_alg == 'PPO':                      
             from stable_baselines3 import PPO
             policy_kwargs = dict(activation_fn=activation_fn, net_arch=net_arch)
-            n_steps = int(self.rl_alg_hyp['n_steps_f'] * self.rl_alg_hyp['batch_size'])       # number of steps of the n-step TD update
+            n_steps = int(self.rl_alg_hyp['n_steps_f'] * self.rl_alg_hyp['batch_size'])       # No. of steps of the n-step TD update
             assert self.rl_alg_hyp['normalize_advantage'] in [False,True], f"Normalize advantage ({self.rl_alg_hyp['normalize_advantage']}) should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
             assert self.rl_alg_hyp['gSDE'] in [False,True], f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
             model = PPO(
-                "MultiInputPolicy",                                                     # policy type
-                env,                                                                    # environment
-                verbose=0,                                                              # without printing training details to the TUI
-                tensorboard_log=tb_log,                                                 # tensorboard log file
-                learning_rate=self.rl_alg_hyp['alpha'],                                 # learning rate
-                gamma=self.rl_alg_hyp['gamma'],                                         # discount factor
-                batch_size=int(self.rl_alg_hyp['batch_size']),                          # batch size
+                "MultiInputPolicy",                                                     # Policy type
+                env,                                                                    # Environment
+                verbose=0,                                                              # Without printing training details to the TUI
+                tensorboard_log=tb_log,                                                 # Tensorboard log file
+                learning_rate=self.rl_alg_hyp['alpha'],                                 # Learning rate
+                gamma=self.rl_alg_hyp['gamma'],                                         # Discount factor
+                batch_size=int(self.rl_alg_hyp['batch_size']),                          # Batch size
                 n_steps=n_steps,                                                        # No. of steps of the n-step TD update
-                gae_lambda=self.rl_alg_hyp['gae_lambda'],                               # factor for generalized advantage estimation
+                gae_lambda=self.rl_alg_hyp['gae_lambda'],                               # Factor for generalized advantage estimation
                 n_epochs=int(self.rl_alg_hyp['n_epoch']),                               # No. of epochs for mini batch training
-                normalize_advantage=self.rl_alg_hyp['normalize_advantage'],             # normalize advantage
-                ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # entropy coefficient
-                policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
+                normalize_advantage=self.rl_alg_hyp['normalize_advantage'],             # Normalize advantage
+                ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # Entropy coefficient
+                policy_kwargs=policy_kwargs,                                            # Contains network hyperparameters
                 use_sde=self.rl_alg_hyp['gSDE'],                                        # gSDE exploration
-                device=TrainConfig.device,                                                     # CPU or GPU
-                seed=TrainConfig.seed_train,                                                 # random seed
+                device=TrainConfig.device,                                              # CPU or GPU
+                seed=TrainConfig.seed_train,                                            # random seed
             )
 
-        elif self.rl_alg == 'TD3':                      # import algorithm
+        elif self.rl_alg == 'TD3':                    
             from stable_baselines3 import TD3
             policy_kwargs = dict(activation_fn=activation_fn, net_arch=net_arch)
             model = TD3(
-                "MultiInputPolicy",                                                     # policy type
-                env,                                                                    # environment
-                verbose=0,                                                              # without printing training details to the TUI
-                tensorboard_log=tb_log,                                                 # tensorboard log file
-                learning_rate=self.rl_alg_hyp['alpha'],                                 # learning rate
-                gamma=self.rl_alg_hyp['gamma'],                                         # discount factor
-                buffer_size=int(self.rl_alg_hyp['buffer_size']),                        # replay buffer size
-                batch_size=int(self.rl_alg_hyp['batch_size']),                          # batch size
+                "MultiInputPolicy",                                                     # Policy type
+                env,                                                                    # Environment
+                verbose=0,                                                              # Without printing training details to the TUI
+                tensorboard_log=tb_log,                                                 # Tensorboard log file
+                learning_rate=self.rl_alg_hyp['alpha'],                                 # Learning rate
+                gamma=self.rl_alg_hyp['gamma'],                                         # Discount factor
+                buffer_size=int(self.rl_alg_hyp['buffer_size']),                        # Replay buffer size
+                batch_size=int(self.rl_alg_hyp['batch_size']),                          # Batch size
                 learning_starts=int(self.rl_alg_hyp['learning_starts']),                # No. of steps before starting the training of actor/critic networks
-                tau=self.rl_alg_hyp['tau'],                                             # soft update parameter
-                train_freq=self.rl_alg_hyp['train_freq'],                               # training frequency
-                target_policy_noise=self.rl_alg_hyp['sigma_exp'],                       # standard deviation of Gaussian noise added to the target policy
-                policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
-                device=TrainConfig.device,                                                     # CPU or GPU
-                seed=TrainConfig.seed_train,                                                 # random seed
+                tau=self.rl_alg_hyp['tau'],                                             # Soft update parameter
+                train_freq=self.rl_alg_hyp['train_freq'],                               # Training frequency
+                target_policy_noise=self.rl_alg_hyp['sigma_exp'],                       # Standard deviation of Gaussian noise added to the target policy
+                policy_kwargs=policy_kwargs,                                            # Contains network hyperparameters
+                device=TrainConfig.device,                                              # CPU or GPU
+                seed=TrainConfig.seed_train,                                            # Random seed
             )
         
-        elif self.rl_alg == 'SAC':                      # import algorithm
+        elif self.rl_alg == 'SAC':                    
             from stable_baselines3 import SAC
             policy_kwargs = dict(activation_fn=activation_fn, net_arch=net_arch)
             assert self.rl_alg_hyp['gSDE'] in [False,True], f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
             model = SAC(
-                "MultiInputPolicy",                                                     # policy type
-                env,                                                                    # environment
-                verbose=0,                                                              # without printing training details to the TUI
-                tensorboard_log=tb_log,                                                 # tensorboard log file
-                learning_rate=self.rl_alg_hyp['alpha'],                                 # learning rate
-                gamma=self.rl_alg_hyp['gamma'],                                         # discount factor
-                buffer_size=int(self.rl_alg_hyp['buffer_size']),                        # replay buffer size
-                batch_size=int(self.rl_alg_hyp['batch_size']),                          # batch size
+                "MultiInputPolicy",                                                     # Policy type
+                env,                                                                    # Environment
+                verbose=0,                                                              # Without printing training details to the TUI
+                tensorboard_log=tb_log,                                                 # Tensorboard log file
+                learning_rate=self.rl_alg_hyp['alpha'],                                 # Learning rate
+                gamma=self.rl_alg_hyp['gamma'],                                         # Discount factor
+                buffer_size=int(self.rl_alg_hyp['buffer_size']),                        # Replay buffer size
+                batch_size=int(self.rl_alg_hyp['batch_size']),                          # Batch size
                 learning_starts=int(self.rl_alg_hyp['learning_starts']),                # No. of steps before starting the training of actor/critic networks
-                tau=self.rl_alg_hyp['tau'],                                             # soft update parameter
-                train_freq=self.rl_alg_hyp['train_freq'],                               # training frequency
-                ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # entropy coefficient
-                policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
+                tau=self.rl_alg_hyp['tau'],                                             # Soft update parameter
+                train_freq=self.rl_alg_hyp['train_freq'],                               # Training frequency
+                ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # Entropy coefficient
+                policy_kwargs=policy_kwargs,                                            # Contains network hyperparameters
                 use_sde=self.rl_alg_hyp['gSDE'],                                        # gSDE exploration
-                device=TrainConfig.device,                                                     # CPU or GPU
-                target_update_interval=self.rl_alg_hyp['train_freq'],                   # target network update interval
-                seed=TrainConfig.seed_train,                                                 # random seed
+                device=TrainConfig.device,                                              # CPU or GPU
+                target_update_interval=self.rl_alg_hyp['train_freq'],                   # Target network update interval
+                seed=TrainConfig.seed_train,                                            # Random seed
             )
         
-        elif self.rl_alg == 'TQC':                      # import algorithm
+        elif self.rl_alg == 'TQC':             
             from sb3_contrib import TQC
             policy_kwargs = dict(activation_fn=activation_fn, net_arch=net_arch,
                             n_critics=int(self.rl_alg_hyp['n_critics']), n_quantiles=int(self.rl_alg_hyp['n_quantiles']))
             assert self.rl_alg_hyp['gSDE'] in [False,True], f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
             model = TQC(
-                "MultiInputPolicy",                                                         # policy type
-                env,                                                                        # environment
-                verbose=0,                                                                  # without printing training details to the TUI
-                tensorboard_log=tb_log,                                                     # tensorboard log file
+                "MultiInputPolicy",                                                         # Policy type
+                env,                                                                        # Environment
+                verbose=0,                                                                  # Without printing training details to the TUI
+                tensorboard_log=tb_log,                                                     # Tensorboard log file
                 top_quantiles_to_drop_per_net=int(self.rl_alg_hyp['top_quantiles_drop']),   # No. of top quantiles to drop
-                learning_rate=self.rl_alg_hyp['alpha'],                                     # learning rate
-                gamma=self.rl_alg_hyp['gamma'],                                             # discount factor
-                buffer_size=int(self.rl_alg_hyp['buffer_size']),                            # replay buffer size
-                batch_size=int(self.rl_alg_hyp['batch_size']),                              # batch size
+                learning_rate=self.rl_alg_hyp['alpha'],                                     # Learning rate
+                gamma=self.rl_alg_hyp['gamma'],                                             # Discount factor
+                buffer_size=int(self.rl_alg_hyp['buffer_size']),                            # Replay buffer size
+                batch_size=int(self.rl_alg_hyp['batch_size']),                              # Batch size
                 learning_starts=int(self.rl_alg_hyp['learning_starts']),                    # No. of steps before starting the training of actor/critic networks
-                tau=self.rl_alg_hyp['tau'],                                                 # soft update parameter
-                train_freq=self.rl_alg_hyp['train_freq'],                                   # training frequency
-                ent_coef=self.rl_alg_hyp['ent_coeff'],                                      # entropy coefficient
-                policy_kwargs=policy_kwargs,                                                # contain network hyperparameters
+                tau=self.rl_alg_hyp['tau'],                                                 # Soft update parameter
+                train_freq=self.rl_alg_hyp['train_freq'],                                   # Training frequency
+                ent_coef=self.rl_alg_hyp['ent_coeff'],                                      # Entropy coefficient
+                policy_kwargs=policy_kwargs,                                                # Contain network hyperparameters
                 use_sde=self.rl_alg_hyp['gSDE'],                                            # gSDE exploration
-                device=TrainConfig.device,                                                         # CPU or GPU
-                target_update_interval=self.rl_alg_hyp['train_freq'],                       # target network update interval
-                seed=TrainConfig.seed_train,                                                     # random seed
+                device=TrainConfig.device,                                                  # CPU or GPU
+                target_update_interval=self.rl_alg_hyp['train_freq'],                       # Target network update interval
+                seed=TrainConfig.seed_train,                                                # Random seed
             )
         else:
             assert False, 'Algorithm is not implemented!'
@@ -226,7 +227,8 @@ class AgentConfiguration:
             Load pretrained Stable-Baselines3 model for RL training
             :param env: environment
             :param tb_log: Tensorboard log file
-            :param str_id: String for identification of the pretrained model ####################################
+            :param model_path: Path to the pretrained model
+            :param type: Specifies whether the replay buffer is loaded
             :return model: Stable-Baselines3 model for RL training
         """
 
@@ -261,10 +263,8 @@ class AgentConfiguration:
 
     def save_model(self, model):
         """
-            Load pretrained Stable-Baselines3 model for RL training
-            :param env: environment
-            :param tb_log: # tensorboard log file
-            :return model: Stable-Baselines3 model for RL training
+            Save trained Stable-Baselines3 model
+            :param model: Stable-Baselines3 model
         """
         model.save(self.path_files + self.str_inv)
         if 'buffer_size' in self.rl_alg_hyp.keys():
@@ -273,7 +273,7 @@ class AgentConfiguration:
     def get_hyper(self):
         """
             Gather and print algorithm hyperparameters and returns the values in a string for file identification
-            :return str_alg: hyperparameter settings in a string for file identification
+            :return str_alg: Hyperparameter settings in a string for file identification
         """
 
         # Print algorithm and hyperparameters and create identifier string

@@ -20,13 +20,13 @@ class TrainConfiguration:
         
         # Set configuration
         self.path = None                        # RL_PtG folder path
-        self.slurm_id = None                                # SLURM ID of a specific thread
+        self.slurm_id = None                    # SLURM ID of a specific thread
         com_set = ['pc', 'slurm']
         
         assert self.com_conf in com_set, f"Wrong computation setup specified - data/config_train.yaml -> com_conf : {self.com_conf} must match {com_set}"
         train_set = ['simple_train', 'save_model', 'load_model', 'save_load_model']
         assert self.model_conf in train_set, f"Wrong training setup specified - data/config_agent.yaml -> model_conf : {train_config['model_conf']} must match {train_set}"
-        
+
         assert len(self.r_seed_train) == len(self.r_seed_test), 'Number of random seeds must be equal for the training and test set!'
         self.seed_train = None              # Random training seed of the present thread
         self.seed_test = None               # Random validation/test seed of the present thread

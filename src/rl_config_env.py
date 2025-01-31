@@ -19,24 +19,26 @@ class EnvConfiguration:
         self.__dict__.update(env_config)
         
         assert self.scenario in [1,2,3], f"Specified business scenario ({self.scenario}) must match one of the three implemented scenarios [1,2,3]!"
-        self.train_len_d = None                                 # total number of days in the training set                    
+        self.train_len_d = None                                 # Total number of days in the training set                    
         raw_mod_set = ['raw', 'mod']
         assert self.raw_modified in raw_mod_set, f"Wrong type of state design specified - data/config_train.yaml -> raw_mod : {env_config['raw_modified']} must match {raw_mod_set}"
         
-        # file paths of process data for the dynamic data-based process model of the methanation plant depending on the load level:
+        # File paths of process data for the dynamic data-based process model of the methanation plant depending on the load level:
         assert self.operation in ['OP1', 'OP2'], f"Wrong load level specified - data/config_env.yaml -> operation : {env_config['operation']} must match ['OP1', 'OP2']"
         base_path = self.datafile_path['path'] + self.operation
-        for i in range(2, 19):  # For datafile_path2 to datafile_path18
+        for i in range(2, 19):          # For datafile_path2 to datafile_path18
             setattr(self, f'datafile_path{i}', f"{base_path}/{self.datafile_path['datafile'][f'datafile_path{i}']}")
 
-        self.meth_stats_load = self.meth_stats_load[self.operation]         # methanation data for steady-state operation for the different load levels
+        self.meth_stats_load = self.meth_stats_load[self.operation]                                     # Methanation data for steady-state operation for the different load levels
         self.max_h2_volumeflow = self.convert_mol_to_Nm3 *  self.meth_stats_load['Meth_H2_flow'][2]     # Maximum hydrogen production in the water electrolysis
 
-        # Lower and upper bounds for gym observations for normalization of the state features to accelerate learning (Should be adjusted to the respected value range)
-        self.h2_u_b = self.meth_stats_load['Meth_H2_flow'][2]           # upper bound of hydrogen molar flow in [mol/s]
-        self.ch4_u_b = self.meth_stats_load['Meth_CH4_flow'][2]         # upper bound of methane molar flow in [mol/s]
-        self.h2_res_u_b = self.meth_stats_load['Meth_H2_res_flow'][2]   # upper bound of residual product gas hydrogen molar flow in [mol/s]
-        self.h2o_u_b = self.meth_stats_load['Meth_H2O_flow'][2]         # upper bound of water mass flow in [kg/h]
+        # Lower and upper bounds for normalizing PtG environment (Should be adjusted to the energy market and process data value ranges)
+        # The upper bounds for hydrogen (h2_u_b), methane (ch4_u_b), residual hydrogen (h2_res_u_b), and water (h2o_u_b)
+        # correspond to the full_load values from meth_stats_load for the selected load level.
+        self.h2_u_b = self.meth_stats_load['Meth_H2_flow'][2]           # Upper bound of hydrogen molar flow in [mol/s]
+        self.ch4_u_b = self.meth_stats_load['Meth_CH4_flow'][2]         # Upper bound of methane molar flow in [mol/s]
+        self.h2_res_u_b = self.meth_stats_load['Meth_H2_res_flow'][2]   # Upper bound of residual product gas hydrogen molar flow in [mol/s]
+        self.h2o_u_b = self.meth_stats_load['Meth_H2O_flow'][2]         # Upper bound of water mass flow in [kg/h]
 
         # Variable names for statistics, data storage, and evaluation
         self.stats_names = ['steps_stats', 'el_price_stats', 'gas_price_stats', 'eua_price_stats', 'Meth_State_stats',

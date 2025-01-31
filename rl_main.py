@@ -3,16 +3,15 @@
 # https://github.com/SimMarkt/RL_PtG
 
 # rl_main: 
-# > Main programming script for training of deep RL algorithms on the PtG-CH4 dispatch task 
-# > Distinguishes between present computational resources: local personal computer ('pc') or computing cluster with SLURM management ('slurm')
+# > Main script for training deep RL algorithms on the PtG-CH4 dispatch task.
+# > Differentiates between available computational resources: local personal computer ('pc') or a computing cluster with SLURM management ('slurm').
 # ----------------------------------------------------------------------------------------------------------------
 
 # --------------------------------------------Import Python libraries---------------------------------------------
-# Standard libraries
 import os
 import torch as th
 
-# Libraries for gymnasium and stable_baselines
+# Libraries for RL environment
 from gymnasium.envs.registration import registry, register 
 
 # Libraries with utility functions and classes

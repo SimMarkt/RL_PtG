@@ -26,7 +26,6 @@ def import_market_data(csvfile: str, type: str, path: str):
         :param csvfile: Name of the .csv files containing energy market data ["Time [s]"; <data>]
         :param type: market data type
         :param path: String with the RL_PtG project path
-        :param TrainConfig: Training configuration in a class object
         :return arr: np.array with market data
     """
 
@@ -34,14 +33,14 @@ def import_market_data(csvfile: str, type: str, path: str):
     df = pd.read_csv(file_path, delimiter=";", decimal=".")
     df["Time"] = pd.to_datetime(df["Time"], format="%d-%m-%Y %H:%M")
 
-    if type == "el": # electricity price data
+    if type == "el":        # Electricity price data
         arr = df["Day-Ahead-price [Euro/MWh]"].values.astype(float) / 10        # Convert Euro/MWh into ct/kWh
-    elif type == "gas": # gas price data
+    elif type == "gas":     # Gas price data
         arr = df["THE_DA_Gas [Euro/MWh]"].values.astype(float) / 10             # Convert Euro/MWh into ct/kWh
-    elif type == "eua": # EUA price data
+    elif type == "eua":     # EUA price data
         arr = df["EUA_CO2 [Euro/t]"].values.astype(float)
     else:
-        assert False, "Market data type not specified appropriately [elec, gas, eua]!"
+        assert False, "Market data type not specified appropriately [el, gas, eua]!"
 
     return arr
 
@@ -49,7 +48,7 @@ def import_market_data(csvfile: str, type: str, path: str):
 def import_data(csvfile: str, path: str):
     """
         Import experimental methanation data for state changes
-        :param csvfile: name of the .csv files containing process data ["Time [s]", "T_cat [°C]", "n_h2 [mol/s]", "n_ch4 [mol/s]", "n_h2_res [mol/s]", "m_DE [kg/h]", "Pel [W]"]
+        :param csvfile: name of the .csv files containing process data
         :param path: String with the RL_PtG project path
         :return arr: Numpy array with operational data
     """
@@ -73,6 +72,7 @@ def import_data(csvfile: str, path: str):
 def load_data(EnvConfig, TrainConfig):
     """
         Loads historical market data and experimental data of methanation operation
+        :param TrainConfig: Training configuration in a class object
         :return dict_price_data: dictionary with market data
                 dict_op_data: dictionary with data of dynamic methanation operation
     """
@@ -113,8 +113,9 @@ def load_data(EnvConfig, TrainConfig):
                             for key in ['el_price', 'gas_price', 'eua_price']})
 
     # Check if training set is divisible by the episode length
-    min_train_len = 6           # Minimum No. of days in the training set 
-    EnvConfig.train_len_d = len(dict_price_data['gas_price_train']) - min_train_len # Training uses min_train_len days less than the data size to always allow enough space for the price forecast of Day-ahead market data
+    min_train_len = 6                       # Minimum No. of days in the training set 
+    # RL training uses 'min_train_len' fewer days than the total data size to ensure there is always enough space for the Day-ahead market price forecast.
+    EnvConfig.train_len_d = len(dict_price_data['gas_price_train']) - min_train_len 
     assert EnvConfig.train_len_d > 0, f'The training set size must be greater than {min_train_len} days'
     if EnvConfig.train_len_d % EnvConfig.eps_len_d != 0:
         # Find all possible divisors of EnvConfig.train_len_d
@@ -127,9 +128,8 @@ def load_data(EnvConfig, TrainConfig):
 
 
 class Preprocessing():
-    """
-        A class that contains variables and functions for preprocessing of energy market and process data
-    """
+    """A class that contains variables and functions for preprocessing of energy market and process data"""
+
     def __init__(self, dict_price_data, dict_op_data, AgentConfig, EnvConfig, TrainConfig):
         """
             Initialization of variables
@@ -145,7 +145,7 @@ class Preprocessing():
         self.TrainConfig = TrainConfig
         self.dict_price_data = dict_price_data
         self.dict_op_data = dict_op_data
-        self.dict_pot_r_b = None                    # dictionary with potential reward [pot_rew...] and boolean reward identifier [part_full_b...]
+        self.dict_pot_r_b = None                    # Dictionary with potential reward [pot_rew...] and boolean load identifier [part_full_b...]
         self.r_level = None                         # Sets the general height of the reward penalty according to electricity, (S)NG, and EUA price levels
 
         # e_r_b_train/e_r_b_val/e_r_b_test: (hourly values)
@@ -177,18 +177,19 @@ class Preprocessing():
         # For Multiprocessing: self.n_eps_loops allows for definition of different eps_ind for different processes (see RL_PtG\env\ptg_gym_env.py)
         self.n_eps_loops = None                 # Total No. of episodes over the entire training procedure 
 
-        self.preprocessing_rew()                                           # Calculate potential reward and boolean identifier
-        self.preprocessing_array()                                         # Transform Day-ahead datasets into np.arrays for calculation purposes
-        self.define_episodes()                                             # define episodes and indices for choosing subsets of the training set randomly          
+        self.preprocessing_rew()                # Calculate potential reward and load identifier
+        self.preprocessing_array()              # Transform Day-ahead datasets into np.arrays for calculation purposes
+        self.define_episodes()                  # define episodes and indices for choosing subsets of the training set randomly          
         
 
     def preprocessing_rew(self):
         """
-            Data preprocessing including the computation of potential rewards, which signify the maximum reward in 
-            Power-to-Gas operation in either partial load [part_full_b... = 0] or full load [part_full_b... = 1]
+            Data preprocessing, including the calculation of potential rewards, which represent the maximum reward in 
+            Power-to-Gas operation, either in partial load [part_full_b... = 0] or full load [part_full_b... = 1].
         """
-        # Compute PtG operation data for the theoretical optimum T-OPT (ignoring dynamics) 
-        # calculate_optimum() had been excluded from Preprocessing() and placed in the different rl_opt.py file for the sake of clarity
+
+        # Compute PtG operation data for the theoretical optimum T-OPT (ignoring dynamics). 
+        # The function calculate_optimum() has been moved from Preprocessing() to the separate rl_opt.py file for clarity.
         print("---Calculate the theoretical optimum, the potential reward, and the load identifier")
         stats_dict_opt_train = calculate_optimum(self.dict_price_data['el_price_train'], self.dict_price_data['gas_price_train'],
                                                 self.dict_price_data['eua_price_train'], "Training", self.EnvConfig.stats_names)
@@ -199,8 +200,8 @@ class Preprocessing():
         stats_dict_opt_level = calculate_optimum(self.dict_price_data['el_price_reward_level'], self.dict_price_data['gas_price_reward_level'],
                                                 self.dict_price_data['eua_price_reward_level'], "reward_Level", self.EnvConfig.stats_names)
 
-        # Store data sets with future values of the potential reward on the two different load levels and
-        # data sets of a boolean identifier of future values of the potential reward in a dictionary
+        # Store datasets containing future values of potential rewards for two different load levels,
+        # along with datasets of the load identifier for future values of the potential reward in a dictionary.
         # Pseudo code for part_full_b_... calculation:
         #       if pot_rew_... <= 0:
         #           part_full_b_... = -1
@@ -222,11 +223,10 @@ class Preprocessing():
 
 
     def preprocessing_array(self):
-        """
-            Transforms dictionaries to np.arrays for computational purposes
-        """
-        # Multi-Dimensional Array (3D) which stores day-ahead electricity price data as well as day-ahead potential reward
-        # and boolean identifier for the entire training and test set
+        """Transforms dictionaries to np.arrays for computational purposes"""
+
+        # e_r_b: Multi-Dimensional array which stores Day-ahead electricity price data as well as Day-ahead potential rewards
+        # and load identifiers for the entire training and test sets
         # e.g. e_r_b_train[0, 5, 156] represents the future value of the electricity price [0,-,-] in 4 hours [-,5,-] at the
         # 156ths entry of the electricity price data set 
         self.e_r_b_train = np.zeros((3, self.EnvConfig.price_ahead, self.dict_price_data['el_price_train'].shape[0] - self.EnvConfig.price_ahead))
@@ -244,7 +244,7 @@ class Preprocessing():
             self.e_r_b_test[1, i, :] = self.dict_pot_r_b['pot_rew_test'][i:(-self.EnvConfig.price_ahead + i)]
             self.e_r_b_test[2, i, :] = self.dict_pot_r_b['part_full_b_test'][i:(-self.EnvConfig.price_ahead + i)]
 
-        # Multi-Dimensional Array (3D) which stores day-ahead gas and eua price data for the entire training and test set        
+        # g_e: Multi-Dimensional Array which stores Day-ahead gas and EUA price data for the entire training and test set        
         self.g_e_train = np.zeros((2, 2, self.dict_price_data['gas_price_train'].shape[0] - 1))
         self.g_e_val = np.zeros((2, 2, self.dict_price_data['gas_price_val'].shape[0] - 1))
         self.g_e_test = np.zeros((2, 2, self.dict_price_data['gas_price_test'].shape[0] - 1))
@@ -263,43 +263,42 @@ class Preprocessing():
         self.g_e_test[1, 1, :] = self.dict_price_data['eua_price_test'][1:]
 
     def define_episodes(self):
-        """
-            Defines settings for training and evaluation episodes
-        """
+        """Defines settings for training and evaluation episodes"""
+
         print("---Define episodes and step size limits")
         # No. of days in the test set ("-1" excludes the day-ahead overhead)
         val_len_d = len(self.dict_price_data['gas_price_val']) - 1
         test_len_d = len(self.dict_price_data['gas_price_test']) - 1
 
-        # Split up the entire training set into several smaller subsets which represents an own episodes
-        self.n_eps = int(self.EnvConfig.train_len_d / self.EnvConfig.eps_len_d)  # Number of training subsets/episodes per training procedure
+        # Split up the entire training set into several smaller subsets, each subset represents an own episodes
+        self.n_eps = int(self.EnvConfig.train_len_d / self.EnvConfig.eps_len_d)  # No. of training subsets/episodes per training procedure
         
-        self.eps_len = 24 * 3600 * self.EnvConfig.eps_len_d  # episode length in seconds
+        self.eps_len = 24 * 3600 * self.EnvConfig.eps_len_d  # Episode length in [s]
 
-        # Number of steps in train and test sets per episode
+        # No. of steps in train and test sets per episode
         self.eps_sim_steps_train = int(self.eps_len / self.EnvConfig.sim_step)
         self.eps_sim_steps_val = int(24 * 3600 * val_len_d / self.EnvConfig.sim_step)
         self.eps_sim_steps_test = int(24 * 3600 * test_len_d /self.EnvConfig.sim_step)
 
-        # Define total number of steps for all workers together
-        self.num_loops = self.TrainConfig.train_steps / (self.eps_sim_steps_train * self.n_eps)      # Number of loops over the total training set
+        # Define the total number of steps for all workers together
+        self.num_loops = self.TrainConfig.train_steps / (self.eps_sim_steps_train * self.n_eps)      # No. of loops over the total training set
         print("    > Total number of training steps =", self.TrainConfig.train_steps)
         print("    > No. of loops over the entire training set =", round(self.num_loops,3))
         print("    > Training steps per episode =", self.eps_sim_steps_train)
         print("    > Steps in the evaluation set =", self.eps_sim_steps_test, "\n")
 
-        # Create random selection routine with replacement for the different training subsets
+        # Create random selection routine without replacement for the different training subsets
         self.rand_eps_ind()
 
-        # For Multiprocessing, eps_ind should not shared between different processes
+        # For Multiprocessing, eps_ind should not be shared between different processes
         self.n_eps_loops = self.n_eps * int(self.num_loops)  # Allows for definition of different eps_ind in Multiprocessing (see RL_PtG\env\ptg_gym_env.py)
 
 
     def rand_eps_ind(self):
         """
-        The agent can either use the total training set in one episode (train_len_d == eps_len_d) or
-        divide the total training set into smaller subsets (train_len_d_i > eps_len_d). In the latter case, the
-        subsets where selected randomly
+            The agent can either use the total training set in one episode (train_len_d == eps_len_d) or
+            divide the total training set into smaller subsets (train_len_d_i > eps_len_d). In the latter case, the
+            subsets where selected randomly.
         """
 
         np.random.seed(self.TrainConfig.seed_train)     # Set the random seed for random episode selection
@@ -320,7 +319,7 @@ class Preprocessing():
     def dict_env_kwargs(self, type="train"):
         """
             Returns global model parameters and hyperparameters for the PtG environment as a dictionary.
-            :param type: Specifies either the training set "train" or the val/ test set "val_test"
+            :param type: Specifies whether the dataset is for training ("train") or for validation/testing ("val_test")
             :return: env_kwargs: Dictionary with global parameters and hyperparameters 
         """
 
@@ -396,7 +395,7 @@ def initial_print():
 
 def config_print(AgentConfig, EnvConfig, TrainConfig):
     """
-        Aggregates and prints general settings
+        Gathers and prints general settings
         :param AgentConfig: Agent configuration in a class object
         :param EnvConfig: Environment configuration in a class object
         :param TrainConfig: Training configuration in a class object
@@ -429,17 +428,17 @@ def config_print(AgentConfig, EnvConfig, TrainConfig):
 
 
 def _make_env(env_id, n_envs, seed, env_kwargs, vec_env_cls=DummyVecEnv):
-    """ 
-        Helper function to create and normalized environments 
-    """
+    """Helper function to create and normalized environments"""
+
     env = make_vec_env(env_id=env_id, n_envs=n_envs, seed=seed, vec_env_cls=vec_env_cls, env_kwargs=env_kwargs)
 
     return VecNormalize(env, norm_obs=False)
 
 def eval_callback_dec(env_fn):
-    """ Decorator to create an evaluation environment and its EvalCallback """
+    """Decorator to create an evaluation environment and its EvalCallback"""
+
     def wrapper(env_id, str_id, TrainConfig, AgentConfig, env_kwargs, suffix, render_mode="None", n_envs=None):
-        """ Wrapper function to create evaluation environment and callback """
+        """Wrapper function to create evaluation environment and callback"""
         # Default n_envs to TrainConfig.eval_trials if not provided
         n_envs = n_envs if n_envs is not None else TrainConfig.eval_trials  
 
@@ -455,14 +454,13 @@ def eval_callback_dec(env_fn):
 
 @eval_callback_dec
 def _make_eval_env(env_id, n_envs, seed, env_kwargs, render_mode="None"):
-    """ Creates an evaluation environment """
+    """Creates an evaluation environment"""
+
     return _make_env(env_id, n_envs, seed, 
                      dict(dict_input=env_kwargs, train_or_eval="eval", render_mode=render_mode))
 
 def create_vec_envs(env_id, str_id, AgentConfig, TrainConfig, env_kwargs_data):
-    """
-    Creates vectorized environments for training, validation, and testing
-    """
+    """Creates vectorized environments for training, validation, and testing"""
 
     # Set processing type
     if TrainConfig.parallel == "Singleprocessing":  vec_env_cls = DummyVecEnv   # DummyVecEnv -> computes each workers interaction in serial, if calculating the env itself is quite fast
@@ -486,9 +484,8 @@ def create_vec_envs(env_id, str_id, AgentConfig, TrainConfig, env_kwargs_data):
     
        
 class Postprocessing():
-    """
-        A class that contains variables and functions for postprocessing
-    """
+    """A class that contains variables and functions for postprocessing"""
+
     def __init__(self, str_id, AgentConfig, EnvConfig, TrainConfig, env_test_single, Preprocess):
         """
             Initialization of variables
@@ -553,9 +550,7 @@ class Postprocessing():
         return None
 
     def plot_results(self):
-        """
-            Creates a plot with multiple subplots of the time series and the methanation operation according to the agent
-        """
+        """Creates a plot with multiple subplots of the time series and the methanation operation according to the agent"""
         print("---Plot and save RL performance on the test set under ./plots/ ...\n") 
 
         stats_dict = self.stats_dict_test

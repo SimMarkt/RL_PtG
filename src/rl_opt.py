@@ -30,6 +30,7 @@ def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_pri
         :param gas_price_data: Gas market data
         :param eua_price_data: EUA market data
         :param data_name: Specifies the data set
+        :param stats_names: Variable names for statistics, data storage, and evaluation
         :return stats_dict_opt: Dictionary with methanation status values
     """
 
@@ -44,7 +45,7 @@ def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_pri
     if EnvConfig.scenario == 3: b_s3 = 1
     else: b_s3 = 0
 
-    rew_l = [0,1]       # First entry of the list is dedicated to partial load, second to full load
+    rew_l = [0,1]       # First entry of the list is dedicated to partial load, the second to full load
     cum_rew = 0         # Cumulative reward
 
     for t in range(len(el_price_data)):     # Loop over the electricity price data
