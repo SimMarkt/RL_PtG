@@ -144,9 +144,9 @@ j_fully_developed : 100            # simulation step -> 24000 sec (step marker)
 
 # Lower and upper bounds for gym observations for normalization of the state features to accelerate learning (Should be adjusted to the respected value range)
 el_l_b : -10    # lower bound of electricity prices in [ct/kWh_el]
-el_u_b : 80     # upper bound of electricity prices in [ct/kWh_el]
+el_u_b : 90     # upper bound of electricity prices in [ct/kWh_el]
 gas_l_b : 0.4   # lower bound of (S)NG prices in [ct/kWh_th]
-gas_u_b : 31.6  # upper bound of (S)NG prices in [ct/kWh_th]
+gas_u_b : 32  # upper bound of (S)NG prices in [ct/kWh_th]
 eua_l_b : 23    # lower bound of EUA prices in [€/t_CO2]
 eua_u_b : 98    # upper bound of EUA prices in [€/t_CO2]
 T_l_b : 10      # lower bound of catalyst temperatures T_CAT in [°C]

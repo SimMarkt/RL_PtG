@@ -220,62 +220,63 @@ class AgentConfiguration:
         
         return model
     
-    def load_model(self, env, tb_log):
+    def load_model(self, env, tb_log, model_path, type):
         """
             Load pretrained Stable-Baselines3 model for RL training
             :param env: environment
             :param tb_log: Tensorboard log file
+            :param str_id: String for identification of the pretrained model ####################################
             :return model: Stable-Baselines3 model for RL training
         """
 
         # Load pretrained RL algorithms
         if self.rl_alg == 'DQN':
             from stable_baselines3 import DQN           # import algorithm
-            model = DQN.load(self.path_files + self.str_inv_load, tensorboard_log=tb_log)
-            print("Check replay buffer:")
-            print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - before loading the replay buffer")
-            model.load_replay_buffer(self.path_files + self.str_inv_load)
-            print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - after loading the replay buffer")
-            model.set_env(env)
+            model = DQN.load(model_path, tensorboard_log=tb_log)
+            if type == 'train': ##################### MAKE SHORTER MAYBE ALSO USING A DECORATOR ###########################
+                print("Check replay buffer:")
+                print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - before loading the replay buffer")
+                model.load_replay_buffer(model_path)
+                print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - after loading the replay buffer")
 
         elif self.rl_alg == 'A2C':                      # import algorithm
             from stable_baselines3 import A2C
-            model = A2C.load(self.path_files + self.str_inv_load, tensorboard_log=tb_log)
-            model.set_env(env)
+            model = A2C.load(model_path, tensorboard_log=tb_log)
 
         elif self.rl_alg == 'PPO':                      # import algorithm
             from stable_baselines3 import PPO
-            model = PPO.load(self.path_files + self.str_inv_load, tensorboard_log=tb_log)
-            model.set_env(env)
+            model = PPO.load(model_path, tensorboard_log=tb_log)
 
         elif self.rl_alg == 'TD3':                      # import algorithm
             from stable_baselines3 import TD3
-            model = TD3.load(self.path_files + self.str_inv_load, tensorboard_log=tb_log)
-            print("Check replay buffer:")
-            print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - before loading the replay buffer")
-            model.load_replay_buffer(self.path_files + self.str_inv_load)
-            print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - after loading the replay buffer")
-            model.set_env(env)
+            model = TD3.load(model_path, tensorboard_log=tb_log)
+            if type == 'train':
+                print("Check replay buffer:")
+                print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - before loading the replay buffer")
+                model.load_replay_buffer(model_path)
+                print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - after loading the replay buffer")
         
         elif self.rl_alg == 'SAC':                      # import algorithm
             from stable_baselines3 import SAC
-            model = SAC.load(self.path_files + self.str_inv_load, tensorboard_log=tb_log)
-            print("Check replay buffer:")
-            print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - before loading the replay buffer")
-            model.load_replay_buffer(self.path_files + self.str_inv_load)
-            print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - after loading the replay buffer")
-            model.set_env(env)
+            model = SAC.load(model_path, tensorboard_log=tb_log)
+            if type == 'train':
+                print("Check replay buffer:")
+                print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - before loading the replay buffer")
+                model.load_replay_buffer(model_path)
+                print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - after loading the replay buffer")
 
         elif self.rl_alg == 'TQC':                      # import algorithm
             from sb3_contrib import TQC
-            model = TQC.load(self.path_files + self.str_inv_load, tensorboard_log=tb_log)
-            print("Check replay buffer:")
-            print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - before loading the replay buffer")
-            model.load_replay_buffer(self.path_files + self.str_inv_load)
-            print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - after loading the replay buffer")
-            model.set_env(env)
+            model = TQC.load(model_path, tensorboard_log=tb_log)
+            if type == 'train':
+                print("Check replay buffer:")
+                print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - before loading the replay buffer")
+                model.load_replay_buffer(model_path)
+                print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - after loading the replay buffer")
         else:
             assert False, 'Algorithm is not implemented!'
+
+        if type == 'train': model.set_env(env)
 
         return model
     
