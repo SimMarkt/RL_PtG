@@ -4,17 +4,13 @@
 
 # config_agent: 
 # > Configuration file for the RL agent in the PtG-CH4 environment
-# 
-# For adding additional algorithms, take the following steps:
-# 1. Extent the "hyperparameters" dictionary with the algorithm as a new key entry incl. hyperparameters, aligned with the structure below and
+# > RL_PtG works with the Stable-Baselines3 and SB3 Contrib libraries, for more information, refer to:
 #       Stable-Baselines3 : https://stable-baselines3.readthedocs.io/en/master/guide/algos.html
 #       SB3 Contrib: https://sb3-contrib.readthedocs.io/en/master/
-# 2. Include the new algorithm in src/rl_agent_param.py -> def load_model(self)
-# 3. Add... param_short??
 # ----------------------------------------------------------------------------------------------------------------
 
-n_envs : 6                   # Number environments/workers for training
-rl_alg : TQC                 # selected RL algorithm - already implemented [DQN, A2C, PPO, TD3, SAC, TQC]
+n_envs : 6                   # Number environment instances/workers for training
+rl_alg : SAC                 # selected RL algorithm - already implemented [DQN, A2C, PPO, TD3, SAC, TQC]
 
 hyperparameters:    # Implemented hyperparameters of the RL algorithms used
     DQN :
@@ -28,7 +24,7 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         eps_fra : 0.00434               # ratio of the training set for exploration annealing
         hidden_layers : 7               # No. of hidden layers
         hidden_units : 366              # No. of hidden units
-        activation : 0                  # activation function ('ReLU' or 'Tanh')
+        activation : ReLU               # activation function ('ReLU' or 'Tanh')
         train_freq : 5                  # training frequency
         target_update_interval : 113204 # target network update interval
         tau : 1.0                       # soft update parameter
@@ -41,7 +37,7 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         n_steps : 658                   # No. of steps of the n-step TD update
         hidden_layers : 4               # No. of hidden layers
         hidden_units : 808              # No. of hidden units
-        activation : 1                  # activation function ('ReLU' or 'Tanh')
+        activation : Tanh               # activation function ('ReLU' or 'Tanh')
         gae_lambda : 0.9819             # factor for generalized advantage estimation
         normalize_advantage : True      # normalize advantage ('False' or 'True')
         gSDE : False                    # gSDE exploration ('False' or 'True')
@@ -54,7 +50,7 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         batch_size : 203                # batch size
         hidden_layers : 2               # No. of hidden layers
         hidden_units : 358              # No. of hidden units
-        activation : 0                  # activation function ('ReLU' or 'Tanh')
+        activation : ReLU               # activation function ('ReLU' or 'Tanh')
         gae_lambda : 0.8002             # factor for generalized advantage estimation
         n_epoch : 13                    # No. of epochs for mini batch training
         normalize_advantage : False     # normalize advantage ('False' or 'True')
@@ -67,7 +63,7 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         batch_size : 257                # batch size
         hidden_layers : 3               # No. of hidden layers
         hidden_units : 743              # No. of hidden units
-        activation : 0                  # activation function ('ReLU' or 'Tanh')
+        activation : ReLU               # activation function ('ReLU' or 'Tanh')
         train_freq : 9                  # training frequency
         tau : 0.005                     # soft update parameter
         learning_starts : 100           # No. of steps before starting the training of actor/critic networks
@@ -81,7 +77,7 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         batch_size : 470                # batch size
         hidden_layers : 6               # No. of hidden layers
         hidden_units : 233              # No. of hidden units
-        activation : 1                  # activation function ('ReLU' or 'Tanh')
+        activation : Tanh               # activation function ('ReLU' or 'Tanh')
         train_freq : 1                  # training frequency
         tau : 0.005                     # soft update parameter
         learning_starts : 100           # No. of steps before starting the training of actor/critic networks
@@ -95,7 +91,7 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         batch_size : 290                # batch size
         hidden_layers : 3               # No. of hidden layers
         hidden_units : 708              # No. of hidden units
-        activation : 0                  # activation function ('ReLU' or 'Tanh')
+        activation : ReLU               # activation function ('ReLU' or 'Tanh')
         top_quantiles_drop : 2          # No. of top quantiles to drop
         n_quantiles : 30                # No. of quantiles for distributed value estimation
         train_freq : 1                  # training frequency

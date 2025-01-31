@@ -38,7 +38,7 @@ class AgentConfiguration:
                       'Hidden layers': {'abb' :"_hl", 'var': 'hidden_layers'},
                       'Hidden units': {'abb' :"_hu", 'var': 'hidden_units'},
                       'Activation function': {'abb' :"_ac", 'var': 'activation'},
-                      'Factor for generalized advantage estimation': {'abb' :"_ge", 'var': 'gae_lambda'},
+                      'Generalized advantage estimation': {'abb' :"_ge", 'var': 'gae_lambda'},
                       'No. of epochs': {'abb' :"_ep", 'var': 'n_epoch'},
                       'Normalize advantage': {'abb' :"_na", 'var': 'normalize_advantage'},
                       'No. of quantiles': {'abb' :"_nq", 'var': 'n_quantiles'},
@@ -51,25 +51,25 @@ class AgentConfiguration:
                       'gSDE exploration': {'abb' :"_gs", 'var': 'gSDE'},
                       }
 
-    def set_model(self, env, tb_log):
+    def set_model(self, env, tb_log, TrainConfig):
         """
             Specify the Stable-Baselines3 model for RL training
             :param env: environment
             :param tb_log: Tensorboard log file
-            :seed_train: random seed for training
+            :param TrainConfig: Training configuration in a class object
             :return model: Stable-Baselines3 model for RL training
         """
-        
+
         # Implement the neural network architecture:
         #   Custom actor (pi) and value function (vf) networks with the
         #   same architecture net_arch and activation function (th.nn.ReLU, th.nn.Tanh)
         #   Note: an extra linear layer will be added on top of the pi and vf nets
-        if self.rl_alg_hyp.activation == 'ReLU':
+        if self.rl_alg_hyp['activation'] == 'ReLU':
             activation_fn = th.nn.ReLU
-        elif self.rl_alg_hyp.activation == 'Tanh':
+        elif self.rl_alg_hyp['activation'] == 'Tanh':
             activation_fn = th.nn.Tanh
         else:
-            assert False, f"Type of activation function ({self.rl_alg_hyp.activation}) needs to be 'ReLU' or 'Tanh'! -> Check RL_PtG/config/config_agent.yaml"
+            assert False, f"Type of activation function ({self.rl_alg_hyp['activation']}) needs to be 'ReLU' or 'Tanh'! -> Check RL_PtG/config/config_agent.yaml"
         net_arch = np.ones((self.rl_alg_hyp['hidden_layers'],), int) * self.rl_alg_hyp['hidden_units']
         net_arch = net_arch.tolist()
 
@@ -93,9 +93,9 @@ class AgentConfiguration:
                 tau=self.rl_alg_hyp['tau'],                                             # soft update parameter
                 train_freq=self.rl_alg_hyp['train_freq'],                               # training frequency
                 policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
-                device=self.device,                                                     # CPU or GPU
+                device=TrainConfig.device,                                                     # CPU or GPU
                 target_update_interval=self.rl_alg_hyp['target_update_interval'],       # target network update interval
-                seed=self.r_seed_train,                                                 # random seed
+                seed=TrainConfig.seed_train,                                                 # random seed
             )
 
         elif self.rl_alg == 'A2C':                      # import algorithm
@@ -116,8 +116,8 @@ class AgentConfiguration:
                 ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # entropy coefficient
                 policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
                 use_sde=self.rl_alg_hyp['gSDE'],                                        # gSDE exploration
-                device=self.device,                                                     # CPU or GPU
-                seed=self.r_seed_train,                                                 # random seed
+                device=TrainConfig.device,                                                     # CPU or GPU
+                seed=TrainConfig.seed_train,                                                 # random seed
             )
 
         elif self.rl_alg == 'PPO':                      # import algorithm
@@ -141,8 +141,8 @@ class AgentConfiguration:
                 ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # entropy coefficient
                 policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
                 use_sde=self.rl_alg_hyp['gSDE'],                                        # gSDE exploration
-                device=self.device,                                                     # CPU or GPU
-                seed=self.r_seed_train,                                                 # random seed
+                device=TrainConfig.device,                                                     # CPU or GPU
+                seed=TrainConfig.seed_train,                                                 # random seed
             )
 
         elif self.rl_alg == 'TD3':                      # import algorithm
@@ -162,8 +162,8 @@ class AgentConfiguration:
                 train_freq=self.rl_alg_hyp['train_freq'],                               # training frequency
                 target_policy_noise=self.rl_alg_hyp['sigma_exp'],                       # standard deviation of Gaussian noise added to the target policy
                 policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
-                device=self.device,                                                     # CPU or GPU
-                seed=self.r_seed_train,                                                 # random seed
+                device=TrainConfig.device,                                                     # CPU or GPU
+                seed=TrainConfig.seed_train,                                                 # random seed
             )
         
         elif self.rl_alg == 'SAC':                      # import algorithm
@@ -185,9 +185,9 @@ class AgentConfiguration:
                 ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # entropy coefficient
                 policy_kwargs=policy_kwargs,                                            # contains network hyperparameters
                 use_sde=self.rl_alg_hyp['gSDE'],                                        # gSDE exploration
-                device=self.device,                                                     # CPU or GPU
+                device=TrainConfig.device,                                                     # CPU or GPU
                 target_update_interval=self.rl_alg_hyp['train_freq'],                   # target network update interval
-                seed=self.r_seed_train,                                                 # random seed
+                seed=TrainConfig.seed_train,                                                 # random seed
             )
         
         elif self.rl_alg == 'TQC':                      # import algorithm
@@ -211,9 +211,9 @@ class AgentConfiguration:
                 ent_coef=self.rl_alg_hyp['ent_coeff'],                                      # entropy coefficient
                 policy_kwargs=policy_kwargs,                                                # contain network hyperparameters
                 use_sde=self.rl_alg_hyp['gSDE'],                                            # gSDE exploration
-                device=self.device,                                                         # CPU or GPU
+                device=TrainConfig.device,                                                         # CPU or GPU
                 target_update_interval=self.rl_alg_hyp['train_freq'],                       # target network update interval
-                seed=self.r_seed_train,                                                     # random seed
+                seed=TrainConfig.seed_train,                                                     # random seed
             )
         else:
             assert False, 'Algorithm is not implemented!'
@@ -298,8 +298,8 @@ class AgentConfiguration:
         """
 
         # Print algorithm and hyperparameters and create identifier string
-        print(f"    > Deep RL agorithm : {self.rl_alg}")
-        self.str_alg = self.rl_alg
+        print(f"    > Deep RL agorithm : >>> {self.rl_alg} <<<")
+        self.str_alg = "_" + self.rl_alg
         self.hyp_print('Learning rate')
         self.hyp_print('Discount factor')
         if self.rl_alg == 'DQN': 
@@ -311,13 +311,13 @@ class AgentConfiguration:
         if self.rl_alg in ['A2C']: self.hyp_print('n-step TD update')
         if self.rl_alg in ['PPO']:
             self.hyp_print('n-step factor')
-            print(f"        No. of steps of the n-step TD update : {int(self.rl_alg_hyp['n_steps_f'] * self.rl_alg_hyp['batch_size'])}")
+            print(f"         No. of steps of the n-step TD update:\t {int(self.rl_alg_hyp['n_steps_f'] * self.rl_alg_hyp['batch_size'])}")
         if self.rl_alg in ['DQN','TD3','SAC','TQC']: self.hyp_print('Replay buffer size')
         if self.rl_alg in ['DQN','PPO','TD3','SAC','TQC']: self.hyp_print('Batch size')
         self.hyp_print('Hidden layers')
         self.hyp_print('Hidden units')
         self.hyp_print('Activation function')
-        if self.rl_alg in ['A2C','PPO']: self.hyp_print('Factor for generalized advantage estimation')
+        if self.rl_alg in ['A2C','PPO']: self.hyp_print('Generalized advantage estimation')
         if self.rl_alg == 'PPO': self.hyp_print('No. of epochs')
         if self.rl_alg in ['A2C','PPO']: self.hyp_print('Normalize advantage')
         if self.rl_alg == 'TQC':
@@ -329,7 +329,7 @@ class AgentConfiguration:
             self.hyp_print('Learning starts') 
             self.hyp_print('Training frequency')
         if self.rl_alg == 'DQN': self.hyp_print('Target update interval')
-        if self.rl_alg in ['A2C','PPO','TD3','SAC','TQC']: self.hyp_print('gSDE exploration')
+        if self.rl_alg in ['A2C','PPO','SAC','TQC']: self.hyp_print('gSDE exploration')
         print(' ')
 
         return self.str_alg
@@ -340,11 +340,12 @@ class AgentConfiguration:
             Prints a specific hyperparameter to the TUI and adds the value to the string identifier
             :param hyp_name: Name of the hyperparameter
         """
-
-        assert hyp_name in self.hyper, f"Specified hyperparameter ({hyp_name}) is not part of the possible hyperparameters!"
+        assert hyp_name in self.hyper, f"Specified hyperparameter ({hyp_name}) is not part of the implemented settings!"
         length_str = len(hyp_name) 
-        if 16 > length_str: print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):\t\t {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
-        else: print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):\t {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
-        self.str_alg += self.hyper[hyp_name]['abb']
+        if length_str > 28:         print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}): {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
+        elif length_str > 22:       print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):\t {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
+        elif length_str > 15:       print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):\t\t {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
+        else:                       print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):\t\t\t {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
+        self.str_alg += self.hyper[hyp_name]['abb'] + str(self.rl_alg_hyp[self.hyper[hyp_name]['var']])
 
 

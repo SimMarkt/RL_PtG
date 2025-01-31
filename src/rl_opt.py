@@ -1,4 +1,10 @@
-# Benchmark: Optimal solution for PtG-operation ignoring dynamics and a rule-based controller
+# ----------------------------------------------------------------------------------------------------------------
+# RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
+# https://github.com/SimMarkt/RL_PtG
+
+# rl_opt: 
+# > Computes the theoretical optimum T-OPT ignoring PtG plant dynamics
+# ----------------------------------------------------------------------------------------------------------------
 
 import numpy as np
 from tqdm import tqdm

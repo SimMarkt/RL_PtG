@@ -1,3 +1,11 @@
+# ----------------------------------------------------------------------------------------------------------------
+# RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
+# https://github.com/SimMarkt/RL_PtG
+
+# rl_utils: 
+# > Utiliy/helper functions
+# ----------------------------------------------------------------------------------------------------------------
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -294,8 +302,8 @@ class Preprocessing():
         self.eps_sim_steps_test = int(24 * 3600 * test_len_d /self. EnvConfig.sim_step)
 
         # Define total number of steps for all workers together
-        self.num_loops = self.TrainConfig.total_steps / (self.eps_sim_steps_train * self.n_eps)      # Number of loops over the total training set
-        print("    > Total number of training steps =", self.TrainConfig.total_steps)
+        self.num_loops = self.TrainConfig.train_steps / (self.eps_sim_steps_train * self.n_eps)      # Number of loops over the total training set
+        print("    > Total number of training steps =", self.TrainConfig.train_steps)
         print("    > No. of loops over the entire training set =", round(self.num_loops,3))
         print("    > Training steps per episode =", self.eps_sim_steps_train)
         print("    > Steps in the evaluation set =", self.eps_sim_steps_test, "\n")
@@ -463,6 +471,7 @@ class Preprocessing():
 
         env_kwargs["reward_level"] = self.r_level
         env_kwargs["action_type"] = self.AgentConfig.rl_alg_hyp["action_type"]     # Action type of the algorithm, discrete or continuous
+        env_kwargs["raw_modified"] = self.EnvConfig.raw_modified     # Specifies the type of state design using raw energy market prices ('raw') or modified economic metrices ('mod')
 
         return env_kwargs
 
@@ -484,15 +493,18 @@ def config_print(AgentConfig, EnvConfig, TrainConfig):
         print(f"---Training case details: RL_PtG{TrainConfig.str_inv} | {TrainConfig.model_conf} ")
     else: 
         print(f"---Training case details: RL_PtG{TrainConfig.str_inv} | {TrainConfig.model_conf} | (Pretrained model: RL_PtG{TrainConfig.str_inv_load}) ")
-    str_id = "RL_PtG"
+    str_id = "RL_PtG_" + TrainConfig.str_inv
     if EnvConfig.scenario == 1: print("    > Business case (_BS):\t\t\t 1 - Trading at the electricity, gas, and emission spot markets")
     elif EnvConfig.scenario == 2: print("    > Business case  (_BS):\t\t\t 2 - Fixed synthetic natural gas (SNG) price and trading at the electricity and emission spot markets")
     else: print("    > Business case (_BS):\t\t\t 3 - Participating in EEG tenders by using a CHP plant and trading at the electricity spot markets")
     str_id += "_BS" + str(EnvConfig.scenario)
     print(f"    > Operational load level (_OP) :\t\t {EnvConfig.operation}")
-    str_id += "_OP" + str(EnvConfig.operation)
-    print(f"    > Training episode length (_epl) :\t\t {EnvConfig.eps_len_d} days")
-    str_id += "_epl" + str(EnvConfig.eps_len_d)
+    str_id += "_" + str(EnvConfig.operation)
+    if EnvConfig.raw_modified == 'raw':    print(f"    > State feature design (_sf) :\t\t Raw energy market data (electricity, gas, and EUA market signals)")
+    else: print(f"    > State feature design (_sf) :\t\t Modified energy market data (potential reward and load identifier)")
+    str_id += "_sf" + str(EnvConfig.raw_modified)
+    print(f"    > Training episode length (_ep) :\t\t {EnvConfig.eps_len_d} days")
+    str_id += "_ep" + str(EnvConfig.eps_len_d)
     print(f"    > Time step size (action frequency) (_ts) :\t {EnvConfig.sim_step} seconds")
     str_id += "_ts" + str(EnvConfig.sim_step)
     print(f"    > Random seed (_rs) :\t\t\t {TrainConfig.seed_train}")
