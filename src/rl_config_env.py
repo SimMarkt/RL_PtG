@@ -124,6 +124,18 @@ class EnvConfiguration:
         self.heat_l_b = env_config['heat_l_b']                           # lower bound of the power consumption of methanation in [W]
         self.heat_u_b = env_config['heat_u_b']                           # upper bound of the power consumption of methanation in [W]
 
+        # Variable names for statistics, data storage, and evaluation
+        self.stats_names = ['steps_stats', 'el_price_stats', 'gas_price_stats', 'eua_price_stats', 'Meth_State_stats',
+                            'Meth_Action_stats', 'Meth_Hot_Cold_stats', 'Meth_T_cat_stats', 'Meth_H2_flow_stats',
+                            'Meth_CH4_flow_stats', 'Meth_H2O_flow_stats', 'Meth_el_heating_stats', 'Meth_ch4_revenues_stats',
+                            'Meth_steam_revenues_stats', 'Meth_o2_revenues_stats', 'Meth_eua_revenues_stats',
+                            'Meth_chp_revenues_stats', 'Meth_elec_costs_heating_stats', 'Meth_elec_costs_electrolyzer_stats',
+                            'Meth_water_costs_stats', 'Meth_reward_stats', 'Meth_cum_reward_stats', 'pot_reward_stats', 'part_full_stats']
+
+                    
+                    
+        
+
 
         
 

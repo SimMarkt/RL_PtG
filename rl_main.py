@@ -70,65 +70,6 @@ def check_env(env_id):
     else:
         print(f"---Environment '{env_id}' is already registered.\n")
 
-
-# def create_vec_envs(env_id, str_id, AgentConfig, TrainConfig, env_kwargs_data):            ######### MAKE SHORTER ########### MAYBE WITH A DECORATOR ################
-#     """
-#         Creates vectorized environments for training, validation, and testing
-#         :param env_id: ID of the environment
-#         :param str_id: String for identification of the present training run
-#         :param AgentConfig: Agent configuration in a class object
-#         :param TrainConfig: Training configuration in a class object
-#         :return env_kwargs_data: Dictionaries with kwargs of training, validation, and test environments
-#         :return eval_callback_val: Callback object with the validation environment for periodic evaluation (validation for hyperparameter tuning)
-#         :return eval_callback_test: Callback object with the test environment for periodic evaluation (testing for error evaluation of the tuned RL model)
-#     """
-
-#     # Training environment
-#     if TrainConfig.parallel == "Singleprocessing":
-#         # DummyVecEnv -> computes each workers interaction in serial, if calculating the env itself is quite fast
-#         env_train = make_vec_env(env_id=env_id, n_envs=AgentConfig.n_envs, seed=TrainConfig.seed_train, vec_env_cls=DummyVecEnv,
-#                            env_kwargs=dict(dict_input=env_kwargs_data['env_kwargs_train'], train_or_eval=TrainConfig.train_or_eval,
-#                                            render_mode="None"))
-#     elif TrainConfig.parallel == "Multiprocessing":
-#         # SubprocVecEnv for multiprocessing -> computes each workers interaction in parallel, if calculating the env itself is quite slow
-#         env_train = make_vec_env(env_id=env_id, n_envs=AgentConfig.n_envs, seed=TrainConfig.seed_train, vec_env_cls=SubprocVecEnv,
-#                            env_kwargs=dict(dict_input=env_kwargs_data['env_kwargs_train'], train_or_eval=TrainConfig.train_or_eval,
-#                                            render_mode="None"))
-#                          #, vec_env_kwargs=dict(start_method="fork"/"spawn"/"forkserver")) # optional
-#     else:
-#         assert False, 'Choose either "Singleprocessing" or "Multiprocessing" in RL_PTG/config/config_train.yaml -> parallel!'
-
-#     env_train = VecNormalize(env_train, norm_obs=False)   # Normalization of rewards with a moving average (norm_obs=False -> observations are normalized separately within the environment)
-
-#     # Environment for validation, EvalCallback creates a callback function which is called during RL learning ###################ZUSAMMENFASSEN ENV_VAL UND ENV_TEST
-#     env_val = make_vec_env(env_id, n_envs=TrainConfig.eval_trials, seed=TrainConfig.seed_test, vec_env_cls=DummyVecEnv,
-#                             env_kwargs=dict(dict_input=env_kwargs_data['env_kwargs_val'], train_or_eval=TrainConfig.train_or_eval,
-#                                             render_mode="None"))
-#     env_val = VecNormalize(env_val, norm_obs=False)
-
-#     eval_callback_val = EvalCallback(env_val,
-#                                       best_model_save_path= TrainConfig.path + "/logs/" + str_id + "_val/",
-#                                       n_eval_episodes=TrainConfig.eval_trials,
-#                                       log_path=TrainConfig.path + "/logs/", 
-#                                       eval_freq=int(TrainConfig.test_steps / AgentConfig.n_envs),              # eval_freq=int(TrainConfig.test_steps / EnvConfig.n_envs) performs validation after test_steps steps independent of the No. of workers 
-#                                       deterministic=True, render=False, verbose=0)
-
-#     # Environment for testing, EvalCallback creates a callback function which is called during RL learning
-#     env_test = make_vec_env(env_id, n_envs=TrainConfig.eval_trials, seed=TrainConfig.seed_test, vec_env_cls=DummyVecEnv,
-#                             env_kwargs=dict(dict_input=env_kwargs_data['env_kwargs_test'], train_or_eval=TrainConfig.train_or_eval,
-#                                             render_mode="None"))
-#     env_test = VecNormalize(env_test, norm_obs=False)
-
-#     eval_callback_test = EvalCallback(env_test,
-#                                       best_model_save_path=TrainConfig.path + "/logs/" + str_id + "_test/",
-#                                       n_eval_episodes=TrainConfig.eval_trials,
-#                                       log_path=TrainConfig.path + "/logs/", 
-#                                       eval_freq=int(TrainConfig.test_steps / AgentConfig.n_envs),              # eval_freq=int(test_steps / EnvConfig.n_envs) performs validation after test_steps steps independent of the No. of workers 
-#                                       deterministic=True, render=False, verbose=0)
-    
-#     return env_train, env_test, eval_callback_val, eval_callback_test
-
-
 def main():
     # ----------------------------------------Initialize RL configuration-----------------------------------------
     initial_print()
@@ -153,29 +94,29 @@ def main():
     print("Load environment...")
     env_id = 'PtGEnv-v0'
     check_env(env_id)                                                                                                   # Check the Gymnasium environment registry
-    env_train, env_test, eval_callback_val, eval_callback_test = create_vec_envs(env_id, str_id, AgentConfig, TrainConfig, env_kwargs_data)          # Create vectorized environments
+    env_train, env_test, eval_callback_val, eval_callback_test, env_test_single = create_vec_envs(env_id, str_id, AgentConfig, TrainConfig, env_kwargs_data)          # Create vectorized environments
     tb_log = "tensorboard/" + str_id                                                                                    # Set path for tensorboard data (for monitoring RL training) 
 
-    # Set up the RL model with the specified algorithm
-    if TrainConfig.model_conf == "simple_train" or TrainConfig.model_conf == "save_model":          # Train RL model from scratch
-        model = AgentConfig.set_model(env_train, tb_log, TrainConfig)
-    else:                                                                                           # Load a pretrained model
-        model = AgentConfig.load_model(env_train, tb_log, str_id)
+    # # Set up the RL model with the specified algorithm
+    # if TrainConfig.model_conf == "simple_train" or TrainConfig.model_conf == "save_model":          # Train RL model from scratch
+    #     model = AgentConfig.set_model(env_train, tb_log, TrainConfig)
+    # else:                                                                                           # Load a pretrained model
+    #     model = AgentConfig.load_model(env_train, tb_log, f"{TrainConfig.path}{TrainConfig.path_files}{str_id}", 'train')
 
-    # ------------------------------------------------RL Training-------------------------------------------------
-    print("Training... >>>", str_id, "<<< \n")
-    if TrainConfig.val_n_test:  model.learn(total_timesteps=TrainConfig.train_steps, callback=[eval_callback_val, eval_callback_test])  # Evaluate the RL agent on both validation and test sets
-    else:                       model.learn(total_timesteps=TrainConfig.train_steps, callback=[eval_callback_val])                      # Evaluate the RL agent only on the validation set
-    print("...finished RL training\n")
+    # # ------------------------------------------------RL Training-------------------------------------------------
+    # print("Training... >>>", str_id, "<<< \n")
+    # if TrainConfig.val_n_test:  model.learn(total_timesteps=TrainConfig.train_steps, callback=[eval_callback_val, eval_callback_test])  # Evaluate the RL agent on both validation and test sets
+    # else:                       model.learn(total_timesteps=TrainConfig.train_steps, callback=[eval_callback_val])                      # Evaluate the RL agent only on the validation set
+    # print("...finished RL training\n")
 
-    # ------------------------------------------------Save model--------------------------------------------------
-    if TrainConfig.model_conf == "save_model" or TrainConfig.model_conf == "save_load_model":
-        print("Save RL agent under ./logs/ ... \n") 
-        AgentConfig.save_model(model)
+    # # ------------------------------------------------Save model--------------------------------------------------
+    # if TrainConfig.model_conf == "save_model" or TrainConfig.model_conf == "save_load_model":
+    #     print("Save RL agent under ./logs/ ... \n") 
+    #     AgentConfig.save_model(model)
     
     # ----------------------------------------------Postprocessing------------------------------------------------
     print("Postprocessing...")
-    PostProcess = Postprocessing(str_id, dict_price_data, dict_op_data, AgentConfig, EnvConfig, TrainConfig, env_test)
+    PostProcess = Postprocessing(str_id, dict_price_data, dict_op_data, AgentConfig, EnvConfig, TrainConfig, env_test_single, Preprocess)
     PostProcess.test_performance()
     PostProcess.plot_results()
 

@@ -12,117 +12,131 @@ import matplotlib.pyplot as plt
 from matplotlib.path import Path
 import matplotlib.patches as patches
 import math
+from tqdm import tqdm
 
-from gymnasium.envs.registration import make
+from gymnasium.envs.registration import make    ###########################################
 from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv, SubprocVecEnv
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import EvalCallback
 
-from src.rl_config_agent import AgentConfiguration
-from src.rl_config_env import EnvConfiguration
-from src.rl_config_train import TrainConfiguration
 from src.rl_opt import calculate_optimum
-from functools import partial
 
-# def _make_env(env_id, n_envs, seed, env_kwargs, vec_env_cls=DummyVecEnv):
-#     """ 
-#         Helper function to create and normalized environments 
-#     """
-#     env = make_vec_env(env_id=env_id, n_envs=n_envs, seed=seed, vec_env_cls=vec_env_cls, env_kwargs=env_kwargs)
-#     return VecNormalize(env, norm_obs=False)
+########TODO: REORDER functions to a good order################
 
-# def eval_callback_dec(env_fn):
-#     """ Decorator to create an EvalCallback for validation/testing environments """
-#     def wrapper(env_id, str_id, TrainConfig, AgentConfig, env_kwargs, suffix):
-#         env = env_fn(env_id, TrainConfig.eval_trials, TrainConfig.seed_test, env_kwargs)
-#         return EvalCallback(env,
-#                             best_model_save_path=f"{TrainConfig.path}/logs/{str_id}_{suffix}/",
-#                             n_eval_episodes=TrainConfig.eval_trials,
-#                             log_path=f"{TrainConfig.path}/logs/",
-#                             eval_freq=int(TrainConfig.test_steps / AgentConfig.n_envs),
-#                             deterministic=True, render=False, verbose=0)
-#     return wrapper
-
-# @eval_callback_dec
-# def _make_eval_env(env_id, n_envs, seed, env_kwargs):
-#     """ Creates an evaluation environment """
-#     return _make_env(env_id, n_envs, seed, env_kwargs)
-
-# def create_vec_envs(env_id, str_id, AgentConfig, TrainConfig, env_kwargs_data):
-#     """
-#     Creates vectorized environments for training, validation, and testing
-#     """
-
-#     # Determine the correct vectorized environment class based on parallelization
-#     vec_env_cls = DummyVecEnv if TrainConfig.parallel == "Singleprocessing" else SubprocVecEnv
-
-#     # Create training environment
-#     env_train = _make_env(env_id, AgentConfig.n_envs, TrainConfig.seed_train, 
-#                           dict(dict_input=env_kwargs_data['env_kwargs_train'], 
-#                                train_or_eval=TrainConfig.train_or_eval, render_mode="None"), vec_env_cls)
-
-#     # Create evaluation callbacks using the decorator
-#     eval_callback_val = _make_eval_env(env_id, str_id, TrainConfig, AgentConfig, env_kwargs_data['env_kwargs_val'], "val")
-#     eval_callback_test = _make_eval_env(env_id, str_id, TrainConfig, AgentConfig, env_kwargs_data['env_kwargs_test'], "test")
-
-#     return env_train, eval_callback_val, eval_callback_test
-
-def create_vec_envs(env_id, str_id, AgentConfig, TrainConfig, env_kwargs_data):            ######### MAKE SHORTER ########### MAYBE WITH A DECORATOR ################
+def _make_env(env_id, n_envs, seed, env_kwargs, vec_env_cls=DummyVecEnv):
+    """ 
+        Helper function to create and normalized environments 
     """
-        Creates vectorized environments for training, validation, and testing
-        :param env_id: ID of the environment
-        :param str_id: String for identification of the present training run
-        :param AgentConfig: Agent configuration in a class object
-        :param TrainConfig: Training configuration in a class object
-        :return env_kwargs_data: Dictionaries with kwargs of training, validation, and test environments
-        :return eval_callback_val: Callback object with the validation environment for periodic evaluation (validation for hyperparameter tuning)
-        :return eval_callback_test: Callback object with the test environment for periodic evaluation (testing for error evaluation of the tuned RL model)
+    env = make_vec_env(env_id=env_id, n_envs=n_envs, seed=seed, vec_env_cls=vec_env_cls, env_kwargs=env_kwargs)
+
+    return VecNormalize(env, norm_obs=False)
+
+def eval_callback_dec(env_fn):
+    """ Decorator to create an evaluation environment and its EvalCallback """
+    def wrapper(env_id, str_id, TrainConfig, AgentConfig, env_kwargs, suffix, render_mode="None", n_envs=None):
+        """ Wrapper function to create evaluation environment and callback """
+        # Default n_envs to TrainConfig.eval_trials if not provided
+        n_envs = n_envs if n_envs is not None else TrainConfig.eval_trials  
+
+        env = env_fn(env_id, n_envs, TrainConfig.seed_test, env_kwargs, render_mode)
+        callback = EvalCallback(env,
+                                best_model_save_path=f"{TrainConfig.path}/logs/{str_id}_{suffix}/",
+                                n_eval_episodes=TrainConfig.eval_trials,
+                                log_path=f"{TrainConfig.path}/logs/",
+                                eval_freq=int(TrainConfig.test_steps / AgentConfig.n_envs),
+                                deterministic=True, render=False, verbose=0)
+        return env, callback
+    return wrapper
+
+@eval_callback_dec
+def _make_eval_env(env_id, n_envs, seed, env_kwargs, render_mode="None"):
+    """ Creates an evaluation environment """
+    return _make_env(env_id, n_envs, seed, 
+                     dict(dict_input=env_kwargs, train_or_eval="eval", render_mode=render_mode))
+
+
+
+def create_vec_envs(env_id, str_id, AgentConfig, TrainConfig, env_kwargs_data):
+    """
+    Creates vectorized environments for training, validation, and testing
     """
 
-    # Training environment
-    if TrainConfig.parallel == "Singleprocessing":
-        # DummyVecEnv -> computes each workers interaction in serial, if calculating the env itself is quite fast
-        env_train = make_vec_env(env_id=env_id, n_envs=AgentConfig.n_envs, seed=TrainConfig.seed_train, vec_env_cls=DummyVecEnv,
-                           env_kwargs=dict(dict_input=env_kwargs_data['env_kwargs_train'], train_or_eval=TrainConfig.train_or_eval,
-                                           render_mode="None"))
-    elif TrainConfig.parallel == "Multiprocessing":
-        # SubprocVecEnv for multiprocessing -> computes each workers interaction in parallel, if calculating the env itself is quite slow
-        env_train = make_vec_env(env_id=env_id, n_envs=AgentConfig.n_envs, seed=TrainConfig.seed_train, vec_env_cls=SubprocVecEnv,
-                           env_kwargs=dict(dict_input=env_kwargs_data['env_kwargs_train'], train_or_eval=TrainConfig.train_or_eval,
-                                           render_mode="None"))
-                         #, vec_env_kwargs=dict(start_method="fork"/"spawn"/"forkserver")) # optional
-    else:
-        assert False, 'Choose either "Singleprocessing" or "Multiprocessing" in RL_PTG/config/config_train.yaml -> parallel!'
+    # Set processing type
+    if TrainConfig.parallel == "Singleprocessing":  vec_env_cls = DummyVecEnv   # DummyVecEnv -> computes each workers interaction in serial, if calculating the env itself is quite fast
+    elif TrainConfig.parallel == "Multiprocessing": vec_env_cls = SubprocVecEnv # SubprocVecEnv for multiprocessing -> computes each workers interaction in parallel, if calculating the env itself is quite slow 
+    else: assert False, 'Choose either "Singleprocessing" or "Multiprocessing" in RL_PTG/config/config_train.yaml -> parallel!'
 
-    env_train = VecNormalize(env_train, norm_obs=False)   # Normalization of rewards with a moving average (norm_obs=False -> observations are normalized separately within the environment)
+    # Create training environment
+    env_train = _make_env(env_id, AgentConfig.n_envs, TrainConfig.seed_train, 
+                          dict(dict_input=env_kwargs_data['env_kwargs_train'], 
+                               train_or_eval=TrainConfig.train_or_eval, render_mode="None"), vec_env_cls)
 
-    # Environment for validation, EvalCallback creates a callback function which is called during RL learning ###################ZUSAMMENFASSEN ENV_VAL UND ENV_TEST
-    env_val = make_vec_env(env_id, n_envs=TrainConfig.eval_trials, seed=TrainConfig.seed_test, vec_env_cls=DummyVecEnv,
-                            env_kwargs=dict(dict_input=env_kwargs_data['env_kwargs_val'], train_or_eval=TrainConfig.train_or_eval,
-                                            render_mode="None"))
-    env_val = VecNormalize(env_val, norm_obs=False)
-
-    eval_callback_val = EvalCallback(env_val,
-                                      best_model_save_path= TrainConfig.path + "/logs/" + str_id + "_val/",
-                                      n_eval_episodes=TrainConfig.eval_trials,
-                                      log_path=TrainConfig.path + "/logs/", 
-                                      eval_freq=int(TrainConfig.test_steps / AgentConfig.n_envs),              # eval_freq=int(TrainConfig.test_steps / EnvConfig.n_envs) performs validation after test_steps steps independent of the No. of workers 
-                                      deterministic=True, render=False, verbose=0)
-
-    # Environment for testing, EvalCallback creates a callback function which is called during RL learning
-    env_test = make_vec_env(env_id, n_envs=TrainConfig.eval_trials, seed=TrainConfig.seed_test, vec_env_cls=DummyVecEnv,
-                            env_kwargs=dict(dict_input=env_kwargs_data['env_kwargs_test'], train_or_eval=TrainConfig.train_or_eval,
-                                            render_mode="None"))
-    env_test = VecNormalize(env_test, norm_obs=False)
-
-    eval_callback_test = EvalCallback(env_test,
-                                      best_model_save_path=TrainConfig.path + "/logs/" + str_id + "_test/",
-                                      n_eval_episodes=TrainConfig.eval_trials,
-                                      log_path=TrainConfig.path + "/logs/", 
-                                      eval_freq=int(TrainConfig.test_steps / AgentConfig.n_envs),              # eval_freq=int(test_steps / EnvConfig.n_envs) performs validation after test_steps steps independent of the No. of workers 
-                                      deterministic=True, render=False, verbose=0)
+    # Create validation and test environments with callbacks
+    _, eval_callback_val = _make_eval_env(env_id, str_id, TrainConfig, AgentConfig, env_kwargs_data['env_kwargs_val'], "val")
+    env_test, eval_callback_test = _make_eval_env(env_id, str_id, TrainConfig, AgentConfig, env_kwargs_data['env_kwargs_test'], "test")
     
-    return env_train, env_test, eval_callback_val, eval_callback_test
+    # Create test2 environment with only one instance of the environment
+    env_test_single, _ = _make_eval_env(env_id, str_id, TrainConfig, AgentConfig, env_kwargs_data['env_kwargs_test'], "test2", n_envs=1)
+
+
+    return env_train, env_test, eval_callback_val, eval_callback_test, env_test_single
+
+# def create_vec_envs(env_id, str_id, AgentConfig, TrainConfig, env_kwargs_data):            ######### MAKE SHORTER ########### MAYBE WITH A DECORATOR ################
+#     """
+#         Creates vectorized environments for training, validation, and testing
+#         :param env_id: ID of the environment
+#         :param str_id: String for identification of the present training run
+#         :param AgentConfig: Agent configuration in a class object
+#         :param TrainConfig: Training configuration in a class object
+#         :return env_kwargs_data: Dictionaries with kwargs of training, validation, and test environments
+#         :return eval_callback_val: Callback object with the validation environment for periodic evaluation (validation for hyperparameter tuning)
+#         :return eval_callback_test: Callback object with the test environment for periodic evaluation (testing for error evaluation of the tuned RL model)
+#     """
+
+#     # Training environment
+#     if TrainConfig.parallel == "Singleprocessing":
+#         # DummyVecEnv -> computes each workers interaction in serial, if calculating the env itself is quite fast
+#         env_train = make_vec_env(env_id=env_id, n_envs=AgentConfig.n_envs, seed=TrainConfig.seed_train, vec_env_cls=DummyVecEnv,
+#                            env_kwargs=dict(dict_input=env_kwargs_data['env_kwargs_train'], train_or_eval=TrainConfig.train_or_eval,
+#                                            render_mode="None"))
+#     elif TrainConfig.parallel == "Multiprocessing":
+#         # SubprocVecEnv for multiprocessing -> computes each workers interaction in parallel, if calculating the env itself is quite slow
+#         env_train = make_vec_env(env_id=env_id, n_envs=AgentConfig.n_envs, seed=TrainConfig.seed_train, vec_env_cls=SubprocVecEnv,
+#                            env_kwargs=dict(dict_input=env_kwargs_data['env_kwargs_train'], train_or_eval=TrainConfig.train_or_eval,
+#                                            render_mode="None"))
+#                          #, vec_env_kwargs=dict(start_method="fork"/"spawn"/"forkserver")) # optional
+#     else:
+#         assert False, 'Choose either "Singleprocessing" or "Multiprocessing" in RL_PTG/config/config_train.yaml -> parallel!'
+
+#     env_train = VecNormalize(env_train, norm_obs=False)   # Normalization of rewards with a moving average (norm_obs=False -> observations are normalized separately within the environment)
+
+#     # Environment for validation, EvalCallback creates a callback function which is called during RL learning ###################ZUSAMMENFASSEN ENV_VAL UND ENV_TEST
+#     env_val = make_vec_env(env_id, n_envs=TrainConfig.eval_trials, seed=TrainConfig.seed_test, vec_env_cls=DummyVecEnv,
+#                             env_kwargs=dict(dict_input=env_kwargs_data['env_kwargs_val'], train_or_eval=TrainConfig.train_or_eval,
+#                                             render_mode="None"))
+#     env_val = VecNormalize(env_val, norm_obs=False)
+
+#     eval_callback_val = EvalCallback(env_val,
+#                                       best_model_save_path= TrainConfig.path + "/logs/" + str_id + "_val/",
+#                                       n_eval_episodes=TrainConfig.eval_trials,
+#                                       log_path=TrainConfig.path + "/logs/", 
+#                                       eval_freq=int(TrainConfig.test_steps / AgentConfig.n_envs),              # eval_freq=int(TrainConfig.test_steps / EnvConfig.n_envs) performs validation after test_steps steps independent of the No. of workers 
+#                                       deterministic=True, render=False, verbose=0)
+
+#     # Environment for testing, EvalCallback creates a callback function which is called during RL learning
+#     env_test = make_vec_env(env_id, n_envs=TrainConfig.eval_trials, seed=TrainConfig.seed_test, vec_env_cls=DummyVecEnv,
+#                             env_kwargs=dict(dict_input=env_kwargs_data['env_kwargs_test'], train_or_eval=TrainConfig.train_or_eval,
+#                                             render_mode="None"))
+#     env_test = VecNormalize(env_test, norm_obs=False)
+
+#     eval_callback_test = EvalCallback(env_test,
+#                                       best_model_save_path=TrainConfig.path + "/logs/" + str_id + "_test/",
+#                                       n_eval_episodes=TrainConfig.eval_trials,
+#                                       log_path=TrainConfig.path + "/logs/", 
+#                                       eval_freq=int(TrainConfig.test_steps / AgentConfig.n_envs),              # eval_freq=int(test_steps / EnvConfig.n_envs) performs validation after test_steps steps independent of the No. of workers 
+#                                       deterministic=True, render=False, verbose=0)
+    
+#     return env_train, env_test, eval_callback_val, eval_callback_test
 
 
 def import_market_data(csvfile: str, type: str, path: str):
@@ -351,13 +365,13 @@ class Preprocessing():
         # calculate_optimum() had been excluded from Preprocessing() and placed in the different rl_opt.py file for the sake of clarity
         print("---Calculate the theoretical optimum, the potential reward, and the load identifier")
         stats_dict_opt_train = calculate_optimum(self.dict_price_data['el_price_train'], self.dict_price_data['gas_price_train'],
-                                                self.dict_price_data['eua_price_train'], "Training")
+                                                self.dict_price_data['eua_price_train'], "Training", self.EnvConfig.stats_names)
         stats_dict_opt_val = calculate_optimum(self.dict_price_data['el_price_val'], self.dict_price_data['gas_price_val'],
-                                                self.dict_price_data['eua_price_val'], "Validation")
+                                                self.dict_price_data['eua_price_val'], "Validation", self.EnvConfig.stats_names)
         stats_dict_opt_test = calculate_optimum(self.dict_price_data['el_price_test'], self.dict_price_data['gas_price_test'],
-                                                self.dict_price_data['eua_price_test'], "Test")
+                                                self.dict_price_data['eua_price_test'], "Test", self.EnvConfig.stats_names)
         stats_dict_opt_level = calculate_optimum(self.dict_price_data['el_price_reward_level'], self.dict_price_data['gas_price_reward_level'],
-                                                self.dict_price_data['eua_price_reward_level'], "reward_Level")
+                                                self.dict_price_data['eua_price_reward_level'], "reward_Level", self.EnvConfig.stats_names)
 
         # Store data sets with future values of the potential reward on the two different load levels and
         # data sets of a boolean identifier of future values of the potential reward in a dictionary
@@ -371,17 +385,14 @@ class Preprocessing():
         #               part_full_b_... = 1
         self.dict_pot_r_b = {                                                                       ##########################################MAKE SHORTER##################
             'pot_rew_train': stats_dict_opt_train['Meth_reward_stats'],
-            'part_full_b_train': stats_dict_opt_train['partial_full_b'],
+            'part_full_b_train': stats_dict_opt_train['part_full_stats'],
             'pot_rew_val': stats_dict_opt_val['Meth_reward_stats'],
-            'part_full_b_val': stats_dict_opt_val['partial_full_b'],
+            'part_full_b_val': stats_dict_opt_val['part_full_stats'],
             'pot_rew_test': stats_dict_opt_test['Meth_reward_stats'],
-            'part_full_b_test': stats_dict_opt_test['partial_full_b'],
+            'part_full_b_test': stats_dict_opt_test['part_full_stats'],
         }
 
         self.r_level = stats_dict_opt_level['Meth_reward_stats']
-        # multiple_plots(stats_dict_opt_train, 3600, "Opt_Training_set_sen" + str(EnvConfig.scenario))         ################# Include Graphics as default ##############
-        # multiple_plots(stats_dict_opt_test, 3600, "Opt_Test_set_sen" + str(EnvConfig.scenario))              ################# Include Graphics as default ##############
-
 
     def preprocessing_array(self):
         """
@@ -444,7 +455,7 @@ class Preprocessing():
         # Number of steps in train and test sets per episode
         self.eps_sim_steps_train = int(self.eps_len / self.EnvConfig.sim_step)
         self.eps_sim_steps_val = int(24 * 3600 * val_len_d / self.EnvConfig.sim_step)
-        self.eps_sim_steps_test = int(24 * 3600 * test_len_d /self. EnvConfig.sim_step)
+        self.eps_sim_steps_test = int(24 * 3600 * test_len_d /self.EnvConfig.sim_step)
 
         # Define total number of steps for all workers together
         self.num_loops = self.TrainConfig.train_steps / (self.eps_sim_steps_train * self.n_eps)      # Number of loops over the total training set
@@ -624,7 +635,7 @@ class Postprocessing():
     """
         A class that contains variables and functions for preprocessing of energy market and process data
     """
-    def __init__(self, str_id, dict_price_data, dict_op_data, AgentConfig, EnvConfig, TrainConfig, env_test):
+    def __init__(self, str_id, dict_price_data, dict_op_data, AgentConfig, EnvConfig, TrainConfig, env_test_single, Preprocess):
         """
             Initialization of variables
             :param str_id: String for identification of the present training run
@@ -639,21 +650,93 @@ class Postprocessing():
         self.AgentConfig = AgentConfig
         self.EnvConfig = EnvConfig
         self.TrainConfig = TrainConfig
-        self.dict_price_data = dict_price_data
-        self.dict_op_data = dict_op_data
+        # self.dict_price_data = dict_price_data
+        # self.dict_op_data = dict_op_data
+        self.eps_sim_steps_test = Preprocess.eps_sim_steps_test
+        model_path = f"{TrainConfig.path}{TrainConfig.path_files}{str_id}_val/best_model"
+        self.env_test_single = env_test_single
+        self.stats_dict_test = {}
+        self.str_id = str_id
 
-        print("---Load best model ./plots/ ...\n") 
-        self.model = AgentConfig.load_model(env_test, tb_log, str_id, 'eval')
+        print(f"---Load RL model which performs best on the validation set \n\t {model_path}") 
+        self.model = AgentConfig.load_model(env=None, tb_log=None, model_path=model_path, type='eval')
 
     def test_performance(self):
-        # PERFORM RL policy on the test set
+        """
+            Test RL policy on the validation environment
+        """
+
+        stats = np.zeros((self.eps_sim_steps_test, len(self.EnvConfig.stats_names)))
+
+        obs = self.env_test_single.reset()
+        # print(obs)
+        timesteps = self.eps_sim_steps_test#  - 6
+        # pot_rew_timeline = np.zeros((timesteps,))
+        # clock_hours = 0
+        # clock_min = 0
+        # clock_h = 0
+        # clock_d = 0
+
+        for i in tqdm(range(timesteps), desc='---Apply RL policy on the test environment:'):
+            # clock_hours = (i + 1) * env_kwargs_test["sim_step"] / 3600
+            # rew_step = math.floor(clock_hours)
+            # pot_rew_timeline[i] = dict_pot_r_b['pot_rew_test'][rew_step]
+
+            action, _states = self.model.predict(obs, deterministic=True)
+            obs, reward, terminated, info = self.env_test_single.step(action)
+
+            # meth_ch4_prod += info[0]['Meth_CH4_flow'] * env_kwargs_test["sim_step"]  # produziertes Methan in mol
+            # meth_ch4_full_load += GLOBAL_PARAMS.meth_stats_load['Meth_CH4_flow'][2] * env_kwargs_test[
+            #     "sim_step"]  # maximal produziertes Methan in mol
+            
+
+            # last_state = info[0]['Meth_State']
+
+            # clock_min += env_kwargs_test["sim_step"] / 60
+            # if clock_min >= 60:
+            #     clock_min -= 60
+            #     clock_h += 1
+            #     if clock_h >= 24:
+            #         clock_h -= 24
+            #         clock_d += 1
+
+            # print(clock_d, clock_h, clock_min)
+            # print("obs",obs)
+            # print("reward", reward)
+            # print("terminated", terminated)
+            # print("info", info)
+            # print("Cumulative reward",info[0]['cum_reward'])
+
+            # Store data in stats
+            if not terminated:
+                j = 0
+                for val in info[0]:
+                    # print(val)
+                    # print(info[0][val])
+                    if j < 24:
+                        if val == 'Meth_Action':
+                            if info[0][val] == 'standby':
+                                stats[i, j] = 0
+                            elif info[0][val] == 'cooldown':
+                                stats[i, j] = 1
+                            elif info[0][val] == 'startup':
+                                stats[i, j] = 2
+                            elif info[0][val] == 'partial_load':
+                                stats[i, j] = 3
+                            else:
+                                stats[i, j] = 4
+                        else:
+                            stats[i, j] = info[0][val]
+                    j += 1
+        
+        
+        for m in range(len(self.EnvConfig.stats_names)):
+            self.stats_dict_test[self.EnvConfig.stats_names[m]] = stats[:(timesteps), m]
+
         return None
 
-    def plot_results():
-        print("---Plot and save RL performance on the test set under ./plots/ ...\n") 
-        return None
-
-    def multiple_plots(self, stats_dict: dict, time_step_size: int, plot_name: str):
+    def plot_results(self):
+        
         """
         Creates a plot with multiple subplots of the time series and the methanation operation according to the agent
         :param stats_dict: dictionary with the prediction results
@@ -661,142 +744,48 @@ class Postprocessing():
         :param plot_name: plot title
         :return
         """
+        print("---Plot and save RL performance on the test set under ./plots/ ...\n") 
 
-        part_full_b = stats_dict['partial_full_b']
-        time_sim = stats_dict['steps_stats'] * time_step_size * 1 / 3600 / 24  # in days
-        time_sim_profit =  np.linspace(0, int(len(part_full_b))-1, num=int(len(part_full_b))) / 24
-        profit_series = part_full_b * 50
+        stats_dict = self.stats_dict_test
+        time_sim = stats_dict['steps_stats'] * self.EnvConfig.sim_step * 1 / 3600 / 24  # in days
+        time_sim = time_sim[:-6]                                        # ptg_gym_env.py curtails an episode by 6 time steps to ensure a data overhead
+        meth_state = stats_dict['Meth_State_stats'][:-6]+1
 
-        fig, axs = plt.subplots(8, 1, figsize=(10, 6), sharex=True, sharey=False)
-        axs[0].plot(time_sim, stats_dict['el_price_stats'], label='el_price')
-        axs[0].plot(time_sim, stats_dict['gas_price_stats'], 'g', label='gas_price')
-        axs[0].plot(time_sim_profit, profit_series, 'r', label='profitable')
-        # axs[0].set_ylim([0, 5.5])
-        axs[0].set_ylabel('ct/kWh')
-        axs[0].legend(loc="upper right", fontsize='x-small')
+        fig, axs = plt.subplots(3, 1, figsize=(10, 6), sharex=True, sharey=False)
+        axs[0].plot(time_sim, stats_dict['el_price_stats'][:-6], label='El.')
+        axs[0].plot(time_sim, stats_dict['gas_price_stats'][:-6], 'g', label='(S)NG')
+        axs[0].set_ylabel('El. & (S)NG prices\n [ct/kWh]')
+        axs[0].legend(loc="upper left", fontsize='x-small')
         axs0_1 = axs[0].twinx()
-        axs0_1.plot(time_sim, stats_dict['eua_price_stats'], 'k', label='eua_price')
-        axs0_1.set_ylabel('eua_price [€/t]')
-        axs0_1.legend(loc="lower right", fontsize='x-small')
-        axs[1].plot(time_sim, stats_dict['Meth_State_stats'], 'b', label='state')
-        axs[1].plot(time_sim, stats_dict['Meth_Action_stats'], 'g', label='action')
-        axs[1].plot(time_sim, stats_dict['Meth_Hot_Cold_stats'], 'k', label='hot/cold-status')
-        # axs[1].set_ylim([0, 12])
-        axs[1].set_ylabel('status')
-        axs[1].legend(loc="upper right", fontsize='x-small')
-        axs[2].plot(time_sim, stats_dict['Meth_T_cat_stats'], 'k', label='T_Cat')
-        # axs[2].plot(time_sim, stats_dict['Meth_T_cat_stats'], 'k', marker='o', markersize=2)
-        # axs[2].set_ylim([0, 600])
-        axs[2].set_ylabel('°C')
-        axs[2].legend(loc="upper right", fontsize='x-small')
-        axs[3].plot(time_sim, stats_dict['Meth_H2_flow_stats'], 'b', label='H2')
-        axs[3].plot(time_sim, stats_dict['Meth_CH4_flow_stats'], 'g', label='CH4')
-        # axs[3].set_ylim([0, 0.025])
-        axs[3].set_ylabel('mol/s')
-        axs[3].legend(loc="upper right", fontsize='x-small')
-        axs[4].plot(time_sim, stats_dict['Meth_H2O_flow_stats'], label='H2O')
-        # axs[4].set_ylim([0, 0.72])
-        axs[4].set_ylabel('kg/h')
-        axs[4].legend(loc="upper right", fontsize='x-small')
-        axs[5].plot(time_sim, stats_dict['Meth_el_heating_stats'], label='P_el_heat')
-        # axs[5].set_ylim([-10, 2000])
-        axs[5].set_ylabel('W')
-        axs[5].legend(loc="upper right", fontsize='x-small')
-        axs[6].plot(time_sim, stats_dict['Meth_ch4_revenues_stats'], 'g', label='CH4')
-        axs[6].plot(time_sim, stats_dict['Meth_steam_revenues_stats'], 'b', label='H2O')
-        axs[6].plot(time_sim, stats_dict['Meth_o2_revenues_stats'], 'lightgray', label='O2')
-        axs[6].plot(time_sim, stats_dict['Meth_elec_costs_heating_stats'], 'k', label='P_el_heating')
-        axs[6].plot(time_sim, stats_dict['Meth_elec_costs_electrolyzer_stats'], 'r', label='P_el_lyzer')
-        axs[6].set_ylabel('ct/h')
-        axs[6].legend(loc="upper right", fontsize='x-small')
-        axs[7].plot(time_sim, stats_dict['Meth_reward_stats'], 'g', label='Reward')
-        axs[7].set_ylabel('r [ct/h]')
-        axs[7].set_xlabel('Time [d]')
-        # axs[7].set_xlim([-10, 10000])
-        axs[7].legend(loc="upper right", fontsize='x-small')
-        axs7_1 = axs[7].twinx()
-        axs7_1.plot(time_sim, stats_dict['Meth_cum_reward_stats'], 'k', label='Cumulative Reward')
-        axs7_1.set_ylabel('cum_r [ct]')
-        axs7_1.legend(loc="lower right", fontsize='x-small')
+        axs0_1.plot(time_sim, stats_dict['eua_price_stats'][:-6], 'k', label='EUA')
+        axs0_1.set_ylabel('EUA prices [€/t$_{CO2}$]')
+        axs0_1.legend(loc="upper right", fontsize='x-small')
 
-        fig.suptitle(" Alg:" + plot_name + "\n Rew:" + str(np.round(stats_dict['Meth_cum_reward_stats'][-1], 0)))
-        plt.savefig('plots/' + plot_name + '_plot.png')
-        print("Reward =", stats_dict['Meth_cum_reward_stats'][-1])
+        axs[1].plot(time_sim, meth_state, 'b', label='state')
+        axs[1].set_yticks([1,2,3,4,5])
+        axs[1].set_yticklabels(['Standby', 'Cooldown/Off', 'Startup', 'Partial Load', 'Full Load'])
+        axs[1].set_ylabel(' ')
+        axs[1].legend(loc="upper left", fontsize='small')
+        axs[1].grid(axis='y', linestyle='dashed')
+        axs1_1 = axs[1].twinx()
+        axs1_1.plot(time_sim, stats_dict['Meth_CH4_flow_stats'][:-6]*1000, 'yellowgreen', label='CH$_4$')
+        axs1_1.set_ylabel('CH$_4$ flow rate\n [mmol/s]')
+        axs1_1.legend(loc="upper right", fontsize='small')  
+        
+        axs[2].plot(time_sim, stats_dict['Meth_reward_stats'][:-6]/100, 'g', label='Reward')
+        axs[2].set_ylabel('Reward [€]')
+        axs[2].set_xlabel('Time [d]')
+        axs[2].legend(loc="upper left", fontsize='x-small')
+        axs2_1 = axs[2].twinx()
+        axs2_1.plot(time_sim, stats_dict['Meth_cum_reward_stats'][:-6]/100, 'k', label='Cum. Reward')
+        axs2_1.set_ylabel('Cumulative \n reward [€]')
+        axs2_1.legend(loc="upper right", fontsize='x-small')
 
-        # plt.show()
-        plt.close()
-
-
-    def multiple_plots_4(self, stats_dict: dict, time_step_size: int, plot_name: str, potential_profit: np.array, part_full: np.array):
-        """
-        Creates a plot with multiple subplots of the time series and the methanation operation according to the agent
-        :param stats_dict: dictionary with the prediction results
-        :param time_step_size: time step size in the simulation
-        :param plot_name: plot title
-        :param profit: denotes periods with potential profit (No Profit = 0, Profit = 10)
-        :return:
-        """
-
-        time_sim = stats_dict['steps_stats'] * time_step_size * 1 / 3600 / 24  # in days
-        time_sim_profit =  np.linspace(0, int(len(profit))-1, num=int(len(profit))) / 24
-        profit_series = 1+ profit * 4
-
-        P_PtG = stats_dict['Meth_H2_flow_stats'] / 0.0198
-
-        plt.rcParams.update({'font.size': 16})
-        plt.rcParams["font.family"] = "serif"
-        plt.rcParams["font.serif"] = ["Times New Roman"]
-
-        pot_rew = potential_profit * time_step_size / 3600
-
-        rew_zero = np.zeros((len(time_sim),))
-        part_full_adapted = np.zeros((len(time_sim),))
-        for i in range(len(time_sim)):
-            if part_full[i] == -1:
-                part_full_adapted[i] = 2
-            elif part_full[i] == 0:
-                part_full_adapted[i] = 4
-            else:
-                part_full_adapted[i] = 5
-
-        fig, axs = plt.subplots(1, 1, figsize=(14, 6), sharex=True, sharey=False)
-        axs.plot(time_sim, stats_dict['Meth_State_stats'], 'b', label='state')
-        axs.plot(time_sim, part_full_adapted, 'k', linestyle="dotted", label='state')
-        axs.set_yticks([1,2,3,4,5])
-        axs.set_yticklabels(['Standby', 'Cooldown/Off', 'Startup', 'Partial Load', 'Full Load'])
-        # axs[1].set_ylim([0, 12])
-        axs.set_ylabel(' ')
-        axs.legend(loc="upper left", fontsize='small') #, bbox_to_anchor = (0.0, 0.0), ncol = 1, fancybox = True, shadow = True)
-        axs.grid(axis='y', linestyle='dashed')
-        axs0_1 = axs.twinx()
-        axs0_1.plot(time_sim, stats_dict['Meth_reward_stats'], color='g', label='Reward')
-        axs0_1.plot(time_sim, pot_rew, color='lawngreen', linestyle='dotted', label='Potential Reward')
-        axs0_1.plot(time_sim, rew_zero, color='grey', linestyle='dashed')
-        axs0_1.set_ylabel('reward')
-        axs0_1.set_xlabel('Time [d]')
-        axs0_1.set_yticks([0, 10, 20])
-        # axs3_1 = axs[3].twinx()
-        # axs3_1.plot(time_sim, stats_dict['Meth_cum_reward_stats'], 'k', label='Cumulative Reward')
-        # axs3_1.set_ylabel('cum. reward')
-        # # axs3_1.set_yticks([0, 1000, 2000])
-        # axs[3].legend(loc="upper left", fontsize='small') #, bbox_to_anchor=(0.0, 0.0), ncol=1, fancybox=True, shadow=True)
-        # axs3_1.legend(loc="upper right", fontsize='small') #, bbox_to_anchor = (0.0, 0.0), ncol = 1, fancybox = True, shadow = True)
-
-        # box = axs0_1.get_position()
-        # axs0_1.set_position([box.x0 * 1.1, box.y0 * 1.05, box.width, box.height])
-        # box = axs[1].get_position()
-        # axs[1].set_position([box.x0 * 1.1, box.y0 * 1.05, box.width, box.height])
-        # box = axs2_1.get_position()
-        # axs2_1.set_position([box.x0 * 1.1, box.y0 * 1.05, box.width, box.height])
-        # box = axs3_1.get_position()
-        # axs3_1.set_position([box.x0 * 1.1, box.y0, box.width, box.height])
-
-        fig.suptitle(" Alg:" + plot_name + "\n Rew:" + str(np.round(stats_dict['Meth_cum_reward_stats'][-1], 0)))
-        plt.savefig('plots/' + plot_name + '_plot.png')
-        # print("Reward =", stats_dict['Meth_cum_reward_stats'][-1])
+        fig.suptitle(f"{self.str_id} \n Rew: {np.round(stats_dict['Meth_cum_reward_stats'][-7]/100, 0)} €", fontsize=9)
+        plt.savefig(f'plots/{self.str_id}_plot.png')
 
         plt.close()
-        # plt.show()
+
 
 
 
