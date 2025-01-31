@@ -19,6 +19,7 @@ path_files : ./log/final/   # data path with pretrained RL models
 parallel : Singleprocessing   # specifies the computation setup: "Singleprocessing" (DummyVecEnv, computes the interaction of each worker in serial, recommended for fast environment calculation such as ptg_gym_env.py) or "Multiprocessing" (SubprocVecEnv, computes the interaction of each worker in parallel, recommended for heavy environment calculation)
 train_or_eval : train         # specifies whether the environment provides detailed descriptions of the state for evaluation ("eval") or not ("train" - recommended for training)
 eval_trials : 5               # No. of evaluation trials in validation and testing (to appropriately assess stochastic policies)
+val_n_test : False            # Set 'True' if the RL agent should be evaluated on both validation and test sets ('False': Evaluate only on the validation set)
 
 train_steps : 10000          # No. of training steps
 test_steps : 1000            # Validation interval (Number of steps after which the RL agent is evaluated)

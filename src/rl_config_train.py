@@ -35,6 +35,7 @@ class TrainConfiguration:
         self.parallel = train_config['parallel']   # specifies the computation setup: "Singleprocessing" (DummyVecEnv) or "Multiprocessing" (SubprocVecEnv)
         self.train_or_eval = train_config['train_or_eval']         # specifies whether the environment provides detailed descriptions of the state for evaluation ("eval") or not ("train" - recommended for training)
         self.eval_trials = train_config['eval_trials']              # No. of evaluation trials in validation and testing (to appropriately assess stochastic policies)
+        self.val_n_test = train_config['val_n_test']                # Set 'True' if the RL agent should be evaluated on both validation and test sets ('False': Evaluate only on the validation set)   
 
         self.train_steps = train_config['train_steps']          # No. of training steps
         self.test_steps = train_config['test_steps']            # Validation interval (Number of steps after which the RL agent is evaluated)

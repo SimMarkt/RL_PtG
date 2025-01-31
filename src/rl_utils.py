@@ -474,7 +474,7 @@ class Preprocessing():
         env_kwargs["raw_modified"] = self.EnvConfig.raw_modified     # Specifies the type of state design using raw energy market prices ('raw') or modified economic metrices ('mod')
 
         return env_kwargs
-
+    
 def initial_print():
     print('\n--------------------------------------------------------------------------------------------')    
     print('---------RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization---------')

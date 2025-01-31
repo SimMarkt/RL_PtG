@@ -16,10 +16,10 @@ import torch as th
 from gymnasium.envs.registration import registry, register, make
 from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv, SubprocVecEnv
 from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
+from stable_baselines3.common.callbacks import EvalCallback
 
 # Libraries with utility functions and classes
-from src.rl_utils import load_data, initial_print, config_print, Preprocessing
+from src.rl_utils import load_data, initial_print, config_print, Preprocessing, create_vec_envs
 from src.rl_config_agent import AgentConfiguration
 from src.rl_config_env import EnvConfiguration
 from src.rl_config_train import TrainConfiguration
@@ -105,9 +105,9 @@ def create_vec_envs(env_id, str_id, AgentConfig, TrainConfig):            ######
     env_val = VecNormalize(env_val, norm_obs=False)
 
     eval_callback_val = EvalCallback(env_val,
-                                      best_model_save_path="./logs/" + str_id + "_val/",
+                                      best_model_save_path= TrainConfig.path + "/logs/" + str_id + "_val/",
                                       n_eval_episodes=TrainConfig.eval_trials,
-                                      log_path="./logs/", 
+                                      log_path=TrainConfig.path + "/logs/", 
                                       eval_freq=int(TrainConfig.test_steps / AgentConfig.n_envs),              # eval_freq=int(TrainConfig.test_steps / EnvConfig.n_envs) performs validation after test_steps steps independent of the No. of workers 
                                       deterministic=True, render=False, verbose=0)
 
@@ -118,9 +118,9 @@ def create_vec_envs(env_id, str_id, AgentConfig, TrainConfig):            ######
     env_test = VecNormalize(env_test, norm_obs=False)
 
     eval_callback_test = EvalCallback(env_test,
-                                      best_model_save_path="./logs/" + str_id + "_test/",
+                                      best_model_save_path=TrainConfig.path + "/logs/" + str_id + "_test/",
                                       n_eval_episodes=TrainConfig.eval_trials,
-                                      log_path="./logs/", 
+                                      log_path=TrainConfig.path + "/logs/", 
                                       eval_freq=int(TrainConfig.test_steps / AgentConfig.n_envs),              # eval_freq=int(test_steps / EnvConfig.n_envs) performs validation after test_steps steps independent of the No. of workers 
                                       deterministic=True, render=False, verbose=0)
     
@@ -163,7 +163,8 @@ if __name__ == '__main__':
 
     # ------------------------------------------------RL Training-------------------------------------------------
     print("Training... >>>", str_id, "<<< \n")
-    model.learn(total_timesteps=TrainConfig.train_steps, callback=[eval_callback_val, eval_callback_test])
+    if TrainConfig.val_n_test:  model.learn(total_timesteps=TrainConfig.train_steps, callback=[eval_callback_val, eval_callback_test])  # Evaluate the RL agent on both validation and test sets
+    else:                       model.learn(total_timesteps=TrainConfig.train_steps, callback=[eval_callback_val])                      # Evaluate the RL agent only on the validation set
 
     # ------------------------------------------------Save model--------------------------------------------------
     if TrainConfig.model_conf == "save_model" or TrainConfig.model_conf == "save_load_model": AgentConfig.save_model(model)

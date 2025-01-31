@@ -637,7 +637,6 @@ class PTGEnv(gym.Env):
         Returns whether the episode ended and thus terminates
         """
         if self.k == self.eps_sim_steps - 6:
-            print(self.cum_rew)
             return True
         else:
             return False
