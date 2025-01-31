@@ -5,7 +5,7 @@ import math
 
 ep_index = 0
 
-# Abbreviation:
+# Abbreviations:
 #   SNG: Synthetic natural gas
 #   EUA: European emission allowances
 #   CHP: Combined heat and power plant
@@ -15,6 +15,7 @@ ep_index = 0
 #   CO2: Carbon dioxide
 #   H2O_DE: Water steam
 #   LHV: Lower heating value
+#   EEG: German renewable energy act
 
 class PTGEnv(gym.Env):
     """Custom Environment that follows gym interface."""

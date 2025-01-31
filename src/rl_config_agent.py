@@ -18,11 +18,12 @@ class AgentConfiguration:
         with open("config/config_agent.yaml", "r") as env_file:
             agent_config = yaml.safe_load(env_file)
 
-        self.n_envs = agent_config['n_envs']                                # Number environments/workers for training
-        assert agent_config['rl_alg'] in agent_config['hyperparameters'], f"Wrong algorithm specified - data/config_agent.yaml -> model_conf : {agent_config['rl_alg']} must match {agent_config['hyperparameters'].keys()}"
-        self.rl_alg = agent_config['rl_alg']                                # selected RL algorithm - already implemented [DQN, A2C, PPO, TD3, SAC, TQC]
-        self.rl_alg_hyp = agent_config['hyperparameters'][self.rl_alg]      # hyperparameters of the algorithm
-        self.str_alg = None                                                 # Represents a string containing the hyperparameter settings after completing the initialization, for file identification purposes
+        # Unpack data
+        self.__dict__.update(agent_config)
+
+        assert self.rl_alg in self.hyperparameters, f"Wrong algorithm specified - data/config_agent.yaml -> model_conf : {self.rl_alg} must match {self.hyperparameters.keys()}"
+        self.rl_alg_hyp = self.hyperparameters[self.rl_alg]      # Hyperparameters of the algorithm
+        self.str_alg = None                                      # Represents a string containing the hyperparameter settings after completing the initialization, for file identification purposes
         # Nested dictionary with all possible hyperparameters including an abbreveation ('abb') and the variable name ('var', need to match notation in RL_PtG/config/config_agent.yaml)
         self.hyper = {'Learning rate': {'abb' :"_al", 'var': 'alpha'},
                       'Discount factor': {'abb' :"_ga", 'var': 'gamma'},
@@ -231,55 +232,33 @@ class AgentConfiguration:
 
         # Load pretrained RL algorithms
         if self.rl_alg == 'DQN':
-            from stable_baselines3 import DQN           # import algorithm
+            from stable_baselines3 import DQN           
             model = DQN.load(model_path, tensorboard_log=tb_log)
-            if type == 'train': ##################### MAKE SHORTER MAYBE ALSO USING A DECORATOR ###########################
-                print("Check replay buffer:")
-                print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - before loading the replay buffer")
-                model.load_replay_buffer(model_path)
-                print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - after loading the replay buffer")
-
-        elif self.rl_alg == 'A2C':                      # import algorithm
+        elif self.rl_alg == 'A2C':                     
             from stable_baselines3 import A2C
             model = A2C.load(model_path, tensorboard_log=tb_log)
-
-        elif self.rl_alg == 'PPO':                      # import algorithm
+        elif self.rl_alg == 'PPO':                      
             from stable_baselines3 import PPO
             model = PPO.load(model_path, tensorboard_log=tb_log)
-
-        elif self.rl_alg == 'TD3':                      # import algorithm
+        elif self.rl_alg == 'TD3':                     
             from stable_baselines3 import TD3
             model = TD3.load(model_path, tensorboard_log=tb_log)
-            if type == 'train':
-                print("Check replay buffer:")
-                print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - before loading the replay buffer")
-                model.load_replay_buffer(model_path)
-                print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - after loading the replay buffer")
-        
-        elif self.rl_alg == 'SAC':                      # import algorithm
+        elif self.rl_alg == 'SAC':                     
             from stable_baselines3 import SAC
             model = SAC.load(model_path, tensorboard_log=tb_log)
-            if type == 'train':
-                print("Check replay buffer:")
-                print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - before loading the replay buffer")
-                model.load_replay_buffer(model_path)
-                print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - after loading the replay buffer")
-
-        elif self.rl_alg == 'TQC':                      # import algorithm
+        elif self.rl_alg == 'TQC':                      
             from sb3_contrib import TQC
             model = TQC.load(model_path, tensorboard_log=tb_log)
-            if type == 'train':
-                print("Check replay buffer:")
-                print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - before loading the replay buffer")
-                model.load_replay_buffer(model_path)
-                print(f"The loaded_model has {model.replay_buffer.size()} transitions in its buffer - after loading the replay buffer")
         else:
             assert False, 'Algorithm is not implemented!'
 
-        if type == 'train': model.set_env(env)
+        if (type == 'train') and ('buffer_size' in self.rl_alg_hyp.keys()):
+            model.load_replay_buffer(model_path)
+            print(f"---Replay buffer loaded - size {model.replay_buffer.size()} transitions")
+            model.set_env(env)
 
         return model
-    
+
     def save_model(self, model):
         """
             Load pretrained Stable-Baselines3 model for RL training
@@ -287,7 +266,6 @@ class AgentConfiguration:
             :param tb_log: # tensorboard log file
             :return model: Stable-Baselines3 model for RL training
         """
-
         model.save(self.path_files + self.str_inv)
         if 'buffer_size' in self.rl_alg_hyp.keys():
             model.save_replay_buffer(self.path_files + self.str_inv)
@@ -348,5 +326,3 @@ class AgentConfiguration:
         elif length_str > 15:       print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):\t\t {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
         else:                       print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):\t\t\t {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
         self.str_alg += self.hyper[hyp_name]['abb'] + str(self.rl_alg_hyp[self.hyper[hyp_name]['var']])
-
-

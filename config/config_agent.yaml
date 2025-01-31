@@ -10,11 +10,11 @@
 # ----------------------------------------------------------------------------------------------------------------
 
 n_envs : 6                   # Number environment instances/workers for training
-rl_alg : SAC                 # selected RL algorithm - already implemented [DQN, A2C, PPO, TD3, SAC, TQC]
+rl_alg : SAC                 # Selected RL algorithm - already implemented [DQN, A2C, PPO, TD3, SAC, TQC]
 
 hyperparameters:    # Implemented hyperparameters of the RL algorithms used
     DQN :
-        action_type : discrete          # the type of action: "discrete" or "continuous"
+        action_type : discrete          # Type of action: "discrete" or "continuous"
         alpha : 0.0002                  # Learning rate (_al)
         gamma : 0.9728                  # Discount factor (_ga)
         buffer_size : 1000000           # Replay buffer size (_rbf)
@@ -30,7 +30,7 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         tau : 1.0                       # soft update parameter
         learning_starts : 50000         # No. of steps before starting the training of actor/critic networks
     A2C :
-        action_type : discrete        # the type of action: "discrete" or "continuous"
+        action_type : discrete          # Type of action: "discrete" or "continuous"
         alpha : 0.00021                 # Learning rate (_al)
         gamma : 0.9393                  # Discount factor (_ga)
         ent_coeff : 0.00004             # entropy coefficient
@@ -42,7 +42,7 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         normalize_advantage : True      # normalize advantage ('False' or 'True')
         gSDE : False                    # gSDE exploration ('False' or 'True')
     PPO : 
-        action_type : discrete        # the type of action: "discrete" or "continuous"
+        action_type : discrete          # Type of action: "discrete" or "continuous"
         alpha : 0.00005                 # Learning rate (_al)
         gamma : 0.973                   # Discount factor (_ga)
         ent_coeff : 0.00001             # entropy coefficient 
@@ -56,7 +56,7 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         normalize_advantage : False     # normalize advantage ('False' or 'True')
         gSDE : False                    # gSDE exploration ('False' or 'True')
     TD3 :
-        action_type : continuous      # the type of action: "discrete" or "continuous"
+        action_type : continuous        # Type of action: "discrete" or "continuous"
         alpha : 0.00015                 # Learning rate (_al)
         gamma : 0.9595                  # Discount factor (_ga)
         buffer_size : 19984440          # Replay buffer size (_rbf)
@@ -69,7 +69,7 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         learning_starts : 100           # No. of steps before starting the training of actor/critic networks
         sigma_exp : 0.19                # exploration noise in the target          
     SAC :
-        action_type : continuous      # the type of action: "discrete" or "continuous"
+        action_type : continuous        # Type of action: "discrete" or "continuous"
         alpha : 0.0001                  # Learning rate (_al)
         gamma : 0.9628                  # Discount factor (_ga)
         ent_coeff : auto                # entropy coefficient (choose either values within [0,1] or the automatic adjustment using 'auto')
@@ -83,7 +83,7 @@ hyperparameters:    # Implemented hyperparameters of the RL algorithms used
         learning_starts : 100           # No. of steps before starting the training of actor/critic networks
         gSDE : False                    # gSDE exploration ('False' or 'True')
     TQC :
-        action_type : continuous      # the type of action: "discrete" or "continuous"
+        action_type : continuous        # Type of action: "discrete" or "continuous"
         alpha : 0.00044                 # Learning rate (_al)
         gamma : 0.9639                  # Discount factor (_ga)
         ent_coeff : 0.00047             # entropy coefficient  (choose either values within [0,1] or the automatic adjustment using [2])

@@ -6,11 +6,22 @@
 # > Computes the theoretical optimum T-OPT ignoring PtG plant dynamics
 # ----------------------------------------------------------------------------------------------------------------
 
+# Abbreviations:
+#   SNG: Synthetic natural gas
+#   EUA: European emission allowances
+#   CHP: Combined heat and power plant
+#   CH4: Methane
+#   H2: Hydrogen
+#   O2: Oxygen
+#   CO2: Carbon dioxide
+#   H2O_DE: Water steam
+#   LHV: Lower heating value
+#   EEG: German renewable energy act
+
 import numpy as np
 import math
 
 from src.rl_config_env import EnvConfiguration
-
 
 def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_price_data: np.array, data_name: str, stats_names):
     """
@@ -18,132 +29,111 @@ def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_pri
         :param el_price_data: Electricity market data
         :param gas_price_data: Gas market data
         :param eua_price_data: EUA market data
-        :param data_name: For tqdm output and reward level specification  ########################################################
+        :param data_name: Specifies the data set
         :return stats_dict_opt: Dictionary with methanation status values
     """
 
     EnvConfig = EnvConfiguration()
 
-    meth_stats = EnvConfig.meth_stats_load
+    meth_stats = EnvConfig.meth_stats_load      # Partial and full load methanation process data
 
-    stats_dict_opt = {}
+    stats_dict_opt = {}                         # Dictionary which will receive the process and economic data for T-OPT
     stats = np.zeros((len(el_price_data), len(stats_names)))
 
     # Include reward calculation from CHP in the case of business scenario 3
-    if EnvConfig.scenario == 3:
-        b_s3 = 1
-    else:
-        b_s3 = 0
+    if EnvConfig.scenario == 3: b_s3 = 1
+    else: b_s3 = 0
 
-    rew_l = [0,1]     # first entry of the list is dedicated to partial load, second to full load
+    rew_l = [0,1]       # First entry of the list is dedicated to partial load, second to full load
+    cum_rew = 0         # Cumulative reward
 
-    cum_rew = 0  # cumulative reward
-
-    for t in range(len(el_price_data)):
-        t_day = int(math.floor(t / 24))
-        for l in range(2):  # Reward calculation for both partial load and full load
+    for t in range(len(el_price_data)):     # Loop over the electricity price data
+        t_day = int(math.floor(t / 24))     # Converts the time t (1-hour resolution) into t_day (1-day-resolution)
+        for l in range(len(rew_l)):                  
+            # Reward calculation for both partial load and full load
 
             # Gas proceeds (Scenario 1+2):          If Scenario == 3: self.gas_price_h[0] = 0
-            ch4_volumeflow = meth_stats['Meth_CH4_flow'][l+1] * EnvConfig.convert_mol_to_Nm3
-            h2_res_volumeflow = meth_stats['Meth_H2_res_flow'][l+1] * EnvConfig.convert_mol_to_Nm3  # in Nm³/s
-            Q_ch4 = ch4_volumeflow * EnvConfig.H_u_CH4 * 1000  # in kW
-            Q_h2_res = h2_res_volumeflow * EnvConfig.H_u_H2 * 1000
-            ch4_revenues = (Q_ch4 + Q_h2_res) * gas_price_data[t_day]  # in ct/h
+            ch4_volumeflow = meth_stats['Meth_CH4_flow'][l+1] * EnvConfig.convert_mol_to_Nm3            # in [Nm³/s]
+            h2_res_volumeflow = meth_stats['Meth_H2_res_flow'][l+1] * EnvConfig.convert_mol_to_Nm3      # in [Nm³/s]
+            Q_ch4 = ch4_volumeflow * EnvConfig.H_u_CH4 * 1000                                           # Thermal power of methane in [kW]
+            Q_h2_res = h2_res_volumeflow * EnvConfig.H_u_H2 * 1000                                      # Thermal power of residual hydrogen in [kW]
+            ch4_revenues = (Q_ch4 + Q_h2_res) * gas_price_data[t_day]                                   # SNG revenues in [ct/h]
 
-            power_chp = Q_ch4 * EnvConfig.eta_CHP * b_s3  # in kW
-            Q_chp = Q_ch4 * (1 - EnvConfig.eta_CHP) * b_s3  # in kW
-            chp_revenues = power_chp * EnvConfig.eeg_el_price  # in ct/h
+            # CHP revenues (Scenario 3):               If Scenario == 3: self.b_s3 = 1 else self.b_s3 = 0
+            power_chp = Q_ch4 * EnvConfig.eta_CHP * b_s3                        # Electrical power of the CHP in [kW]
+            Q_chp = Q_ch4 * (1 - EnvConfig.eta_CHP) * b_s3                      # Thermal power of the produced steam in the CHP in [kW]
+            chp_revenues = power_chp * EnvConfig.eeg_el_price                   # EEG tender revenues in [ct/h]
 
-            Q_steam = meth_stats['Meth_H2O_flow'][l+1] * (EnvConfig.dt_water * EnvConfig.cp_water +
-                                                          EnvConfig.h_H2O_evap) / 3600  # in kW
-            steam_revenues = (Q_steam + Q_chp) * EnvConfig.heat_price  # in ct/h
+            # Steam revenues (Scenario 1+2+3):          If Scenario != 3: self.Q_chp = 0
+            Q_steam = meth_stats['Meth_H2O_flow'][l+1] * (EnvConfig.dt_water * EnvConfig.cp_water + EnvConfig.h_H2O_evap) / 3600    # Thermal power of the produced steam in the methanation plant in [kW]
+            steam_revenues = (Q_steam + Q_chp) * EnvConfig.heat_price                                                               # in [ct/h]
 
-            h2_volumeflow = meth_stats['Meth_H2_flow'][l+1] * EnvConfig.convert_mol_to_Nm3  # in Nm³/s
-            o2_volumeflow = 1 / 2 * h2_volumeflow * 3600  # in Nm³/h = Nm³/s * 3600 s/h
-            o2_revenues = o2_volumeflow * EnvConfig.o2_price  # in ct/h
+            # Oxygen revenues (Scenario 1+2+3):
+            h2_volumeflow = meth_stats['Meth_H2_flow'][l+1] * EnvConfig.convert_mol_to_Nm3          # in [Nm³/s]
+            o2_volumeflow = 1 / 2 * h2_volumeflow * 3600                                            # in [Nm³/h] = [Nm³/s * 3600 s/h]
+            o2_revenues = o2_volumeflow * EnvConfig.o2_price                                        # Oxygen revenues in [ct/h]
 
-            Meth_CO2_mass_flow = meth_stats['Meth_CH4_flow'][l+1] * EnvConfig.Molar_mass_CO2 / 1000  # in kg/s
-            eua_revenues = Meth_CO2_mass_flow / 1000 * 3600 * eua_price_data[t_day] * 100  # in ct/h = kg/s * t/1000kg * 3600 s/h * €/t * 100 ct/€
+            # EUA revenues (Scenario 1+2):              If Scenario == 3: self.eua_price_h[0] = 0
+            Meth_CO2_mass_flow = meth_stats['Meth_CH4_flow'][l+1] * EnvConfig.Molar_mass_CO2 / 1000     # Consumed CO2 mass flow in [kg/s]
+            eua_revenues = Meth_CO2_mass_flow / 1000 * 3600 * eua_price_data[t_day] * 100               # EUA revenues in ct/h = kg/s * t/1000kg * 3600 s/h * €/t * 100 ct/€
 
-            # Linear regression model for LHV efficiency of an 6 MW electrolyzer (maximum reference power)
-            elec_costs_heating = meth_stats['Meth_el_heating'][l+1] / 1000 * el_price_data[t]  # in ct/h
-            load_elec = h2_volumeflow / EnvConfig.max_h2_volumeflow
+            # Linear regression model for LHV efficiency of a 6 MW electrolyzer
+            # Costs for electricity:
+            elec_costs_heating = meth_stats['Meth_el_heating'][l+1] / 1000 * el_price_data[t]       # Electricity costs for methanation heating in [ct/h]
+            load_elec = h2_volumeflow / EnvConfig.max_h2_volumeflow                                 # Electrolyzer load
             if load_elec < EnvConfig.min_load_electrolyzer:
                 eta_electrolyzer = 0.02
             else:
                 eta_electrolyzer = (0.598 - 0.325 * load_elec ** 2 + 0.218 * load_elec ** 3 +
                                     0.01 * load_elec ** (-1) - 1.68 * 10 ** (-3) * load_elec ** (-2) +
                                     2.51 * 10 ** (-5) * load_elec ** (-3))
-            elec_costs_electrolyzer = h2_volumeflow * EnvConfig.H_u_H2 * 1000 / eta_electrolyzer * el_price_data[t]
+            elec_costs_electrolyzer = h2_volumeflow * EnvConfig.H_u_H2 * 1000 / eta_electrolyzer * el_price_data[t] # Electricity costs for water electrolysis in [ct/h]
             elec_costs = elec_costs_heating + elec_costs_electrolyzer
 
             # Costs for water consumption:
-            water_elec = meth_stats['Meth_H2_flow'][l+1] * EnvConfig.Molar_mass_H2O / 1000 * 3600  # in kg/h (1 mol water is consumed for producing 1 mol H2)
-            water_costs = (meth_stats['Meth_H2O_flow'][l+1] + water_elec) / EnvConfig.rho_water * \
-                          EnvConfig.water_price  # in ct/h = kg/h / kg/m³ * ct/m³
+            water_elec = meth_stats['Meth_H2_flow'][l+1] * EnvConfig.Molar_mass_H2O / 1000 * 3600                       # Water demand of the electrolyzer in [kg/h] (1 mol water is consumed for producing 1 mol H2)
+            water_costs = (meth_stats['Meth_H2O_flow'][l+1] + water_elec) / EnvConfig.rho_water * EnvConfig.water_price # Water costs in [ct/h] = [kg/h / (kg/m³) * ct/m³]
 
             rew_l[l] = (ch4_revenues + chp_revenues + steam_revenues + eua_revenues +
                         o2_revenues - elec_costs - water_costs)  # in ct/h
-
-            # if t == 1000:             ################################################################### DELETE #####################################
-            #     print(data_name)
-            #     print("Meth_H2_flow", meth_stats['Meth_H2_flow'][l], "Meth_CH4_flow", meth_stats['Meth_CH4_flow'][l], "Meth_H2_res_flow", meth_stats['Meth_H2_res_flow'][l], "Meth_H2O_flow", meth_stats['Meth_H2O_flow'][l],"Meth_el_heating", meth_stats['Meth_el_heating'][l],"el_price_h[0]",el_price_data[t], "gas_price_h[0]", gas_price_data[t_day], "eua_price_h[0]",eua_price_data[t_day])
-            #     print("h2_volumeflow", h2_volumeflow, "ch4_volumeflow", ch4_volumeflow, "h2_res_volumeflow",
-            #           h2_res_volumeflow, "Q_ch4", Q_ch4, "Q_h2_res",
-            #           Q_h2_res, "Meth_CO2_mass_flow", Meth_CO2_mass_flow)
-            #     print("ch4_revenues",ch4_revenues,"chp_revenues",chp_revenues,"steam_revenues",steam_revenues,"o2_revenues",o2_revenues,"eua_revenues",eua_revenues,"elec_costs_heating",elec_costs_heating,"elec_costs_electrolyzer",elec_costs_electrolyzer,"water_costs",water_costs )
-            #     print(load_elec, eta_electrolyzer, l)
-            #     print("REW:", (ch4_revenues + chp_revenues + steam_revenues + eua_revenues + o2_revenues - elec_costs - water_costs))
-
+        
         tmp = max(rew_l)
         index = rew_l.index(tmp)
-
         rew = max(rew_l)
-        # print("REW_max=", rew)
 
-        stats[t, 0] = t                         # counts the simulated hours ##################MAKE SHORTER ###############################
+        # Assign values
+        stats[t, 0] = t
         stats[t, 1] = el_price_data[t]
         stats[t, 2] = gas_price_data[t_day]
         stats[t, 3] = eua_price_data[t_day]
 
-        if rew > 0:                     ##################MAKE SHORTER ###############################
-            stats[t, 4] = meth_stats['Meth_State'][index + 1]
-            stats[t, 5] = meth_stats['Meth_Action'][index + 1]
-            stats[t, 6] = meth_stats['Meth_Hot_Cold'][index + 1]
-            stats[t, 7] = meth_stats['Meth_T_cat'][index + 1]
-            stats[t, 8] = meth_stats['Meth_H2_flow'][index + 1]
-            stats[t, 9] = meth_stats['Meth_CH4_flow'][index + 1]
-            stats[t, 10] = meth_stats['Meth_H2O_flow'][index + 1]
-            stats[t, 11] = meth_stats['Meth_el_heating'][index + 1]
-            stats[t, 12] = ch4_revenues
-            stats[t, 13] = steam_revenues
-            stats[t, 14] = o2_revenues
-            stats[t, 15] = eua_revenues
-            stats[t, 16] = chp_revenues
-            stats[t, 17] = -elec_costs_heating
-            stats[t, 18] = -elec_costs_electrolyzer
-            stats[t, 19] = -water_costs
-            cum_rew += rew                          # cum_rew in [ct] -> cum_rew = rew * 1h = [ct/h * 1h] = [ct]
+        # Check if rew > 0
+        if rew > 0:
+            stats[t, 4:20] = [meth_stats['Meth_State'][index + 1], 
+                              meth_stats['Meth_Action'][index + 1],
+                              meth_stats['Meth_Hot_Cold'][index + 1],
+                              meth_stats['Meth_T_cat'][index + 1],
+                              meth_stats['Meth_H2_flow'][index + 1],
+                              meth_stats['Meth_CH4_flow'][index + 1],
+                              meth_stats['Meth_H2O_flow'][index + 1],
+                              meth_stats['Meth_el_heating'][index + 1],
+                              ch4_revenues, steam_revenues, o2_revenues, eua_revenues, chp_revenues,
+                              -elec_costs_heating, -elec_costs_electrolyzer, -water_costs
+            ]
             stats[t, 23] = index
-        else:                       ##################MAKE SHORTER ###############################
-            stats[t, 4] = meth_stats['Meth_State'][0]
-            stats[t, 5] = meth_stats['Meth_Action'][0]
-            stats[t, 6] = meth_stats['Meth_Hot_Cold'][0]
-            stats[t, 7] = meth_stats['Meth_T_cat'][0]
-            stats[t, 8] = meth_stats['Meth_H2_flow'][0]
-            stats[t, 9] = meth_stats['Meth_CH4_flow'][0]
-            stats[t, 10] = meth_stats['Meth_H2O_flow'][0]
-            stats[t, 11] = meth_stats['Meth_el_heating'][0]
-            stats[t, 12] = 0
-            stats[t, 13] = 0
-            stats[t, 14] = 0
-            stats[t, 15] = 0
-            stats[t, 16] = 0
-            stats[t, 17] = 0
-            stats[t, 18] = 0
-            stats[t, 19] = 0
+            cum_rew += rew
+        else:
+            stats[t, 4:20] = [meth_stats['Meth_State'][0], 
+                              meth_stats['Meth_Action'][0],
+                              meth_stats['Meth_Hot_Cold'][0],
+                              meth_stats['Meth_T_cat'][0],
+                              meth_stats['Meth_H2_flow'][0],
+                              meth_stats['Meth_CH4_flow'][0],
+                              meth_stats['Meth_H2O_flow'][0],
+                              meth_stats['Meth_el_heating'][0]] + [0] * 8
             stats[t, 23] = -1
 
+        # Final updates
         stats[t, 20] = rew
         stats[t, 21] = cum_rew
 
