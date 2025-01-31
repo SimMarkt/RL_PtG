@@ -17,6 +17,7 @@ noise : 10                      # noise factor when changing the methanation sta
 eps_len_d : 59                  # No. of days in an episode (episodes are randomly selected from the entire training data set without replacement)
 state_change_penalty : 0.0      # Factor which enables reward penalty during training (if state_change_penalty = 0.0: No reward penalty; if state_change_penalty > 0.0: Reward penalty on mode transitions;)
 sim_step : 600                  # Frequency for taking an action in [s]
+raw_modified : mod              # Specifies the type of state design using raw energy market prices ('raw') or modified economic metrices ('mod')
 
 # file paths of energy spot market data for training and evaluation:
 # (_train: training set; _val: validation set; _test: test set)

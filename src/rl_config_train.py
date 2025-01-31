@@ -34,8 +34,9 @@ class TrainConfiguration:
 
         self.parallel = train_config['parallel']   # specifies the computation setup: "Singleprocessing" (DummyVecEnv) or "Multiprocessing" (SubprocVecEnv)
         self.train_or_eval = train_config['train_or_eval']         # specifies whether the environment provides detailed descriptions of the state for evaluation ("eval") or not ("train" - recommended for training)
+        self.eval_trials = train_config['eval_trials']              # No. of evaluation trials in validation and testing (to appropriately assess stochastic policies)
 
-        self.total_steps = train_config['total_steps']          # total number of training steps
+        self.train_steps = train_config['train_steps']          # No. of training steps
         self.test_steps = train_config['test_steps']            # Validation interval (Number of steps after which the RL agent is evaluated)
         self.r_seed_train = train_config['r_seed_train']         # random seeds for neural network initialization (and environment randomness) of the training set
         self.r_seed_test = train_config['r_seed_test']         # random seeds for neural network initialization (and environment randomness) of the validation and test sets
