@@ -10,7 +10,7 @@ com_conf : pc               # selected computational resources either 'pc' (loca
 device : auto               # computational device ['cpu', 'cuda', 'auto'] - 'auto' will run the code on GPU if possible
 str_inv : train           # specifies the training results and models to a specific investigation
 str_inv_load : pretrain   # specifies the name of the pretrained model  
-model_conf : save_model   # simple_train: Train RL from scratch without saving the model afterwards
+model_conf : simple_train   # simple_train: Train RL from scratch without saving the model afterwards
                             # save_model: Train RL from scratch and save the model afterwards
                             # load_model: Load a pretrained RL model and continue with training without saving the model afterwards
                             # save_load_model: Load a pretrained RL model and continue with training and save the model afterwards
