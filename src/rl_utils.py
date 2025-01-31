@@ -13,10 +13,117 @@ from matplotlib.path import Path
 import matplotlib.patches as patches
 import math
 
+from gymnasium.envs.registration import make
+from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv, SubprocVecEnv
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.callbacks import EvalCallback
+
 from src.rl_config_agent import AgentConfiguration
 from src.rl_config_env import EnvConfiguration
 from src.rl_config_train import TrainConfiguration
 from src.rl_opt import calculate_optimum
+from functools import partial
+
+# def _make_env(env_id, n_envs, seed, env_kwargs, vec_env_cls=DummyVecEnv):
+#     """ 
+#         Helper function to create and normalized environments 
+#     """
+#     env = make_vec_env(env_id=env_id, n_envs=n_envs, seed=seed, vec_env_cls=vec_env_cls, env_kwargs=env_kwargs)
+#     return VecNormalize(env, norm_obs=False)
+
+# def eval_callback_dec(env_fn):
+#     """ Decorator to create an EvalCallback for validation/testing environments """
+#     def wrapper(env_id, str_id, TrainConfig, AgentConfig, env_kwargs, suffix):
+#         env = env_fn(env_id, TrainConfig.eval_trials, TrainConfig.seed_test, env_kwargs)
+#         return EvalCallback(env,
+#                             best_model_save_path=f"{TrainConfig.path}/logs/{str_id}_{suffix}/",
+#                             n_eval_episodes=TrainConfig.eval_trials,
+#                             log_path=f"{TrainConfig.path}/logs/",
+#                             eval_freq=int(TrainConfig.test_steps / AgentConfig.n_envs),
+#                             deterministic=True, render=False, verbose=0)
+#     return wrapper
+
+# @eval_callback_dec
+# def _make_eval_env(env_id, n_envs, seed, env_kwargs):
+#     """ Creates an evaluation environment """
+#     return _make_env(env_id, n_envs, seed, env_kwargs)
+
+# def create_vec_envs(env_id, str_id, AgentConfig, TrainConfig, env_kwargs_data):
+#     """
+#     Creates vectorized environments for training, validation, and testing
+#     """
+
+#     # Determine the correct vectorized environment class based on parallelization
+#     vec_env_cls = DummyVecEnv if TrainConfig.parallel == "Singleprocessing" else SubprocVecEnv
+
+#     # Create training environment
+#     env_train = _make_env(env_id, AgentConfig.n_envs, TrainConfig.seed_train, 
+#                           dict(dict_input=env_kwargs_data['env_kwargs_train'], 
+#                                train_or_eval=TrainConfig.train_or_eval, render_mode="None"), vec_env_cls)
+
+#     # Create evaluation callbacks using the decorator
+#     eval_callback_val = _make_eval_env(env_id, str_id, TrainConfig, AgentConfig, env_kwargs_data['env_kwargs_val'], "val")
+#     eval_callback_test = _make_eval_env(env_id, str_id, TrainConfig, AgentConfig, env_kwargs_data['env_kwargs_test'], "test")
+
+#     return env_train, eval_callback_val, eval_callback_test
+
+def create_vec_envs(env_id, str_id, AgentConfig, TrainConfig, env_kwargs_data):            ######### MAKE SHORTER ########### MAYBE WITH A DECORATOR ################
+    """
+        Creates vectorized environments for training, validation, and testing
+        :param env_id: ID of the environment
+        :param str_id: String for identification of the present training run
+        :param AgentConfig: Agent configuration in a class object
+        :param TrainConfig: Training configuration in a class object
+        :return env_kwargs_data: Dictionaries with kwargs of training, validation, and test environments
+        :return eval_callback_val: Callback object with the validation environment for periodic evaluation (validation for hyperparameter tuning)
+        :return eval_callback_test: Callback object with the test environment for periodic evaluation (testing for error evaluation of the tuned RL model)
+    """
+
+    # Training environment
+    if TrainConfig.parallel == "Singleprocessing":
+        # DummyVecEnv -> computes each workers interaction in serial, if calculating the env itself is quite fast
+        env_train = make_vec_env(env_id=env_id, n_envs=AgentConfig.n_envs, seed=TrainConfig.seed_train, vec_env_cls=DummyVecEnv,
+                           env_kwargs=dict(dict_input=env_kwargs_data['env_kwargs_train'], train_or_eval=TrainConfig.train_or_eval,
+                                           render_mode="None"))
+    elif TrainConfig.parallel == "Multiprocessing":
+        # SubprocVecEnv for multiprocessing -> computes each workers interaction in parallel, if calculating the env itself is quite slow
+        env_train = make_vec_env(env_id=env_id, n_envs=AgentConfig.n_envs, seed=TrainConfig.seed_train, vec_env_cls=SubprocVecEnv,
+                           env_kwargs=dict(dict_input=env_kwargs_data['env_kwargs_train'], train_or_eval=TrainConfig.train_or_eval,
+                                           render_mode="None"))
+                         #, vec_env_kwargs=dict(start_method="fork"/"spawn"/"forkserver")) # optional
+    else:
+        assert False, 'Choose either "Singleprocessing" or "Multiprocessing" in RL_PTG/config/config_train.yaml -> parallel!'
+
+    env_train = VecNormalize(env_train, norm_obs=False)   # Normalization of rewards with a moving average (norm_obs=False -> observations are normalized separately within the environment)
+
+    # Environment for validation, EvalCallback creates a callback function which is called during RL learning ###################ZUSAMMENFASSEN ENV_VAL UND ENV_TEST
+    env_val = make_vec_env(env_id, n_envs=TrainConfig.eval_trials, seed=TrainConfig.seed_test, vec_env_cls=DummyVecEnv,
+                            env_kwargs=dict(dict_input=env_kwargs_data['env_kwargs_val'], train_or_eval=TrainConfig.train_or_eval,
+                                            render_mode="None"))
+    env_val = VecNormalize(env_val, norm_obs=False)
+
+    eval_callback_val = EvalCallback(env_val,
+                                      best_model_save_path= TrainConfig.path + "/logs/" + str_id + "_val/",
+                                      n_eval_episodes=TrainConfig.eval_trials,
+                                      log_path=TrainConfig.path + "/logs/", 
+                                      eval_freq=int(TrainConfig.test_steps / AgentConfig.n_envs),              # eval_freq=int(TrainConfig.test_steps / EnvConfig.n_envs) performs validation after test_steps steps independent of the No. of workers 
+                                      deterministic=True, render=False, verbose=0)
+
+    # Environment for testing, EvalCallback creates a callback function which is called during RL learning
+    env_test = make_vec_env(env_id, n_envs=TrainConfig.eval_trials, seed=TrainConfig.seed_test, vec_env_cls=DummyVecEnv,
+                            env_kwargs=dict(dict_input=env_kwargs_data['env_kwargs_test'], train_or_eval=TrainConfig.train_or_eval,
+                                            render_mode="None"))
+    env_test = VecNormalize(env_test, norm_obs=False)
+
+    eval_callback_test = EvalCallback(env_test,
+                                      best_model_save_path=TrainConfig.path + "/logs/" + str_id + "_test/",
+                                      n_eval_episodes=TrainConfig.eval_trials,
+                                      log_path=TrainConfig.path + "/logs/", 
+                                      eval_freq=int(TrainConfig.test_steps / AgentConfig.n_envs),              # eval_freq=int(test_steps / EnvConfig.n_envs) performs validation after test_steps steps independent of the No. of workers 
+                                      deterministic=True, render=False, verbose=0)
+    
+    return env_train, env_test, eval_callback_val, eval_callback_test
+
 
 def import_market_data(csvfile: str, type: str, path: str):
     """
@@ -136,6 +243,44 @@ def load_data(EnvConfig, TrainConfig):
     assert EnvConfig.train_len_d >= EnvConfig.eps_len_d, f'Training set size ({EnvConfig.train_len_d}) must be larger or at least equal to the defined episode length ({EnvConfig.eps_len_d})!'
 
     return dict_price_data, dict_op_data
+
+def initial_print():
+    print('\n--------------------------------------------------------------------------------------------')    
+    print('---------RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization---------')
+    print('--------------------------------------------------------------------------------------------\n')
+
+def config_print(AgentConfig, EnvConfig, TrainConfig):
+    """
+        Aggregates and prints general settings
+        :param AgentConfig: Agent configuration in a class object
+        :param EnvConfig: Environment configuration in a class object
+        :param TrainConfig: Training configuration in a class object
+        :return str_id: String for identification of the present training run
+    """
+    print("Set training case...")
+    if TrainConfig.model_conf == "simple_train" or TrainConfig.model_conf == "save_model":
+        print(f"---Training case details: RL_PtG{TrainConfig.str_inv} | {TrainConfig.model_conf} ")
+    else: 
+        print(f"---Training case details: RL_PtG{TrainConfig.str_inv} | {TrainConfig.model_conf} | (Pretrained model: RL_PtG{TrainConfig.str_inv_load}) ")
+    str_id = "RL_PtG_" + TrainConfig.str_inv
+    if EnvConfig.scenario == 1: print("    > Business case (_BS):\t\t\t 1 - Trading at the electricity, gas, and emission spot markets")
+    elif EnvConfig.scenario == 2: print("    > Business case  (_BS):\t\t\t 2 - Fixed synthetic natural gas (SNG) price and trading at the electricity and emission spot markets")
+    else: print("    > Business case (_BS):\t\t\t 3 - Participating in EEG tenders by using a CHP plant and trading at the electricity spot markets")
+    str_id += "_BS" + str(EnvConfig.scenario)
+    print(f"    > Operational load level (_OP) :\t\t {EnvConfig.operation}")
+    str_id += "_" + str(EnvConfig.operation)
+    if EnvConfig.raw_modified == 'raw':    print(f"    > State feature design (_sf) :\t\t Raw energy market data (electricity, gas, and EUA market signals)")
+    else: print(f"    > State feature design (_sf) :\t\t Modified energy market data (potential reward and load identifier)")
+    str_id += "_sf" + str(EnvConfig.raw_modified)
+    print(f"    > Training episode length (_ep) :\t\t {EnvConfig.eps_len_d} days")
+    str_id += "_ep" + str(EnvConfig.eps_len_d)
+    print(f"    > Time step size (action frequency) (_ts) :\t {EnvConfig.sim_step} seconds")
+    str_id += "_ts" + str(EnvConfig.sim_step)
+    print(f"    > Random seed (_rs) :\t\t\t {TrainConfig.seed_train}")
+    str_id += AgentConfig.get_hyper()
+    str_id += "_rs" + str(TrainConfig.seed_train)                       # Random seed at the end of "str_id" for file simplified file
+
+    return str_id
 
 class Preprocessing():
     """
@@ -474,189 +619,184 @@ class Preprocessing():
         env_kwargs["raw_modified"] = self.EnvConfig.raw_modified     # Specifies the type of state design using raw energy market prices ('raw') or modified economic metrices ('mod')
 
         return env_kwargs
-    
-def initial_print():
-    print('\n--------------------------------------------------------------------------------------------')    
-    print('---------RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization---------')
-    print('--------------------------------------------------------------------------------------------\n')
-
-def config_print(AgentConfig, EnvConfig, TrainConfig):
+        
+class Postprocessing():
     """
-        Aggregates and prints general settings
-        :param AgentConfig: Agent configuration in a class object
-        :param EnvConfig: Environment configuration in a class object
-        :param TrainConfig: Training configuration in a class object
-        :return str_id: String for identification of the present training run
+        A class that contains variables and functions for preprocessing of energy market and process data
     """
-    print("Set training case...")
-    if TrainConfig.model_conf == "simple_train" or TrainConfig.model_conf == "save_model":
-        print(f"---Training case details: RL_PtG{TrainConfig.str_inv} | {TrainConfig.model_conf} ")
-    else: 
-        print(f"---Training case details: RL_PtG{TrainConfig.str_inv} | {TrainConfig.model_conf} | (Pretrained model: RL_PtG{TrainConfig.str_inv_load}) ")
-    str_id = "RL_PtG_" + TrainConfig.str_inv
-    if EnvConfig.scenario == 1: print("    > Business case (_BS):\t\t\t 1 - Trading at the electricity, gas, and emission spot markets")
-    elif EnvConfig.scenario == 2: print("    > Business case  (_BS):\t\t\t 2 - Fixed synthetic natural gas (SNG) price and trading at the electricity and emission spot markets")
-    else: print("    > Business case (_BS):\t\t\t 3 - Participating in EEG tenders by using a CHP plant and trading at the electricity spot markets")
-    str_id += "_BS" + str(EnvConfig.scenario)
-    print(f"    > Operational load level (_OP) :\t\t {EnvConfig.operation}")
-    str_id += "_" + str(EnvConfig.operation)
-    if EnvConfig.raw_modified == 'raw':    print(f"    > State feature design (_sf) :\t\t Raw energy market data (electricity, gas, and EUA market signals)")
-    else: print(f"    > State feature design (_sf) :\t\t Modified energy market data (potential reward and load identifier)")
-    str_id += "_sf" + str(EnvConfig.raw_modified)
-    print(f"    > Training episode length (_ep) :\t\t {EnvConfig.eps_len_d} days")
-    str_id += "_ep" + str(EnvConfig.eps_len_d)
-    print(f"    > Time step size (action frequency) (_ts) :\t {EnvConfig.sim_step} seconds")
-    str_id += "_ts" + str(EnvConfig.sim_step)
-    print(f"    > Random seed (_rs) :\t\t\t {TrainConfig.seed_train}")
-    str_id += AgentConfig.get_hyper()
-    str_id += "_rs" + str(TrainConfig.seed_train)                       # Random seed at the end of "str_id" for file simplified file
+    def __init__(self, str_id, dict_price_data, dict_op_data, AgentConfig, EnvConfig, TrainConfig, env_test):
+        """
+            Initialization of variables
+            :param str_id: String for identification of the present training run
+            :param dict_price_data: Dictionary with market data
+            :param dict_op_data: Dictionary with dynamic process data
+            :param AgentConfig: Agent configuration in a class object
+            :param EnvConfig: Environment configuration in a class object
+            :param TrainConfig: Training configuration in a class object
+            :param env_test: Test environment
+        """
+        # Initialization
+        self.AgentConfig = AgentConfig
+        self.EnvConfig = EnvConfig
+        self.TrainConfig = TrainConfig
+        self.dict_price_data = dict_price_data
+        self.dict_op_data = dict_op_data
 
-    return str_id
+        print("---Load best model ./plots/ ...\n") 
+        self.model = AgentConfig.load_model(env_test, tb_log, str_id, 'eval')
 
-def multiple_plots(stats_dict: dict, time_step_size: int, plot_name: str):
-    """
-    Creates a plot with multiple subplots of the time series and the methanation operation according to the agent
-    :param stats_dict: dictionary with the prediction results
-    :param time_step_size: time step size in the simulation
-    :param plot_name: plot title
-    :return
-    """
+    def test_performance(self):
+        # PERFORM RL policy on the test set
+        return None
 
-    part_full_b = stats_dict['partial_full_b']
-    time_sim = stats_dict['steps_stats'] * time_step_size * 1 / 3600 / 24  # in days
-    time_sim_profit =  np.linspace(0, int(len(part_full_b))-1, num=int(len(part_full_b))) / 24
-    profit_series = part_full_b * 50
+    def plot_results():
+        print("---Plot and save RL performance on the test set under ./plots/ ...\n") 
+        return None
 
-    fig, axs = plt.subplots(8, 1, figsize=(10, 6), sharex=True, sharey=False)
-    axs[0].plot(time_sim, stats_dict['el_price_stats'], label='el_price')
-    axs[0].plot(time_sim, stats_dict['gas_price_stats'], 'g', label='gas_price')
-    axs[0].plot(time_sim_profit, profit_series, 'r', label='profitable')
-    # axs[0].set_ylim([0, 5.5])
-    axs[0].set_ylabel('ct/kWh')
-    axs[0].legend(loc="upper right", fontsize='x-small')
-    axs0_1 = axs[0].twinx()
-    axs0_1.plot(time_sim, stats_dict['eua_price_stats'], 'k', label='eua_price')
-    axs0_1.set_ylabel('eua_price [€/t]')
-    axs0_1.legend(loc="lower right", fontsize='x-small')
-    axs[1].plot(time_sim, stats_dict['Meth_State_stats'], 'b', label='state')
-    axs[1].plot(time_sim, stats_dict['Meth_Action_stats'], 'g', label='action')
-    axs[1].plot(time_sim, stats_dict['Meth_Hot_Cold_stats'], 'k', label='hot/cold-status')
-    # axs[1].set_ylim([0, 12])
-    axs[1].set_ylabel('status')
-    axs[1].legend(loc="upper right", fontsize='x-small')
-    axs[2].plot(time_sim, stats_dict['Meth_T_cat_stats'], 'k', label='T_Cat')
-    # axs[2].plot(time_sim, stats_dict['Meth_T_cat_stats'], 'k', marker='o', markersize=2)
-    # axs[2].set_ylim([0, 600])
-    axs[2].set_ylabel('°C')
-    axs[2].legend(loc="upper right", fontsize='x-small')
-    axs[3].plot(time_sim, stats_dict['Meth_H2_flow_stats'], 'b', label='H2')
-    axs[3].plot(time_sim, stats_dict['Meth_CH4_flow_stats'], 'g', label='CH4')
-    # axs[3].set_ylim([0, 0.025])
-    axs[3].set_ylabel('mol/s')
-    axs[3].legend(loc="upper right", fontsize='x-small')
-    axs[4].plot(time_sim, stats_dict['Meth_H2O_flow_stats'], label='H2O')
-    # axs[4].set_ylim([0, 0.72])
-    axs[4].set_ylabel('kg/h')
-    axs[4].legend(loc="upper right", fontsize='x-small')
-    axs[5].plot(time_sim, stats_dict['Meth_el_heating_stats'], label='P_el_heat')
-    # axs[5].set_ylim([-10, 2000])
-    axs[5].set_ylabel('W')
-    axs[5].legend(loc="upper right", fontsize='x-small')
-    axs[6].plot(time_sim, stats_dict['Meth_ch4_revenues_stats'], 'g', label='CH4')
-    axs[6].plot(time_sim, stats_dict['Meth_steam_revenues_stats'], 'b', label='H2O')
-    axs[6].plot(time_sim, stats_dict['Meth_o2_revenues_stats'], 'lightgray', label='O2')
-    axs[6].plot(time_sim, stats_dict['Meth_elec_costs_heating_stats'], 'k', label='P_el_heating')
-    axs[6].plot(time_sim, stats_dict['Meth_elec_costs_electrolyzer_stats'], 'r', label='P_el_lyzer')
-    axs[6].set_ylabel('ct/h')
-    axs[6].legend(loc="upper right", fontsize='x-small')
-    axs[7].plot(time_sim, stats_dict['Meth_reward_stats'], 'g', label='Reward')
-    axs[7].set_ylabel('r [ct/h]')
-    axs[7].set_xlabel('Time [d]')
-    # axs[7].set_xlim([-10, 10000])
-    axs[7].legend(loc="upper right", fontsize='x-small')
-    axs7_1 = axs[7].twinx()
-    axs7_1.plot(time_sim, stats_dict['Meth_cum_reward_stats'], 'k', label='Cumulative Reward')
-    axs7_1.set_ylabel('cum_r [ct]')
-    axs7_1.legend(loc="lower right", fontsize='x-small')
+    def multiple_plots(self, stats_dict: dict, time_step_size: int, plot_name: str):
+        """
+        Creates a plot with multiple subplots of the time series and the methanation operation according to the agent
+        :param stats_dict: dictionary with the prediction results
+        :param time_step_size: time step size in the simulation
+        :param plot_name: plot title
+        :return
+        """
 
-    fig.suptitle(" Alg:" + plot_name + "\n Rew:" + str(np.round(stats_dict['Meth_cum_reward_stats'][-1], 0)))
-    plt.savefig('plots/' + plot_name + '_plot.png')
-    print("Reward =", stats_dict['Meth_cum_reward_stats'][-1])
+        part_full_b = stats_dict['partial_full_b']
+        time_sim = stats_dict['steps_stats'] * time_step_size * 1 / 3600 / 24  # in days
+        time_sim_profit =  np.linspace(0, int(len(part_full_b))-1, num=int(len(part_full_b))) / 24
+        profit_series = part_full_b * 50
 
-    # plt.show()
-    plt.close()
+        fig, axs = plt.subplots(8, 1, figsize=(10, 6), sharex=True, sharey=False)
+        axs[0].plot(time_sim, stats_dict['el_price_stats'], label='el_price')
+        axs[0].plot(time_sim, stats_dict['gas_price_stats'], 'g', label='gas_price')
+        axs[0].plot(time_sim_profit, profit_series, 'r', label='profitable')
+        # axs[0].set_ylim([0, 5.5])
+        axs[0].set_ylabel('ct/kWh')
+        axs[0].legend(loc="upper right", fontsize='x-small')
+        axs0_1 = axs[0].twinx()
+        axs0_1.plot(time_sim, stats_dict['eua_price_stats'], 'k', label='eua_price')
+        axs0_1.set_ylabel('eua_price [€/t]')
+        axs0_1.legend(loc="lower right", fontsize='x-small')
+        axs[1].plot(time_sim, stats_dict['Meth_State_stats'], 'b', label='state')
+        axs[1].plot(time_sim, stats_dict['Meth_Action_stats'], 'g', label='action')
+        axs[1].plot(time_sim, stats_dict['Meth_Hot_Cold_stats'], 'k', label='hot/cold-status')
+        # axs[1].set_ylim([0, 12])
+        axs[1].set_ylabel('status')
+        axs[1].legend(loc="upper right", fontsize='x-small')
+        axs[2].plot(time_sim, stats_dict['Meth_T_cat_stats'], 'k', label='T_Cat')
+        # axs[2].plot(time_sim, stats_dict['Meth_T_cat_stats'], 'k', marker='o', markersize=2)
+        # axs[2].set_ylim([0, 600])
+        axs[2].set_ylabel('°C')
+        axs[2].legend(loc="upper right", fontsize='x-small')
+        axs[3].plot(time_sim, stats_dict['Meth_H2_flow_stats'], 'b', label='H2')
+        axs[3].plot(time_sim, stats_dict['Meth_CH4_flow_stats'], 'g', label='CH4')
+        # axs[3].set_ylim([0, 0.025])
+        axs[3].set_ylabel('mol/s')
+        axs[3].legend(loc="upper right", fontsize='x-small')
+        axs[4].plot(time_sim, stats_dict['Meth_H2O_flow_stats'], label='H2O')
+        # axs[4].set_ylim([0, 0.72])
+        axs[4].set_ylabel('kg/h')
+        axs[4].legend(loc="upper right", fontsize='x-small')
+        axs[5].plot(time_sim, stats_dict['Meth_el_heating_stats'], label='P_el_heat')
+        # axs[5].set_ylim([-10, 2000])
+        axs[5].set_ylabel('W')
+        axs[5].legend(loc="upper right", fontsize='x-small')
+        axs[6].plot(time_sim, stats_dict['Meth_ch4_revenues_stats'], 'g', label='CH4')
+        axs[6].plot(time_sim, stats_dict['Meth_steam_revenues_stats'], 'b', label='H2O')
+        axs[6].plot(time_sim, stats_dict['Meth_o2_revenues_stats'], 'lightgray', label='O2')
+        axs[6].plot(time_sim, stats_dict['Meth_elec_costs_heating_stats'], 'k', label='P_el_heating')
+        axs[6].plot(time_sim, stats_dict['Meth_elec_costs_electrolyzer_stats'], 'r', label='P_el_lyzer')
+        axs[6].set_ylabel('ct/h')
+        axs[6].legend(loc="upper right", fontsize='x-small')
+        axs[7].plot(time_sim, stats_dict['Meth_reward_stats'], 'g', label='Reward')
+        axs[7].set_ylabel('r [ct/h]')
+        axs[7].set_xlabel('Time [d]')
+        # axs[7].set_xlim([-10, 10000])
+        axs[7].legend(loc="upper right", fontsize='x-small')
+        axs7_1 = axs[7].twinx()
+        axs7_1.plot(time_sim, stats_dict['Meth_cum_reward_stats'], 'k', label='Cumulative Reward')
+        axs7_1.set_ylabel('cum_r [ct]')
+        axs7_1.legend(loc="lower right", fontsize='x-small')
+
+        fig.suptitle(" Alg:" + plot_name + "\n Rew:" + str(np.round(stats_dict['Meth_cum_reward_stats'][-1], 0)))
+        plt.savefig('plots/' + plot_name + '_plot.png')
+        print("Reward =", stats_dict['Meth_cum_reward_stats'][-1])
+
+        # plt.show()
+        plt.close()
 
 
-def multiple_plots_4(stats_dict: dict, time_step_size: int, plot_name: str, potential_profit: np.array, part_full: np.array):
-    """
-    Creates a plot with multiple subplots of the time series and the methanation operation according to the agent
-    :param stats_dict: dictionary with the prediction results
-    :param time_step_size: time step size in the simulation
-    :param plot_name: plot title
-    :param profit: denotes periods with potential profit (No Profit = 0, Profit = 10)
-    :return:
-    """
+    def multiple_plots_4(self, stats_dict: dict, time_step_size: int, plot_name: str, potential_profit: np.array, part_full: np.array):
+        """
+        Creates a plot with multiple subplots of the time series and the methanation operation according to the agent
+        :param stats_dict: dictionary with the prediction results
+        :param time_step_size: time step size in the simulation
+        :param plot_name: plot title
+        :param profit: denotes periods with potential profit (No Profit = 0, Profit = 10)
+        :return:
+        """
 
-    time_sim = stats_dict['steps_stats'] * time_step_size * 1 / 3600 / 24  # in days
-    time_sim_profit =  np.linspace(0, int(len(profit))-1, num=int(len(profit))) / 24
-    profit_series = 1+ profit * 4
+        time_sim = stats_dict['steps_stats'] * time_step_size * 1 / 3600 / 24  # in days
+        time_sim_profit =  np.linspace(0, int(len(profit))-1, num=int(len(profit))) / 24
+        profit_series = 1+ profit * 4
 
-    P_PtG = stats_dict['Meth_H2_flow_stats'] / 0.0198
+        P_PtG = stats_dict['Meth_H2_flow_stats'] / 0.0198
 
-    plt.rcParams.update({'font.size': 16})
-    plt.rcParams["font.family"] = "serif"
-    plt.rcParams["font.serif"] = ["Times New Roman"]
+        plt.rcParams.update({'font.size': 16})
+        plt.rcParams["font.family"] = "serif"
+        plt.rcParams["font.serif"] = ["Times New Roman"]
 
-    pot_rew = potential_profit * time_step_size / 3600
+        pot_rew = potential_profit * time_step_size / 3600
 
-    rew_zero = np.zeros((len(time_sim),))
-    part_full_adapted = np.zeros((len(time_sim),))
-    for i in range(len(time_sim)):
-        if part_full[i] == -1:
-            part_full_adapted[i] = 2
-        elif part_full[i] == 0:
-            part_full_adapted[i] = 4
-        else:
-            part_full_adapted[i] = 5
+        rew_zero = np.zeros((len(time_sim),))
+        part_full_adapted = np.zeros((len(time_sim),))
+        for i in range(len(time_sim)):
+            if part_full[i] == -1:
+                part_full_adapted[i] = 2
+            elif part_full[i] == 0:
+                part_full_adapted[i] = 4
+            else:
+                part_full_adapted[i] = 5
 
-    fig, axs = plt.subplots(1, 1, figsize=(14, 6), sharex=True, sharey=False)
-    axs.plot(time_sim, stats_dict['Meth_State_stats'], 'b', label='state')
-    axs.plot(time_sim, part_full_adapted, 'k', linestyle="dotted", label='state')
-    axs.set_yticks([1,2,3,4,5])
-    axs.set_yticklabels(['Standby', 'Cooldown/Off', 'Startup', 'Partial Load', 'Full Load'])
-    # axs[1].set_ylim([0, 12])
-    axs.set_ylabel(' ')
-    axs.legend(loc="upper left", fontsize='small') #, bbox_to_anchor = (0.0, 0.0), ncol = 1, fancybox = True, shadow = True)
-    axs.grid(axis='y', linestyle='dashed')
-    axs0_1 = axs.twinx()
-    axs0_1.plot(time_sim, stats_dict['Meth_reward_stats'], color='g', label='Reward')
-    axs0_1.plot(time_sim, pot_rew, color='lawngreen', linestyle='dotted', label='Potential Reward')
-    axs0_1.plot(time_sim, rew_zero, color='grey', linestyle='dashed')
-    axs0_1.set_ylabel('reward')
-    axs0_1.set_xlabel('Time [d]')
-    axs0_1.set_yticks([0, 10, 20])
-    # axs3_1 = axs[3].twinx()
-    # axs3_1.plot(time_sim, stats_dict['Meth_cum_reward_stats'], 'k', label='Cumulative Reward')
-    # axs3_1.set_ylabel('cum. reward')
-    # # axs3_1.set_yticks([0, 1000, 2000])
-    # axs[3].legend(loc="upper left", fontsize='small') #, bbox_to_anchor=(0.0, 0.0), ncol=1, fancybox=True, shadow=True)
-    # axs3_1.legend(loc="upper right", fontsize='small') #, bbox_to_anchor = (0.0, 0.0), ncol = 1, fancybox = True, shadow = True)
+        fig, axs = plt.subplots(1, 1, figsize=(14, 6), sharex=True, sharey=False)
+        axs.plot(time_sim, stats_dict['Meth_State_stats'], 'b', label='state')
+        axs.plot(time_sim, part_full_adapted, 'k', linestyle="dotted", label='state')
+        axs.set_yticks([1,2,3,4,5])
+        axs.set_yticklabels(['Standby', 'Cooldown/Off', 'Startup', 'Partial Load', 'Full Load'])
+        # axs[1].set_ylim([0, 12])
+        axs.set_ylabel(' ')
+        axs.legend(loc="upper left", fontsize='small') #, bbox_to_anchor = (0.0, 0.0), ncol = 1, fancybox = True, shadow = True)
+        axs.grid(axis='y', linestyle='dashed')
+        axs0_1 = axs.twinx()
+        axs0_1.plot(time_sim, stats_dict['Meth_reward_stats'], color='g', label='Reward')
+        axs0_1.plot(time_sim, pot_rew, color='lawngreen', linestyle='dotted', label='Potential Reward')
+        axs0_1.plot(time_sim, rew_zero, color='grey', linestyle='dashed')
+        axs0_1.set_ylabel('reward')
+        axs0_1.set_xlabel('Time [d]')
+        axs0_1.set_yticks([0, 10, 20])
+        # axs3_1 = axs[3].twinx()
+        # axs3_1.plot(time_sim, stats_dict['Meth_cum_reward_stats'], 'k', label='Cumulative Reward')
+        # axs3_1.set_ylabel('cum. reward')
+        # # axs3_1.set_yticks([0, 1000, 2000])
+        # axs[3].legend(loc="upper left", fontsize='small') #, bbox_to_anchor=(0.0, 0.0), ncol=1, fancybox=True, shadow=True)
+        # axs3_1.legend(loc="upper right", fontsize='small') #, bbox_to_anchor = (0.0, 0.0), ncol = 1, fancybox = True, shadow = True)
 
-    # box = axs0_1.get_position()
-    # axs0_1.set_position([box.x0 * 1.1, box.y0 * 1.05, box.width, box.height])
-    # box = axs[1].get_position()
-    # axs[1].set_position([box.x0 * 1.1, box.y0 * 1.05, box.width, box.height])
-    # box = axs2_1.get_position()
-    # axs2_1.set_position([box.x0 * 1.1, box.y0 * 1.05, box.width, box.height])
-    # box = axs3_1.get_position()
-    # axs3_1.set_position([box.x0 * 1.1, box.y0, box.width, box.height])
+        # box = axs0_1.get_position()
+        # axs0_1.set_position([box.x0 * 1.1, box.y0 * 1.05, box.width, box.height])
+        # box = axs[1].get_position()
+        # axs[1].set_position([box.x0 * 1.1, box.y0 * 1.05, box.width, box.height])
+        # box = axs2_1.get_position()
+        # axs2_1.set_position([box.x0 * 1.1, box.y0 * 1.05, box.width, box.height])
+        # box = axs3_1.get_position()
+        # axs3_1.set_position([box.x0 * 1.1, box.y0, box.width, box.height])
 
-    fig.suptitle(" Alg:" + plot_name + "\n Rew:" + str(np.round(stats_dict['Meth_cum_reward_stats'][-1], 0)))
-    plt.savefig('plots/' + plot_name + '_plot.png')
-    # print("Reward =", stats_dict['Meth_cum_reward_stats'][-1])
+        fig.suptitle(" Alg:" + plot_name + "\n Rew:" + str(np.round(stats_dict['Meth_cum_reward_stats'][-1], 0)))
+        plt.savefig('plots/' + plot_name + '_plot.png')
+        # print("Reward =", stats_dict['Meth_cum_reward_stats'][-1])
 
-    plt.close()
-    # plt.show()
+        plt.close()
+        # plt.show()
 
 
 

@@ -22,8 +22,7 @@ class TrainConfiguration:
         assert train_config['com_conf'] in com_set, f"Wrong computation setup specified - data/config_train.yaml -> com_conf : {train_config['com_conf']} must match {com_set}"
         self.com_conf = train_config['com_conf']               # selected computational resources either 'pc' or 'slurm'
         self.device = train_config['device']               # computational device ['cpu', 'gpu', 'auto']
-        self.str_inv = train_config['str_inv']        # specifies the training results and models to a specific investigation ##################---------------------------------
-        self.str_inv_load = train_config['str_inv_load']  # specifies the name of the pretrained model  
+        self.str_inv = train_config['str_inv']        # specifies the training results and models to a specific investigation
         train_set = ['simple_train', 'save_model', 'load_model', 'save_load_model']
         assert train_config['model_conf'] in train_set, f"Wrong training setup specified - data/config_agent.yaml -> model_conf : {train_config['model_conf']} must match {train_set}"
         self.model_conf = train_config['model_conf']   # simple_train: Train RL from scratch without saving the model afterwards
