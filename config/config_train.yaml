@@ -6,21 +6,28 @@
 # > Configuration file for the training setup
 # ----------------------------------------------------------------------------------------------------------------
           
-com_conf : pc               # selected computational resources either 'pc' (local personal computer) or 'slurm' (computing cluster with SLURM management)
-device : auto               # computational device ['cpu', 'cuda', 'auto'] - 'auto' will run the code on GPU if possible
-str_inv : train           # specifies the training results and models to a specific investigation
-str_inv_load : pretrain   # specifies the name of the pretrained model  
-model_conf : simple_train   # simple_train: Train RL from scratch without saving the model afterwards
+com_conf : pc               # Selected computational resources either 'pc' (local personal computer) or 'slurm' (computing cluster with SLURM management)
+device : auto               # Computational device ['cpu', 'cuda', 'auto'] - 'auto' will run the code on GPU if possible
+str_inv : train             # Specifies the training results and models to a specific investigation
+model_conf : simple_train   # simple_train: Train RL from scratch
                             # save_model: Train RL from scratch and save the model afterwards
-                            # load_model: Load a pretrained RL model and continue with training without saving the model afterwards
+                            # load_model: Load a pretrained RL model and continue with training
                             # save_load_model: Load a pretrained RL model and continue with training and save the model afterwards
-path_files : ./log/final/   # data path with pretrained RL models
+path_files : /logs/         # Data path with the pretrained RL models
 
-parallel : Singleprocessing   # specifies the computation setup: "Singleprocessing" (DummyVecEnv, computes the interaction of each worker in serial, recommended for fast environment calculation such as ptg_gym_env.py) or "Multiprocessing" (SubprocVecEnv, computes the interaction of each worker in parallel, recommended for heavy environment calculation)
-train_or_eval : train         # specifies whether the environment provides detailed descriptions of the state for evaluation ("eval") or not ("train" - recommended for training)
-eval_trials : 5               # No. of evaluation trials in validation and testing (to appropriately assess stochastic policies)
+# parallel: Defines the computational setup:  
+# - "Singleprocessing" (DummyVecEnv): Executes each worker's interaction sequentially; recommended for fast environment computations (e.g., ptg_gym_env.py).  
+# - "Multiprocessing" (SubprocVecEnv): Executes each worker's interaction in parallel; ideal for computationally intensive environments.
+parallel : Singleprocessing
+# train_or_eval: Specifies whether the environment provides detailed state descriptions for evaluation:
+# - "eval": Provides detailed state descriptions for evaluation purposes.
+# - "train": Default setting for training, does not provide detailed state descriptions (recommended for training).
+train_or_eval : train
+eval_trials : 5               # No. of evaluation trials during validation and testing to properly assess stochastic policies.
+val_n_test : False            # Set 'True' if the RL agent should be evaluated on both validation and test sets ('False': Evaluate only on the validation set)
 
 train_steps : 10000          # No. of training steps
-test_steps : 1000            # Validation interval (Number of steps after which the RL agent is evaluated)
-r_seed_train : [3654, 467, 9327, 5797, 249, 9419]         # random seeds for neural network initialization (and environment randomness) of the training set - for single thread computation, default [3654]
-r_seed_test : [605, 5534, 2910, 7653, 8936, 1925]         # random seeds for neural network initialization (and environment randomness) of the validation set - for single thread computation, default [605]
+test_steps : 1000            # Validation interval (No. of steps after which the RL agent is evaluated)
+# Random seeds for neural network initialization and environment randomness
+r_seed_train : [3654, 467, 9327, 5797, 249, 9419]         # - of the training set - for single thread computation, default [3654]
+r_seed_test : [605, 5534, 2910, 7653, 8936, 1925]         # - of the validation set - for single thread computation, default [605]
