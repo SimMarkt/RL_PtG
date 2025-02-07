@@ -38,7 +38,7 @@ For more information on the data-based process model, please refer to ...
 Highlight the main features of the project:
 - Feature 1
 - Feature 2
-- Feature 3
+- Data: Electricity price day-ahead data from SMARD; Since the main study used gas and EUA market data provided by MONTEL without the rights to publish. Create synthesized data based on the real market data using TimeGAN algorithm.
 
 ---
 
