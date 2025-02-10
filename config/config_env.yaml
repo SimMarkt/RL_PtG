@@ -26,7 +26,7 @@ operation : OP1                 # Specifies the load level "OP1" or "OP2" of the
 price_ahead : 13                # No. of forecast values for electricity price future data (0-12h)
 time_step_op : 2                # Time step between consecutive entries in the methanation operation data sets in [s]
 noise : 10                      # Noise factor affecting state transitions in the methanation process in the gym environment [No. of steps in operation data set]
-eps_len_d : 59                  # No. of days in an episode (episodes are randomly selected from the entire training data set without replacement)
+eps_len_d : 37                  # No. of days in an episode (episodes are randomly selected from the entire training data set without replacement)
 state_change_penalty : 0.0      # Factor enabling reward penalty during training (if state_change_penalty = 0.0: No reward penalty; if state_change_penalty > 0.0: Reward penalty on mode transitions;)
 sim_step : 600                  # Frequency for taking an action in [s]
 raw_modified : mod              # Specifies the type of state design using raw energy market prices ('raw') or modified economic metrices ('mod')
