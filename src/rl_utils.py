@@ -249,6 +249,8 @@ class Preprocessing():
         self.g_e_val = np.zeros((2, 2, self.dict_price_data['gas_price_val'].shape[0] - 1))
         self.g_e_test = np.zeros((2, 2, self.dict_price_data['gas_price_test'].shape[0] - 1))
 
+        print(self.g_e_train.shape, self.dict_price_data['gas_price_train'].shape)
+
         self.g_e_train[0, 0, :] = self.dict_price_data['gas_price_train'][:-1]  
         self.g_e_train[1, 0, :] = self.dict_price_data['eua_price_train'][:-1]
         self.g_e_val[0, 0, :] = self.dict_price_data['gas_price_val'][:-1]
