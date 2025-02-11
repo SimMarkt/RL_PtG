@@ -50,6 +50,7 @@ def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_pri
 
     for t in range(len(el_price_data)):     # Loop over the electricity price data
         t_day = int(math.floor(t / 24))     # Converts the time t (1-hour resolution) into t_day (1-day-resolution)
+        if t_day == len(gas_price_data): t_day -= 1
         for l in range(len(rew_l)):                  
             # Reward calculation for both partial load and full load
 
