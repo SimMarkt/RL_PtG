@@ -1,33 +1,36 @@
 # ----------------------------------------------------------------------------------------------------------------
-# RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
+# RL_PtG: Deep Reinforcement Learning for Power-to-Gas Dispatch Optimization
 # https://github.com/SimMarkt/RL_PtG
 
 # config_train: 
-# > Configuration file for the training setup
+# > Configuration file for setting up training
 # ----------------------------------------------------------------------------------------------------------------
           
-com_conf : pc               # Selected computational resources either 'pc' (local personal computer) or 'slurm' (computing cluster with SLURM management)
-device : auto               # Computational device ['cpu', 'cuda', 'auto'] - 'auto' will run the code on GPU if possible
-str_inv : train             # Specifies the training results and models to a specific investigation
-model_conf : simple_train   # simple_train: Train RL from scratch
-                            # save_model: Train RL from scratch and save the model afterwards
-                            # load_model: Load a pretrained RL model and continue with training
-                            # save_load_model: Load a pretrained RL model and continue with training and save the model afterwards
-path_files : /logs/         # Data path with the pretrained RL models
+com_conf : pc               # Computational resources to be used: 
+                            # 'pc' (local personal computer) or 'slurm' (computing cluster with SLURM management)
+device : auto               # Computational device to use: ['cpu', 'cuda', 'auto']
+                            # 'auto' selects GPU if available, otherwise defaults to CPU
+str_inv : train             # Specifies the training results and models for a specific investigation
+model_conf : simple_train   # Model configuration options: 
+                            # 'simple_train': Train the RL model from scratch
+                            # 'save_model': Train the RL model from scratch and save it afterward
+                            # 'load_model': Load a pretrained RL model and continue training
+                            # 'save_load_model': Load a pretrained RL model, continue training, and save the updated model
+path_files : /logs/          # Path where pretrained RL models and logs are stored
 
-# parallel: Defines the computational setup:  
-# - "Singleprocessing" (DummyVecEnv): Executes each worker's interaction sequentially; recommended for fast environment computations (e.g., ptg_gym_env.py).  
-# - "Multiprocessing" (SubprocVecEnv): Executes each worker's interaction in parallel; ideal for computationally intensive environments.
+# parallel: Defines the computational setup for parallel execution: 
+# - "Singleprocessing" (DummyVecEnv): Executes worker interactions sequentially; recommended for fast environments (e.g., ptg_gym_env.py)  
+# - "Multiprocessing" (SubprocVecEnv): Executes worker interactions in parallel; ideal for computationally intensive environments
 parallel : Singleprocessing
-# train_or_eval: Specifies whether the environment provides detailed state descriptions for evaluation:
+# train_or_eval: Specifies the mode of operation, whether training or evaluation:
 # - "eval": Provides detailed state descriptions for evaluation purposes.
-# - "train": Default setting for training, does not provide detailed state descriptions (recommended for training).
+# - "train": Default setting for training; does not provide detailed state descriptions (recommended for training).
 train_or_eval : train
-eval_trials : 5               # No. of evaluation trials during validation and testing to properly assess stochastic policies.
-val_n_test : False            # Set 'True' if the RL agent should be evaluated on both validation and test sets ('False': Evaluate only on the validation set)
-
-train_steps : 1000000          # No. of training steps
-test_steps : 50000            # Validation interval (No. of steps after which the RL agent is evaluated)
-# Random seeds for neural network initialization and environment randomness
-r_seed_train : [3654, 467, 9327, 5797, 249, 9419]         # - of the training set - for single thread computation, default [3654]
-r_seed_test : [605, 5534, 2910, 7653, 8936, 1925]         # - of the validation set - for single thread computation, default [605]
+eval_trials : 5               # No. of evaluation trials to run during validation and testing to properly assess the agent's performance.
+val_n_test : False            # Set to 'True' if the RL agent should be evaluated on both validation and test sets. 
+                              # If 'False', evaluation is done only on the validation set.
+train_steps : 1000000         # No. of training steps
+test_steps : 50000            # Validation interval: No. of steps between evaluations during training
+# Random seeds for reproducibility of neural network initialization and environment randomness:
+r_seed_train : [3654, 467, 9327, 5797, 249, 9419]         # Random seeds for the training set (default: [3654] for single-threaded computations)
+r_seed_test : [605, 5534, 2910, 7653, 8936, 1925]         # Random seeds for the validation set (default: [605] for single-threaded computations)

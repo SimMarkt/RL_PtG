@@ -13,36 +13,37 @@ ep_index = 0
 #   H2: Hydrogen
 #   O2: Oxygen
 #   CO2: Carbon dioxide
-#   H2O_DE: Water steam
+#   H2O_DE: Water vapor (steam)
 #   LHV: Lower heating value
-#   EEG: German renewable energy act
+#   EEG: German Renewable Energy Act (Erneuerbare-Energien-Gesetz)
 
 class PTGEnv(gym.Env):
-    """Custom Environment that follows gym interface."""
+    """Custom Environment implementing the Gymnasium interface for PtG dispatch optimization."""
 
     metadata = {"render_modes": ["None"]}
 
     def __init__(self, dict_input, train_or_eval = "train", render_mode="None"):
         """
-            Initialize the PtG environment
-            :param dict_input: Dictionary with energy market data, process data and training configuration data
-            :param train_or_eval: Specifies whether the environment provides detailed state descriptions for evaluation ("eval") or not ("train" - recommended for training)
-            :param render_mode: Render mode
+            Initialize the PtG environment for training or evaluation
+            :param dict_input: Dictionary containing energy market data, process data, and training configurations
+            :param train_or_eval: Specifies if detailed state descriptions are provided for evaluation ("eval") or not ("train", default for training)
+            :param render_mode: Specifies the rendering mode
         """
         super().__init__()
 
         global ep_index
 
-        # Unpack data
+        # Unpack data from dictionary
         self.__dict__.update(dict_input)
-  
-        if self.parallel == "Multiprocessing":  # Multiprocessing: ep_index is not shared between different processes
+
+        # If multiprocessing, ensure ep_index is specific to each process
+        if self.parallel == "Multiprocessing":
             ep_index = self.np_random.integers(0, self.n_eps_loops, size=1)[0]
 
-        assert train_or_eval in ["train", "eval"], f'ptg_gym_env.py error: train_or_eval must be "train" [info empty] or "eval" [info contains results].'
+        assert train_or_eval in ["train", "eval"], f'ptg_gym_env.py error: train_or_eval must be either "train" or "eval".'
         self.train_or_eval = train_or_eval
 
-        # The methanation plant has 5 states: [0, 1, 2, 3, 4]
+        # Methanation plant process states: [0, 1, 2, 3, 4]
         self.M_state = {
             'standby': self.ptg_standby,
             'cooldown': self.ptg_cooldown,
@@ -51,12 +52,12 @@ class PTGEnv(gym.Env):
             'full_load': self.ptg_full_load,
         }
 
-        # Initialize dynamic variables for simulation and time tracking
-        if isinstance(self.eps_ind, np.ndarray): # True for the training environment
+        # Initialize dynamic simulation variables and time tracking
+        if isinstance(self.eps_ind, np.ndarray):            # Training environment scenario
             self.act_ep_h = int(self.eps_ind[ep_index] * self.eps_len_d * 24)
             self.act_ep_d = int(self.eps_ind[ep_index] * self.eps_len_d)
-            ep_index += 1  # Choose next data subset for next episode
-        else:               # For validation and test environments
+            ep_index += 1                                   # Select next data subset for subsequent episode
+        else:                                               # Validation or test environments
             self.act_ep_h, self.act_ep_d = 0, 0
         self.time_step_size_sim = self.sim_step
         self.step_size = int(self.time_step_size_sim / self.time_step_op)
@@ -94,7 +95,7 @@ class PTGEnv(gym.Env):
         self.e_r_b_act = self.e_r_b[:, :, self.act_ep_h]
         self.g_e_act = self.g_e[:, :, self.act_ep_d]
 
-        # Temporal encoding to differentiate between time steps within an hour using a sine-cosine transformation
+        # Temporal encoding for time step within an hour (sine-cosine transformation)
         self.temp_h_enc_sin = math.sin(2 * math.pi * self.clock_hours)
         self.temp_h_enc_cos = math.cos(2 * math.pi * self.clock_hours)
 
@@ -107,17 +108,17 @@ class PTGEnv(gym.Env):
         self.standby = self.standby_down                            # Current standby data set
         self.startup = self.startup_cold                            # Current startup data set
         self.partial = self.op1_start_p                             # Current partial load data set
-        self.part_op = 'op1_start_p'                                # Tracks partial load conditions
+        self.part_op = 'op1_start_p'                                # Track partial load conditions
         self.full = self.op2_start_f                                # Current full load data set
-        self.full_op = 'op2_start_f'                                # Tracks full load conditions
+        self.full_op = 'op2_start_f'                                # Track full load conditions
         self.Meth_T_cat = 16                                        # Initial catalyst temperature [°C]
-        self.i = self._get_index(self.cooldown, self.Meth_T_cat)    # Represents the index of row in specific operation
-        self.j = 0                          # Counts the number of steps in specific operation
-        self.op = self.cooldown[self.i, :]  # Operation point in current data set
+        self.i = self._get_index(self.cooldown, self.Meth_T_cat)    # Index for operation
+        self.j = 0                                                  # Step counter for operation
+        self.op = self.cooldown[self.i, :]                          # Current operation point
         keys = ['H2_flow', 'CH4_flow', 'H2_res_flow', 'H2O_flow', 'el_heating']
         for i, key in enumerate(keys, start=2): setattr(self, f'Meth_{key}', self.op[i])
-        self.hot_cold = 0                   # Detects whether startup originates from cold or hot conditions (0=cold, 1=hot)
-        self.state_change = False           # If last action has changed the methanation state self.M_state (=True)
+        self.hot_cold = 0                   # Detect startup conditions (0=cold, 1=hot)
+        self.state_change = False           # Track changes in methanation state Meth_State
         self.r_0 = self.reward_level[0]     # Reward level
 
         # Reward constituents
@@ -126,15 +127,15 @@ class PTGEnv(gym.Env):
         self.o2_volumeflow, self.o2_revenues, self.Meth_CO2_mass_flow, self.eua_revenues = (0.0,) * 4
         self.elec_costs_heating, self.load_elec, self.elec_costs_electrolyzer, self.elec_costs = (0.0,) * 4
         self.water_elec, self.water_costs, self.rew, self.cum_rew = (0.0,) * 4
-        self.eta_electrolyzer = 0.02        # Initial electrolyzer efficiency at zero load
+        self.eta_electrolyzer = 0.02        # Initial electrolyzer efficiency
         self.cum_rew = 0                    # Cumulative reward
 
-        # Info object and counter
-        self.info = {}                      # Info object for evaluation
-        self.k = 0                          # Counts the number of agent steps
+        # Info object and step counter
+        self.info = {}                      # Info for evaluation
+        self.k = 0                          # Step counter
         
     def _initialize_action_space(self):
-        """Initialize action space""" 
+        """Initialize the action space for plant operations""" 
         self.actions = ['standby', 'cooldown', 'startup', 'partial_load', 'full_load']
         self.current_action = 'cooldown'                    # Aligned with the real-world plant
         if self.action_type == "discrete":
@@ -157,7 +158,7 @@ class PTGEnv(gym.Env):
         """Define observation space based on raw or modified economic data"""
         b_norm, b_enc = [0, 1], [-1, 1]     # Normalized lower and upper bounds [low, up]
 
-        # Distinguish between using raw energy market prices ('raw') or modified economic metrics ('mod')
+        # Set observation space depending on raw/modified market data
         if self.raw_modified == "raw":           
             self.observation_space = spaces.Dict(
                 {
@@ -200,7 +201,7 @@ class PTGEnv(gym.Env):
             assert False, f"ptg_gym_env.py error: state design raw_modified {self.raw_modified} must match 'raw' or 'mod'!"
 
     def _normalize_observations(self):
-        """Normalize observations by standardization"""
+        """Normalize observations using standardization"""
         self.pot_rew_n = (self.e_r_b_act[1, :] - self.rew_l_b) / (self.rew_u_b - self.rew_l_b)
         self.el_n = (self.e_r_b_act[0, :] - self.el_l_b) / (self.el_u_b - self.el_l_b)
         self.gas_n = (self.g_e_act[0, :] - self.gas_l_b) / (self.gas_u_b - self.gas_l_b)
@@ -213,7 +214,7 @@ class PTGEnv(gym.Env):
         self.Meth_el_heating_n = (self.Meth_el_heating - self.heat_l_b) / (self.heat_u_b - self.heat_l_b)
 
     def _get_obs(self):
-        """Get observations"""
+        """Retrieve the current observations from the environment"""
         if self.raw_modified == "raw":
             return {
                 "Elec_Price": np.array(self.el_n, dtype=np.float64),
@@ -245,7 +246,7 @@ class PTGEnv(gym.Env):
             }
 
     def _get_info(self):
-        """Get details about the environment"""
+        """Retrieve additional details or metadata about the environment"""
         return {
             "step": self.k,
             "el_price_act": self.e_r_b_act[0, 0],
@@ -274,7 +275,7 @@ class PTGEnv(gym.Env):
         }
 
     def _get_reward(self):
-        """Calculate the reward based on revenues and costs"""
+        """Calculate the reward based on the current revenues and costs"""
 
         # Gas revenues (Scenario 1+2):          If Scenario == 3: self.gas_price_h[0] = 0
         self.ch4_volumeflow = self.Meth_CH4_flow * self.convert_mol_to_Nm3              # in [Nm³/s]
@@ -446,7 +447,7 @@ class PTGEnv(gym.Env):
         self.temp_h_enc_cos = math.cos(2 * math.pi * self.clock_hours)
 
         self.Meth_T_cat = self.op[-1, 1]    # Last value in self.op equals the new catalyst temperature
-        # Average the species flow and electric heating values over the time step
+        # Average the species flow and electric heating values over the simulation time step
         self.Meth_H2_flow = np.average(self.op[:, 2])
         self.Meth_CH4_flow = np.average(self.op[:, 3])
         self.Meth_H2_res_flow = np.average(self.op[:, 4])
@@ -503,26 +504,28 @@ class PTGEnv(gym.Env):
         if self.k == self.eps_sim_steps - 6:    return True     # Curtails training to ensure and data overhead (-6)
         else:                                   return False
 
-    # -------------------- Utility/helper functions to predict process dynamics and state changes ----------------------------
+    # ------------------ Utility/Helper Functions for Predicting Process Dynamics and State Changes --------------------------
     def _get_index(self, operation, t_cat):
         """
-            :param operation: np.array of the operation mode, in which the timestep occurs
+            Determine the position (index) in the operation data set based on the catalyst temperature
+            :param operation: np.array of operation modes for each timestep
             :param t_cat: Catalyst temperature
-            :return: idx: Index for the starting catalyst temperature
+            :return: idx: Index of the operation mode closest to the target temperature
         """
-        diff = np.abs(operation[:, 1] - t_cat)
-        idx = diff.argmin()
+        diff = np.abs(operation[:, 1] - t_cat)      # Calculate temperature difference
+        idx = diff.argmin()                         # Find the index with the smallest difference
         return idx
 
     def _perform_sim_step(self, operation, initial_state, next_operation, next_state, idx, j, change_operation):
         """
-            :param operation: np.array of the operation mode, in which the timestep occurs
-            :param initial_state: Initial methanation state
-            :param next_operation: np.array of the subsequent operation mode (if change_operation == True)
-            :param next_state: The final state after reaching total_steps
-            :param idx: Index for the starting catalyst temperature
-            :param j: Index for the next time step
-            :param change_operation: If the subsequent operation differs from the current operation (== True)
+            Performs a single simulation step
+            :param operation: np.array of operation modes for each timestep
+            :param initial_state: The initial methanation state at the current timestep
+            :param next_operation: np.array of the next operation mode (if change_operation == True)
+            :param next_state: The final state after reaching the specified total_steps
+            :param idx: Index of the closest operation mode to the catalyst temperature
+            :param j: Index of the next timestep
+            :param change_operation: A flag indicating whether the operation mode changes (True if it does)
             :return: op_range: Operation range; r_state: Methanation state; idx; j
         """
         total_steps = len(operation[:, 1])
@@ -549,12 +552,12 @@ class PTGEnv(gym.Env):
 
     def _cont(self, operation, initial_state, next_operation, next_state, change_operation):
         """
-            Perform just one simulation step in current Meth_state operation
-            :param operation: np.array of the operation mode, in which the timestep occurs
-            :param initial_state: Initial methanation state
-            :param next_operation: np.array of the subsequent operation mode (if change_operation == True)
-            :param next_state: The final state after reaching total_steps
-            :param change_operation: If the subsequent operation differs from the current operation (== True)
+            Perform a single simulation step in the current methanation state operation.
+            :param operation: np.array of operation modes for each timestep
+            :param initial_state: The initial methanation state at the current timestep
+            :param next_operation: np.array of the next operation mode (if change_operation == True)
+            :param next_state: The final state after reaching the specified total_steps
+            :param change_operation: A flag indicating whether the operation mode changes (True if it does)
             :return: op_range: Operation range; r_state: Methanation state; idx; j
         """
         self.j += 1
@@ -562,7 +565,7 @@ class PTGEnv(gym.Env):
 
     def _standby(self):
         """
-            Go to Meth_State = Standby and perform one simulation step
+            Transition the system to the 'Standby' methanation state and perform a simulation step
             :return: op_range: Operation range; r_state: Methanation state; idx; j
         """
         self.Meth_State = self.M_state['standby']
@@ -581,10 +584,9 @@ class PTGEnv(gym.Env):
 
     def _cooldown(self):
         """
-            Go to Meth_State = Cooldown and perform one simulation step
+            Transition the system to the 'Cooldown' methanation state and perform a simulation step
             :return: op_range: Operation range; r_state: Methanation state; idx; j
         """
-        # Go to State = Cooldown
         self.Meth_State = self.M_state['cooldown']
         # Get index of the specific state according to T_cat
         self.i = int(max(self._get_index(self.cooldown, self.Meth_T_cat) +
@@ -596,10 +598,9 @@ class PTGEnv(gym.Env):
 
     def _startup(self):
         """
-            Go to Meth_State = Startup and perform one simulation step
+            Transition the system to the 'Startup' methanation state and perform a simulation step
             :return: op_range: Operation range; r_state: Methanation state; idx; j
         """
-        # Go to State = Startup
         self.Meth_State = self.M_state['startup']
         self.partial = self.op1_start_p
         self.part_op = 'op1_start_p'
@@ -619,7 +620,7 @@ class PTGEnv(gym.Env):
 
     def _partial(self):
         """
-            Go to State = Partial load and perform one simulation step dependent on previous full_load conditions
+            Transition the system to the 'Partial load' state and perform a simulation step, dependent on prior full-load conditions.
             :return: op_range: Operation range; r_state: Methanation state; idx; j
         """
         self.Meth_State = self.M_state['partial_load']
@@ -629,7 +630,7 @@ class PTGEnv(gym.Env):
         match self.full_op:
             case 'op2_start_f':
                 if time_op < self.time2_start_f_p:
-                    self.partial = self.op1_start_p     # Approximation: simple change without temperature changes
+                    self.partial = self.op1_start_p     # Approximation: A simple change without considering temperature changes
                     self.part_op = 'op1_start_p'
                     self.i = self._get_index(self.partial, self.Meth_T_cat)
                     self.j = 1
@@ -639,7 +640,7 @@ class PTGEnv(gym.Env):
                     self.i = 0
                     self.j = 1
             case 'op3_p_f':
-                if time_op < self.time1_p_f_p:          # Approximation: simple go back to original state
+                if time_op < self.time1_p_f_p:          # Approximation:  A simple return to the original state
                     self.partial = self.op8_f_p
                     self.part_op = 'op8_f_p'
                     self.i = self.i_fully_developed     # Fully developed operation
@@ -685,10 +686,9 @@ class PTGEnv(gym.Env):
 
     def _full(self):
         """
-            Go to State = Full load and perform one simulation step dependent on previous partial_load conditions
+            Transition the system to the 'Full load' state and perform a simulation step, dependent on prior partial-load conditions.
             :return: op_range: Operation range; r_state: Methanation state; idx; j
         """
-        # Go to State = Full load
         self.Meth_State = self.M_state['full_load']
         # Select the full_load operation mode
         time_op = self.i + self.j * self.step_size  # Simulation step in partial_load
@@ -696,7 +696,7 @@ class PTGEnv(gym.Env):
         match self.part_op:
             case 'op1_start_p':
                 if time_op < self.time1_start_p_f:
-                    self.full = self.op2_start_f    # Approximation: simple change without temperature changes
+                    self.full = self.op2_start_f    # Approximation: A simple change without considering temperature changes
                     self.full_op = 'op2_start_f'
                     self.i = 0
                     self.j = 1
@@ -706,7 +706,7 @@ class PTGEnv(gym.Env):
                     self.i = 0
                     self.j = 1
             case 'op8_f_p':
-                if time_op < self.time1_f_p_f:      # Approximation: simple go back to original state
+                if time_op < self.time1_f_p_f:      # Approximation: A simple return to the original state
                     self.full = self.op3_p_f
                     self.full_op = 'op3_p_f'
                     self.i = self.i_fully_developed # Fully developed operation
