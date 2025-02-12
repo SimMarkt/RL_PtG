@@ -20,8 +20,6 @@ from src.rl_config_agent import AgentConfiguration
 from src.rl_config_env import EnvConfiguration
 from src.rl_config_train import TrainConfiguration
 
-################TODO: ENERGIEMARKT DATEN ANPASSEN###############################################################
-
 def computational_resources(TrainConfig):
     """
         Set computational resources and the random seed of the present thread
@@ -90,7 +88,7 @@ def main():
     print("Load environment...")
     env_id = 'PtGEnv-v0'
     check_env(env_id)                                                                                                   # Check the Gymnasium environment registry
-    env_train, env_test, eval_callback_val, eval_callback_test, env_test_single = create_vec_envs(env_id, str_id, AgentConfig, TrainConfig, env_kwargs_data)          # Create vectorized environments
+    env_train, env_test_post, eval_callback_val, eval_callback_test = create_vec_envs(env_id, str_id, AgentConfig, TrainConfig, env_kwargs_data)          # Create vectorized environments
     tb_log = "tensorboard/" + str_id                                                                                    # Set path for tensorboard data (for monitoring RL training) 
 
     # Set up the RL model with the specified algorithm
@@ -112,7 +110,7 @@ def main():
     
     # ----------------------------------------------Postprocessing------------------------------------------------
     print("Postprocessing...")
-    PostProcess = Postprocessing(str_id, AgentConfig, EnvConfig, TrainConfig, env_test_single, Preprocess)
+    PostProcess = Postprocessing(str_id, AgentConfig, EnvConfig, TrainConfig, env_test_post, Preprocess)
     PostProcess.test_performance()
     PostProcess.plot_results()
 
