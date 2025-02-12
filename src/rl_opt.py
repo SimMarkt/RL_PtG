@@ -25,34 +25,33 @@ from src.rl_config_env import EnvConfiguration
 
 def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_price_data: np.array, data_name: str, stats_names):
     """
-        Computes the maximum possible revenues and runs the plant when the potential reward > 0 ignoring any dynamics
+        Computes the theoretical maximum revenue for the Power-to-Gas process, assuming no operational constraints.
         :param el_price_data: Electricity market data
         :param gas_price_data: Gas market data
         :param eua_price_data: EUA market data
-        :param data_name: Specifies the data set
-        :param stats_names: Variable names for statistics, data storage, and evaluation
-        :return stats_dict_opt: Dictionary with methanation status values
+        :param data_name: Identifier for the dataset
+        :param stats_names: List of statistical variable names for tracking results
+        :return stats_dict_opt: Dictionary containing process and economic data for the theoretical optimal scenario
     """
 
     EnvConfig = EnvConfiguration()
 
-    meth_stats = EnvConfig.meth_stats_load      # Partial and full load methanation process data
+    meth_stats = EnvConfig.meth_stats_load      # Methanation process data for partial and full load
 
-    stats_dict_opt = {}                         # Dictionary which will receive the process and economic data for T-OPT
+    stats_dict_opt = {}                         # Dictionary to store computed results
     stats = np.zeros((len(el_price_data), len(stats_names)))
 
-    # Include reward calculation from CHP in the case of business scenario 3
-    if EnvConfig.scenario == 3: b_s3 = 1
-    else: b_s3 = 0
+    # Scenario 3 includes CHP (Combined Heat and Power) revenue calculation
+    b_s3 = 1 if EnvConfig.scenario == 3 else 0  
 
     rew_l = [0,1]       # First entry of the list is dedicated to partial load, the second to full load
     cum_rew = 0         # Cumulative reward
 
     for t in range(len(el_price_data)):     # Loop over the electricity price data
-        t_day = int(math.floor(t / 24))     # Converts the time t (1-hour resolution) into t_day (1-day-resolution)
+        t_day = int(math.floor(t / 24))     # Convert hourly index to daily index
         if t_day == len(gas_price_data): t_day -= 1
-        for l in range(len(rew_l)):                  
-            # Reward calculation for both partial load and full load
+        for l in range(len(rew_l)):   # Iterate over partial and full load scenarios               
+             # Compute revenues and costs for different operating conditions
 
             # Gas proceeds (Scenario 1+2):          If Scenario == 3: self.gas_price_h[0] = 0
             ch4_volumeflow = meth_stats['Meth_CH4_flow'][l+1] * EnvConfig.convert_mol_to_Nm3            # in [Nm³/s]
@@ -99,17 +98,17 @@ def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_pri
             rew_l[l] = (ch4_revenues + chp_revenues + steam_revenues + eua_revenues +
                         o2_revenues - elec_costs - water_costs)  # in ct/h
         
+        # Select the best option (partial or full load)
         tmp = max(rew_l)
         index = rew_l.index(tmp)
         rew = max(rew_l)
 
-        # Assign values
+        # Store results
         stats[t, 0] = t
         stats[t, 1] = el_price_data[t]
         stats[t, 2] = gas_price_data[t_day]
         stats[t, 3] = eua_price_data[t_day]
 
-        # Check if rew > 0
         if rew > 0:
             stats[t, 4:20] = [meth_stats['Meth_State'][index + 1], 
                               meth_stats['Meth_Action'][index + 1],
@@ -135,13 +134,15 @@ def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_pri
                               meth_stats['Meth_el_heating'][0]] + [0] * 8
             stats[t, 23] = -1
 
-        # Final updates
+        # Update reward statistics
         stats[t, 20] = rew
         stats[t, 21] = cum_rew
 
+    # Store computed values in dictionary
     for m in range(len(stats_names)):
         stats_dict_opt[stats_names[m]] = stats[:, m]
 
+    # Print cumulative reward (only if not 'reward_Level')
     if data_name != "reward_Level":
         max_pot_cum_rew = stats_dict_opt['Meth_cum_reward_stats'][-EnvConfig.price_ahead]
         print("    > ", data_name, ": Cumulative reward - theoretical optimum T-OPT = ", round(max_pot_cum_rew,2))
@@ -149,18 +150,3 @@ def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_pri
         max_pot_cum_rew = stats_dict_opt['Meth_cum_reward_stats'][0]
 
     return stats_dict_opt
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

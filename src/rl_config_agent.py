@@ -1,12 +1,12 @@
 # ----------------------------------------------------------------------------------------------------------------
-# RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
-# https://github.com/SimMarkt/RL_PtG
+# RL_PtG: Deep Reinforcement Learning for Power-to-Gas Dispatch Optimization
+# GitHub Repository: https://github.com/SimMarkt/RL_PtG
 
-# rl_config_agent: 
-# > Contains hyperparameters of the RL agents
-# > Converts the config_agent.yaml data into a class object for further processing
-# > Contains three additional functions to specify, load, and save the Stable-Baselines3 models
-# ----------------------------------------------------------------------------------------------------------------
+# rl_config_agent:
+# > Stores hyperparameters for the RL agents
+# > Parses the config_agent.yaml data into a class object for further processing
+# > Includes three additional functions to specify, load, and save Stable-Baselines3 models
+# -------------------------------------------------------------------------------------------
 
 import numpy as np
 import torch as th
@@ -14,18 +14,19 @@ import yaml
 
 class AgentConfiguration:
     def __init__(self):
-        # Load the environment configuration
+        # Load the environment configuration from the YAML file
         with open("config/config_agent.yaml", "r") as env_file:
             agent_config = yaml.safe_load(env_file)
 
-        # Unpack data
+        # Unpack data from dictionary
         self.__dict__.update(agent_config)
 
-        assert self.rl_alg in self.hyperparameters, f"Wrong algorithm specified - data/config_agent.yaml -> model_conf : {self.rl_alg} must match {self.hyperparameters.keys()}"
-        self.rl_alg_hyp = self.hyperparameters[self.rl_alg]      # Hyperparameters of the algorithm
-        self.str_alg = None                                      # String representing the hyperparameter settings after initialization, used for file identification.
-        # Nested dictionary with all possible hyperparameters including an abbreveation ('abb') and the variable name ('var'). 
-        # 'var' need to match notation in RL_PtG/config/config_agent.yaml
+        # Ensure the specified RL algorithm exists in the hyperparameters
+        assert self.rl_alg in self.hyperparameters, f"Invalid algorithm specified - data/config_agent.yaml -> model_conf : {self.rl_alg} must match {self.hyperparameters.keys()}"
+        self.rl_alg_hyp = self.hyperparameters[self.rl_alg]      # Hyperparameters of the selected algorithm
+        self.str_alg = None                                      # Initialize the string for the algorithm settings (used for file identification)
+        # Nested dictionary with hyperparameters, including abbreviation ('abb') and variable name ('var') 
+        # 'var' must match the notation in RL_PtG/config/config_agent.yaml
         self.hyper = {'Learning rate': {'abb' :"_al", 'var': 'alpha'},
                       'Discount factor': {'abb' :"_ga", 'var': 'gamma'},
                       'Initial exploration coefficient': {'abb' :"_ie", 'var': 'eps_init'},
@@ -55,17 +56,17 @@ class AgentConfiguration:
 
     def set_model(self, env, tb_log, TrainConfig):
         """
-            Specifies the Stable-Baselines3 model for RL training
-            :param env: environment
-            :param tb_log: Tensorboard log file
-            :param TrainConfig: Training configuration in a class object
+            Specifies and initializes the Stable-Baselines3 model for RL training
+            :param env: The environment for training
+            :param tb_log: The TensorBoard log file location
+            :param TrainConfig: Training configuration (class object)
             :return model: Stable-Baselines3 model for RL training
         """
 
         # Implement the neural network architecture:
         #   Custom actor (pi) and value function (vf) networks with the
         #   same architecture net_arch and activation function (th.nn.ReLU, th.nn.Tanh)
-        #   Note: an extra linear layer will be added on top of the pi and vf nets
+        #   Note: An extra linear layer will be added on top of the pi and vf nets
         if self.rl_alg_hyp['activation'] == 'ReLU':
             activation_fn = th.nn.ReLU
         elif self.rl_alg_hyp['activation'] == 'Tanh':
@@ -75,14 +76,14 @@ class AgentConfiguration:
         net_arch = np.ones((self.rl_alg_hyp['hidden_layers'],), int) * self.rl_alg_hyp['hidden_units']
         net_arch = net_arch.tolist()
 
-        # Set RL algorithms and specify hyperparameters
+        # Set RL algorithms and configure hyperparameters
         if self.rl_alg == 'DQN':
-            from stable_baselines3 import DQN           # Import algorithm
+            from stable_baselines3 import DQN           
             policy_kwargs = dict(activation_fn=activation_fn, net_arch=net_arch)
             model = DQN(
                 "MultiInputPolicy",                                                     # Policy type
                 env,                                                                    # Environment
-                verbose=0,                                                              # Without printing training details to the TUI
+                verbose=0,                                                              # Suppress verbose output
                 tensorboard_log=tb_log,                                                 # Tensorboard log file
                 learning_rate=self.rl_alg_hyp['alpha'],                                 # Learning rate
                 gamma=self.rl_alg_hyp['gamma'],                                         # Discount factor
@@ -90,12 +91,12 @@ class AgentConfiguration:
                 batch_size=int(self.rl_alg_hyp['batch_size']),                          # Batch size
                 exploration_initial_eps=self.rl_alg_hyp['eps_init'],                    # Initial exploration coefficient
                 exploration_final_eps=self.rl_alg_hyp['eps_fin'],                       # Final exploration coefficient
-                exploration_fraction=self.rl_alg_hyp['eps_fra'],                        # Ratio of the training set for exploration annealing
-                learning_starts=int(self.rl_alg_hyp['learning_starts']),                # No. of steps before starting the training of actor/critic networks
+                exploration_fraction=self.rl_alg_hyp['eps_fra'],                        # Fraction of the training set used for exploration annealing
+                learning_starts=int(self.rl_alg_hyp['learning_starts']),                # No. of timesteps before training starts
                 tau=self.rl_alg_hyp['tau'],                                             # Soft update parameter
                 train_freq=self.rl_alg_hyp['train_freq'],                               # Training frequency
-                policy_kwargs=policy_kwargs,                                            # Contains network hyperparameters
-                device=TrainConfig.device,                                              # CPU or GPU
+                policy_kwargs=policy_kwargs,                                            # Network settings
+                device=TrainConfig.device,                                              # Device (CPU or GPU)
                 target_update_interval=self.rl_alg_hyp['target_update_interval'],       # Target network update interval
                 seed=TrainConfig.seed_train,                                            # Random seed
             )
@@ -108,7 +109,7 @@ class AgentConfiguration:
             model = A2C(
                 "MultiInputPolicy",                                                     # Policy type
                 env,                                                                    # Environment
-                verbose=0,                                                              # Without printing training details to the TUI
+                verbose=0,                                                              # Suppress verbose output
                 tensorboard_log=tb_log,                                                 # Tensorboard log file
                 learning_rate=self.rl_alg_hyp['alpha'],                                 # Learning rate
                 gamma=self.rl_alg_hyp['gamma'],                                         # Discount factor
@@ -116,9 +117,9 @@ class AgentConfiguration:
                 gae_lambda=self.rl_alg_hyp['gae_lambda'],                               # Factor for generalized advantage estimation
                 normalize_advantage=self.rl_alg_hyp['normalize_advantage'],             # Normalize advantage
                 ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # Entropy coefficient
-                policy_kwargs=policy_kwargs,                                            # Contains network hyperparameters
+                policy_kwargs=policy_kwargs,                                            # Network settings
                 use_sde=self.rl_alg_hyp['gSDE'],                                        # gSDE exploration
-                device=TrainConfig.device,                                              # CPU or GPU
+                device=TrainConfig.device,                                              # Device (CPU or GPU)
                 seed=TrainConfig.seed_train,                                            # Random seed
             )
 
@@ -131,7 +132,7 @@ class AgentConfiguration:
             model = PPO(
                 "MultiInputPolicy",                                                     # Policy type
                 env,                                                                    # Environment
-                verbose=0,                                                              # Without printing training details to the TUI
+                verbose=0,                                                              # Suppress verbose output
                 tensorboard_log=tb_log,                                                 # Tensorboard log file
                 learning_rate=self.rl_alg_hyp['alpha'],                                 # Learning rate
                 gamma=self.rl_alg_hyp['gamma'],                                         # Discount factor
@@ -141,9 +142,9 @@ class AgentConfiguration:
                 n_epochs=int(self.rl_alg_hyp['n_epoch']),                               # No. of epochs for mini batch training
                 normalize_advantage=self.rl_alg_hyp['normalize_advantage'],             # Normalize advantage
                 ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # Entropy coefficient
-                policy_kwargs=policy_kwargs,                                            # Contains network hyperparameters
+                policy_kwargs=policy_kwargs,                                            # Network settings
                 use_sde=self.rl_alg_hyp['gSDE'],                                        # gSDE exploration
-                device=TrainConfig.device,                                              # CPU or GPU
+                device=TrainConfig.device,                                              # Device (CPU or GPU)
                 seed=TrainConfig.seed_train,                                            # random seed
             )
 
@@ -153,18 +154,18 @@ class AgentConfiguration:
             model = TD3(
                 "MultiInputPolicy",                                                     # Policy type
                 env,                                                                    # Environment
-                verbose=0,                                                              # Without printing training details to the TUI
+                verbose=0,                                                              # Suppress verbose output
                 tensorboard_log=tb_log,                                                 # Tensorboard log file
                 learning_rate=self.rl_alg_hyp['alpha'],                                 # Learning rate
                 gamma=self.rl_alg_hyp['gamma'],                                         # Discount factor
                 buffer_size=int(self.rl_alg_hyp['buffer_size']),                        # Replay buffer size
                 batch_size=int(self.rl_alg_hyp['batch_size']),                          # Batch size
-                learning_starts=int(self.rl_alg_hyp['learning_starts']),                # No. of steps before starting the training of actor/critic networks
+                learning_starts=int(self.rl_alg_hyp['learning_starts']),                # No. of timesteps before training starts
                 tau=self.rl_alg_hyp['tau'],                                             # Soft update parameter
                 train_freq=self.rl_alg_hyp['train_freq'],                               # Training frequency
                 target_policy_noise=self.rl_alg_hyp['sigma_exp'],                       # Standard deviation of Gaussian noise added to the target policy
-                policy_kwargs=policy_kwargs,                                            # Contains network hyperparameters
-                device=TrainConfig.device,                                              # CPU or GPU
+                policy_kwargs=policy_kwargs,                                            # Network settings
+                device=TrainConfig.device,                                              # Device (CPU or GPU)
                 seed=TrainConfig.seed_train,                                            # Random seed
             )
         
@@ -175,19 +176,19 @@ class AgentConfiguration:
             model = SAC(
                 "MultiInputPolicy",                                                     # Policy type
                 env,                                                                    # Environment
-                verbose=0,                                                              # Without printing training details to the TUI
+                verbose=0,                                                              # Suppress verbose output
                 tensorboard_log=tb_log,                                                 # Tensorboard log file
                 learning_rate=self.rl_alg_hyp['alpha'],                                 # Learning rate
                 gamma=self.rl_alg_hyp['gamma'],                                         # Discount factor
                 buffer_size=int(self.rl_alg_hyp['buffer_size']),                        # Replay buffer size
                 batch_size=int(self.rl_alg_hyp['batch_size']),                          # Batch size
-                learning_starts=int(self.rl_alg_hyp['learning_starts']),                # No. of steps before starting the training of actor/critic networks
+                learning_starts=int(self.rl_alg_hyp['learning_starts']),                # No. of timesteps before training starts
                 tau=self.rl_alg_hyp['tau'],                                             # Soft update parameter
                 train_freq=self.rl_alg_hyp['train_freq'],                               # Training frequency
                 ent_coef=self.rl_alg_hyp['ent_coeff'],                                  # Entropy coefficient
-                policy_kwargs=policy_kwargs,                                            # Contains network hyperparameters
+                policy_kwargs=policy_kwargs,                                            # Network settings
                 use_sde=self.rl_alg_hyp['gSDE'],                                        # gSDE exploration
-                device=TrainConfig.device,                                              # CPU or GPU
+                device=TrainConfig.device,                                              # Device (CPU or GPU)
                 target_update_interval=self.rl_alg_hyp['train_freq'],                   # Target network update interval
                 seed=TrainConfig.seed_train,                                            # Random seed
             )
@@ -200,20 +201,20 @@ class AgentConfiguration:
             model = TQC(
                 "MultiInputPolicy",                                                         # Policy type
                 env,                                                                        # Environment
-                verbose=0,                                                                  # Without printing training details to the TUI
+                verbose=0,                                                                  # Suppress verbose output
                 tensorboard_log=tb_log,                                                     # Tensorboard log file
                 top_quantiles_to_drop_per_net=int(self.rl_alg_hyp['top_quantiles_drop']),   # No. of top quantiles to drop
                 learning_rate=self.rl_alg_hyp['alpha'],                                     # Learning rate
                 gamma=self.rl_alg_hyp['gamma'],                                             # Discount factor
                 buffer_size=int(self.rl_alg_hyp['buffer_size']),                            # Replay buffer size
                 batch_size=int(self.rl_alg_hyp['batch_size']),                              # Batch size
-                learning_starts=int(self.rl_alg_hyp['learning_starts']),                    # No. of steps before starting the training of actor/critic networks
+                learning_starts=int(self.rl_alg_hyp['learning_starts']),                    # No. of timesteps before training starts
                 tau=self.rl_alg_hyp['tau'],                                                 # Soft update parameter
                 train_freq=self.rl_alg_hyp['train_freq'],                                   # Training frequency
                 ent_coef=self.rl_alg_hyp['ent_coeff'],                                      # Entropy coefficient
-                policy_kwargs=policy_kwargs,                                                # Contain network hyperparameters
+                policy_kwargs=policy_kwargs,                                                # Network settings
                 use_sde=self.rl_alg_hyp['gSDE'],                                            # gSDE exploration
-                device=TrainConfig.device,                                                  # CPU or GPU
+                device=TrainConfig.device,                                                  # Device (CPU or GPU)
                 target_update_interval=self.rl_alg_hyp['train_freq'],                       # Target network update interval
                 seed=TrainConfig.seed_train,                                                # Random seed
             )
@@ -224,15 +225,15 @@ class AgentConfiguration:
     
     def load_model(self, env, tb_log, model_path, type):
         """
-            Load pretrained Stable-Baselines3 model for RL training
-            :param env: environment
-            :param tb_log: Tensorboard log file
+            Loads a pretrained Stable-Baselines3 model for RL training
+            :param env: The environment for training
+            :param tb_log: The file path for TensorBoard logs
             :param model_path: Path to the pretrained model
-            :param type: Specifies whether the replay buffer is loaded
+            :param type: Specifies whether to load the replay buffer ('train' for training, others for evaluation)
             :return model: Stable-Baselines3 model for RL training
         """
 
-        # Load pretrained RL algorithms
+        # Load the pre-trained RL model based on the specified algorithm
         if self.rl_alg == 'DQN':
             from stable_baselines3 import DQN           
             model = DQN.load(model_path, tensorboard_log=tb_log)
@@ -263,7 +264,7 @@ class AgentConfiguration:
 
     def save_model(self, model):
         """
-            Save trained Stable-Baselines3 model
+            Saves the trained Stable-Baselines3 model and its replay buffer (if applicable).
             :param model: Stable-Baselines3 model
         """
         model.save(self.path_files + self.str_inv)
@@ -272,11 +273,11 @@ class AgentConfiguration:
 
     def get_hyper(self):
         """
-            Gather and print algorithm hyperparameters and returns the values in a string for file identification
-            :return str_alg: Hyperparameter settings in a string for file identification
+            Displays the algorithm's hyperparameters and returns a string identifier for file identification.
+            :return str_alg: The hyperparameter settings as a string for file identification
         """
 
-        # Print algorithm and hyperparameters and create identifier string
+        # Display the chosen algorithm and its hyperparameters
         print(f"    > Deep RL agorithm : >>> {self.rl_alg} <<<")
         self.str_alg = "_" + self.rl_alg
         self.hyp_print('Learning rate')
@@ -316,8 +317,8 @@ class AgentConfiguration:
 
     def hyp_print(self, hyp_name: str):
         """
-            Prints a specific hyperparameter to the TUI and adds the value to the string identifier
-            :param hyp_name: Name of the hyperparameter
+            Displays the value of a specific hyperparameter and adds it to the string identifier for file naming
+            :param hyp_name: Name of the hyperparameter to display
         """
         assert hyp_name in self.hyper, f"Specified hyperparameter ({hyp_name}) is not part of the implemented settings!"
         length_str = len(hyp_name) 
