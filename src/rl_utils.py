@@ -3,15 +3,12 @@
 # https://github.com/SimMarkt/RL_PtG
 
 # rl_utils: 
-# > Utiliy/helper functions
+# > Utiliy/Helper functions
 # ----------------------------------------------------------------------------------------------------------------
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.path import Path
-import matplotlib.patches as patches
-import math
 import warnings
 from tqdm import tqdm
 
@@ -23,11 +20,11 @@ from src.rl_opt import calculate_optimum
 
 def import_market_data(csvfile: str, type: str, path: str):
     """
-        Import data of day-ahead prices for electricity
-        :param csvfile: Name of the .csv files containing energy market data ["Time [s]"; <data>]
-        :param type: market data type
-        :param path: String with the RL_PtG project path
-        :return arr: np.array with market data
+        Imports day-ahead market price data.
+        :param csvfile: Name of the .csv file containing market data ["Time [s]"; <data>].
+        :param type: Type of market data to be imported ('el' for electricity, 'gas' for natural gas, 'eua' for EUA prices).
+        :param path: File path to the RL_PtG project directory.
+        :return: A numpy array containing the extracted market data.
     """
 
     file_path = path + "/" + csvfile
@@ -41,17 +38,17 @@ def import_market_data(csvfile: str, type: str, path: str):
     elif type == "eua":     # EUA price data
         arr = df["EUA_CO2 [Euro/t]"].values.astype(float)
     else:
-        assert False, "Market data type not specified appropriately [el, gas, eua]!"
+        assert False, "Invalid market data type. Must be one of ['el', 'gas', 'eua']!"
 
     return arr
 
 
 def import_data(csvfile: str, path: str):
     """
-        Import experimental methanation data for state changes
-        :param csvfile: name of the .csv files containing process data
-        :param path: String with the RL_PtG project path
-        :return arr: Numpy array with operational data
+        Imports experimental methanation process data.
+        :param csvfile: Name of the .csv file containing operational data.
+        :param path: File path to the RL_PtG project directory.
+        :return: A numpy array containing time-series operational data.
     """
     # Import historic Data from csv file
     file_path = path + "/" + csvfile
@@ -59,11 +56,11 @@ def import_data(csvfile: str, path: str):
 
     # Transform data to numpy array
     t = df["Time [s]"].values.astype(float)                         # Time
-    t_cat = df["T_cat [gradC]"].values.astype(float)                # Maximum catalyst temperature in the methanation reactor system [°C]
-    n_h2 = df["n_h2 [mol/s]"].values.astype(float)                  # Hydrogen reactant molar flow [mol/s]
-    n_ch4 = df["n_ch4 [mol/s]"].values.astype(float)                # Methane product molar flow [mol/s]
-    n_h2_res = df["n_h2_res [mol/s]"].values.astype(float)          # Hydrogen product molar flow (residues) [mol/s]    
-    m_h2o = df["m_DE [kg/h]"].values.astype(float)                  # Water mass flow [kg/h]
+    t_cat = df["T_cat [gradC]"].values.astype(float)                # Maximum catalyst temperature [°C]
+    n_h2 = df["n_h2 [mol/s]"].values.astype(float)                  # Hydrogen reactant molar flow rate [mol/s]
+    n_ch4 = df["n_ch4 [mol/s]"].values.astype(float)                # Methane product molar flow rate [mol/s]
+    n_h2_res = df["n_h2_res [mol/s]"].values.astype(float)          # Hydrogen product molar flow rate (residues) [mol/s]    
+    m_h2o = df["m_DE [kg/h]"].values.astype(float)                  # Water mass flow rate [kg/h]
     p_el = df["Pel [W]"].values.astype(float)                       # Electrical power consumption for heating the methanation plant [W]
     arr = np.c_[t, t_cat, n_h2, n_ch4, n_h2_res, m_h2o, p_el]
 
@@ -72,15 +69,15 @@ def import_data(csvfile: str, path: str):
 
 def load_data(EnvConfig, TrainConfig):
     """
-        Loads historical market data and experimental data of methanation operation
-        :param TrainConfig: Training configuration in a class object
-        :return dict_price_data: dictionary with market data
-                dict_op_data: dictionary with data of dynamic methanation operation
+        Loads historical market data and experimental methanation operation data
+        :param TrainConfig: Training configuration (class object)
+        :return dict_price_data: Dictionary containing electricity, gas, and EUA market data
+                dict_op_data: Dictionary containing time-series data for dynamic methanation operations
     """
     print("---Load data")
     path = TrainConfig.path
 
-    # Market data for electricity, gas, and EUA
+    # Define market data file types (electricity, gas, and EUA) and dataset splits.
     market_data_files = [('el_price', 'el'), ('gas_price', 'gas'), ('eua_price', 'eua')]
     splits = ['train', 'val', 'test']
 
@@ -89,7 +86,7 @@ def load_data(EnvConfig, TrainConfig):
         for data in market_data_files for split in splits
     }
 
-    # Function to check market data sizes
+    # Function to verify consistency of market data sizes across datasets.
     def check_market_data_size(split):
         el_size_h = len(dict_price_data[f'el_price_{split}'])
         el_size_d = el_size_h // 24
@@ -107,7 +104,7 @@ def load_data(EnvConfig, TrainConfig):
     for split in splits:
         check_market_data_size(split)
 
-    # Methanation operation data
+    # Define methanation operation datasets with corresponding file indices
     op_data_files = [
         ('startup_cold', 2), ('startup_hot', 3), ('cooldown', 4), ('standby_down', 5), ('standby_up', 6),
         ('op1_start_p', 7), ('op2_start_f', 8), ('op3_p_f', 9), ('op4_p_f_p_5', 10), ('op5_p_f_p_10', 11),
@@ -134,7 +131,7 @@ def load_data(EnvConfig, TrainConfig):
 
     # Check if training set is divisible by the episode length
     min_train_len = 6                       # Minimum No. of days in the training set 
-    # RL training uses 'min_train_len' fewer days than the total data size to ensure there is always enough space for the Day-ahead market price forecast.
+    # RL training excludes 'min_train_len' days to maintain space for the day-ahead market price forecast.
     EnvConfig.train_len_d = len(dict_price_data['gas_price_train']) - min_train_len 
     assert EnvConfig.train_len_d > 0, f'The training set size must be greater than {min_train_len} days'
     if EnvConfig.train_len_d % EnvConfig.eps_len_d != 0:
@@ -146,7 +143,7 @@ def load_data(EnvConfig, TrainConfig):
 
     return dict_price_data, dict_op_data
 
-
+####################################################################comment check#########################################################
 class Preprocessing():
     """A class that contains variables and functions for preprocessing of energy market and process data"""
 
@@ -155,9 +152,9 @@ class Preprocessing():
             Initialization of variables
             :param dict_price_data: Dictionary with market data
             :param dict_op_data: Dictionary with dynamic process data
-            :param AgentConfig: Agent configuration in a class object
-            :param EnvConfig: Environment configuration in a class object
-            :param TrainConfig: Training configuration in a class object
+            :param AgentConfig: Agent configuration (class object)
+            :param EnvConfig: Environment configuration (class object)
+            :param TrainConfig: Training configuration (class object)
         """
         # Initialization
         self.AgentConfig = AgentConfig
@@ -416,9 +413,9 @@ def initial_print():
 def config_print(AgentConfig, EnvConfig, TrainConfig):
     """
         Gathers and prints general settings
-        :param AgentConfig: Agent configuration in a class object
-        :param EnvConfig: Environment configuration in a class object
-        :param TrainConfig: Training configuration in a class object
+        :param AgentConfig: Agent configuration (class object)
+        :param EnvConfig: Environment configuration (class object)
+        :param TrainConfig: Training configuration (class object)
         :return str_id: String for identification of the present training run
     """
     print("Set training case...")
@@ -509,9 +506,9 @@ class Postprocessing():
         """
             Initialization of variables
             :param str_id: String for identification of the present training run
-            :param AgentConfig: Agent configuration in a class object
-            :param EnvConfig: Environment configuration in a class object
-            :param TrainConfig: Training configuration in a class object
+            :param AgentConfig: Agent configuration (class object)
+            :param EnvConfig: Environment configuration (class object)
+            :param TrainConfig: Training configuration (class object)
             :param env_test_post: Test environment with only one instance for postprocessing
             :param Preprocess: Class object of preprocessing
         """
