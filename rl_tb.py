@@ -10,4 +10,4 @@ import os
 
 # # ----------------------------------------------------------------------------------------------------------------------
 print("Tensorboard URL...")
-os.system('tensorboard --logdir=' + 'tensorboard/')
+os.system('tensorboard --logdir=tensorboard/')

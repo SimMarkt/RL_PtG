@@ -14,9 +14,9 @@
 #   H2: Hydrogen
 #   O2: Oxygen
 #   CO2: Carbon dioxide
-#   H2O_DE: Water steam
+#   H2O_DE: Water vapor (steam)
 #   LHV: Lower heating value
-#   EEG: German renewable energy act
+#   EEG: German Renewable Energy Act (Erneuerbare-Energien-Gesetz)
 
 import numpy as np
 import math
