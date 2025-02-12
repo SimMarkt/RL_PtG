@@ -52,8 +52,12 @@ class PTGEnv(gym.Env):
         }
 
         # Initialize dynamic variables for simulation and time tracking
-        self.act_ep_h = int(self.eps_ind[ep_index] * self.eps_len_d * 24)
-        self.act_ep_d = int(self.eps_ind[ep_index] * self.eps_len_d)
+        if isinstance(self.eps_ind, np.ndarray): # True for the training environment
+            self.act_ep_h = int(self.eps_ind[ep_index] * self.eps_len_d * 24)
+            self.act_ep_d = int(self.eps_ind[ep_index] * self.eps_len_d)
+            ep_index += 1  # Choose next data subset for next episode
+        else:               # For validation and test environments
+            self.act_ep_h, self.act_ep_d = 0, 0
         self.time_step_size_sim = self.sim_step
         self.step_size = int(self.time_step_size_sim / self.time_step_op)
         self.clock_hours = 0 * self.time_step_size_sim / 3600   # in [h]
@@ -69,8 +73,6 @@ class PTGEnv(gym.Env):
         else: self.b_s3 = 0
 
         self.render_mode = render_mode
-
-        ep_index += 1  # Choose next data subset for next episode
        
     def _initialize_datasets(self):
         """Initialize data sets and temporal encoding"""
@@ -478,16 +480,18 @@ class PTGEnv(gym.Env):
         global ep_index
 
         # Initialize dynamic variables for simulation and time tracking
-        self.act_ep_h = int(self.eps_ind[ep_index] * self.eps_len_d * 24)
-        self.act_ep_d = int(self.eps_ind[ep_index] * self.eps_len_d)
+        if isinstance(self.eps_ind, np.ndarray): # True for the training environment
+            self.act_ep_h = int(self.eps_ind[ep_index] * self.eps_len_d * 24)
+            self.act_ep_d = int(self.eps_ind[ep_index] * self.eps_len_d)
+            ep_index += 1  # Choose next data subset for next episode
+        else:               # For validation and test environments
+            self.act_ep_h, self.act_ep_d = 0, 0
         self.clock_hours = 0 * self.time_step_size_sim / 3600  # in hours
         self.clock_days = self.clock_hours / 24  # in days
 
         self._initialize_datasets()
         self._initialize_op_rew()
         self._normalize_observations()
-
-        ep_index += 1  # Choose next data subset for next episode
 
         observation = self._get_obs()
         info = self._get_info()

@@ -189,7 +189,7 @@ class Preprocessing():
         self.eps_sim_steps_val = None           # Number of steps in the validation set
         self.eps_sim_steps_test = None          # Number of steps in the test set
         self.eps_ind = None                     # Contains indexes of the randomly ordered training subsets
-        self.overhead_factor = 3                # Overhead of self.eps_ind - To account for randomn selection of the different processes in multiprocessing (need to be an integer)
+        self.overhead_factor = 10                # Overhead of self.eps_ind - To account for randomn selection of the different processes in multiprocessing (need to be an integer)
         assert isinstance(self.overhead_factor, int), f"Episode overhead ({self.overhead_factor}) must be an integer!"
         self.n_eps = None                       # Episode length in seconds
         self.num_loops = None                   # No. of loops over the total training set during training
@@ -382,7 +382,7 @@ class Preprocessing():
             })
         else:
             env_kwargs.update({
-                "eps_ind": np.zeros(len(self.eps_ind), dtype=int),
+                "eps_ind": None,
                 "state_change_penalty": 0.0,
             })
             if type == "val":
@@ -494,25 +494,25 @@ def create_vec_envs(env_id, str_id, AgentConfig, TrainConfig, env_kwargs_data):
 
     # Create validation and test environments with callbacks
     _, eval_callback_val = _make_eval_env(env_id, str_id, TrainConfig, AgentConfig, env_kwargs_data['env_kwargs_val'], "val")
-    env_test, eval_callback_test = _make_eval_env(env_id, str_id, TrainConfig, AgentConfig, env_kwargs_data['env_kwargs_test'], "test")
+    _, eval_callback_test = _make_eval_env(env_id, str_id, TrainConfig, AgentConfig, env_kwargs_data['env_kwargs_test'], "test")
     
     # Create test2 environment with only one instance of the environment for postprocessing
-    env_test_post, _ = _make_eval_env(env_id, str_id, TrainConfig, AgentConfig, env_kwargs_data['env_kwargs_test'], "test2", n_envs=1)
+    env_test_post, _ = _make_eval_env(env_id, str_id, TrainConfig, AgentConfig, env_kwargs_data['env_kwargs_test'], "test_post", n_envs=1)
 
-    return env_train, env_test, eval_callback_val, eval_callback_test, env_test_post
+    return env_train, env_test_post, eval_callback_val, eval_callback_test
     
        
 class Postprocessing():
     """A class that contains variables and functions for postprocessing"""
 
-    def __init__(self, str_id, AgentConfig, EnvConfig, TrainConfig, env_test_single, Preprocess):
+    def __init__(self, str_id, AgentConfig, EnvConfig, TrainConfig, env_test_post, Preprocess):
         """
             Initialization of variables
             :param str_id: String for identification of the present training run
             :param AgentConfig: Agent configuration in a class object
             :param EnvConfig: Environment configuration in a class object
             :param TrainConfig: Training configuration in a class object
-            :param env_test_single: Test environment with only one instance
+            :param env_test_post: Test environment with only one instance for postprocessing
             :param Preprocess: Class object of preprocessing
         """
         # Initialization
@@ -521,7 +521,7 @@ class Postprocessing():
         self.TrainConfig = TrainConfig
         self.eps_sim_steps_test = Preprocess.eps_sim_steps_test
         model_path = f"{TrainConfig.path}{TrainConfig.path_files}{str_id}_val/best_model"
-        self.env_test_single = env_test_single
+        self.env_test_post = env_test_post
         self.stats_dict_test = {}
         self.str_id = str_id
 
@@ -535,12 +535,12 @@ class Postprocessing():
 
         stats = np.zeros((self.eps_sim_steps_test, len(self.EnvConfig.stats_names)))
 
-        obs = self.env_test_single.reset()
+        obs = self.env_test_post.reset()
         timesteps = self.eps_sim_steps_test#  - 6
 
         for i in tqdm(range(timesteps), desc='---Apply RL policy on the test environment:'):
             action, _ = self.model.predict(obs, deterministic=True)
-            obs, _ , terminated, info = self.env_test_single.step(action)
+            obs, _ , terminated, info = self.env_test_post.step(action)
 
             # Store data in stats
             if not terminated:
