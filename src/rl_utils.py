@@ -143,27 +143,27 @@ def load_data(EnvConfig, TrainConfig):
 
     return dict_price_data, dict_op_data
 
-####################################################################comment check#########################################################
 class Preprocessing():
-    """A class that contains variables and functions for preprocessing of energy market and process data"""
+    """A class for preprocessing energy market and process data"""
 
     def __init__(self, dict_price_data, dict_op_data, AgentConfig, EnvConfig, TrainConfig):
         """
-            Initialization of variables
-            :param dict_price_data: Dictionary with market data
-            :param dict_op_data: Dictionary with dynamic process data
-            :param AgentConfig: Agent configuration (class object)
-            :param EnvConfig: Environment configuration (class object)
-            :param TrainConfig: Training configuration (class object)
+            Initializes preprocessing with configuration parameters and data
+            :param dict_price_data: Dictionary containing historical market data.
+            :param dict_op_data: Dictionary containing dynamic process data.
+            :param AgentConfig: Configuration settings for the agent.
+            :param EnvConfig: Configuration settings for the environment.
+            :param TrainConfig: Configuration settings for training.
         """
-        # Initialization
+        # Store configuration objects and input data
         self.AgentConfig = AgentConfig
         self.EnvConfig = EnvConfig
         self.TrainConfig = TrainConfig
         self.dict_price_data = dict_price_data
         self.dict_op_data = dict_op_data
-        self.dict_pot_r_b = None                    # Dictionary with potential reward [pot_rew...] and boolean load identifier [part_full_b...]
-        self.r_level = None                         # Sets the general height of the reward penalty according to electricity, (S)NG, and EUA price levels
+        # Placeholder variables for computed values.
+        self.dict_pot_r_b = None                    # Dictionary containing the potential reward [pot_rew...] and the boolean load identifier [part_full_b...]
+        self.r_level = None                         # Defines the reward penalty level based on electricity, synthetic natural gas (SNG), and EUA price levels
 
         # e_r_b_train/e_r_b_val/e_r_b_test: (hourly values)
         #   np.array which stores elec. price data, potential reward, and boolean identifier
@@ -181,10 +181,10 @@ class Preprocessing():
         #       historical values = No. of values in the gas/EUA price data set
         self.g_e_train, self.g_e_val, self.g_e_test = None, None, None
 
-        # Variables for division of the entire training set into different, randomly picked subsets for episodic learing
-        self.eps_sim_steps_train = None         # Number of steps in the training set per episode
-        self.eps_sim_steps_val = None           # Number of steps in the validation set
-        self.eps_sim_steps_test = None          # Number of steps in the test set
+        # Variables for splitting the training set into randomly selected subsets for episodic learning
+        self.eps_sim_steps_train = None         # No. of steps per episode in the training set
+        self.eps_sim_steps_val = None           # No. of steps in the validation set
+        self.eps_sim_steps_test = None          # No. of steps in the test set
         self.eps_ind = None                     # Contains indexes of the randomly ordered training subsets
         self.overhead_factor = 10                # Overhead of self.eps_ind - To account for randomn selection of the different processes in multiprocessing (need to be an integer)
         assert isinstance(self.overhead_factor, int), f"Episode overhead ({self.overhead_factor}) must be an integer!"
