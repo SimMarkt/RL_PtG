@@ -185,28 +185,29 @@ class Preprocessing():
         self.eps_sim_steps_train = None         # No. of steps per episode in the training set
         self.eps_sim_steps_val = None           # No. of steps in the validation set
         self.eps_sim_steps_test = None          # No. of steps in the test set
-        self.eps_ind = None                     # Contains indexes of the randomly ordered training subsets
-        self.overhead_factor = 10                # Overhead of self.eps_ind - To account for randomn selection of the different processes in multiprocessing (need to be an integer)
+        self.eps_ind = None                     # Indexes of the randomly ordered training subsets
+        self.overhead_factor = 10               # Overhead factor for self.eps_ind to account for randomness in process selection during multiprocessing (Must be an integer)
         assert isinstance(self.overhead_factor, int), f"Episode overhead ({self.overhead_factor}) must be an integer!"
         self.n_eps = None                       # Episode length in seconds
-        self.num_loops = None                   # No. of loops over the total training set during training
+        self.num_loops = None                   # No. of loops over the full training set during training
 
-        # For Multiprocessing: self.n_eps_loops allows for definition of different eps_ind for different processes (see RL_PtG\env\ptg_gym_env.py)
-        self.n_eps_loops = None                 # Total No. of episodes over the entire training procedure 
+        # For Multiprocessing: self.n_eps_loops is used for definition of different eps_ind for different processes (RL_PtG\env\ptg_gym_env.py for reference)
+        self.n_eps_loops = None                 # Total No. of episodes across the entire training process 
 
-        self.preprocessing_rew()                # Calculate potential reward and load identifier
-        self.preprocessing_array()              # Transform Day-ahead datasets into np.arrays for calculation purposes
-        self.define_episodes()                  # define episodes and indices for choosing subsets of the training set randomly          
+        self.preprocessing_rew()                # Compute potential reward and load identifier
+        self.preprocessing_array()              # Convert day-ahead datasets into NumPy arrays for calculations.
+        self.define_episodes()                  # Define episodes and generate indices for random subset selection in training          
         
 
     def preprocessing_rew(self):
         """
-            Data preprocessing, including the calculation of potential rewards, which represent the maximum reward in 
-            Power-to-Gas operation, either in partial load [part_full_b... = 0] or full load [part_full_b... = 1].
+            Data preprocessing, including the calculation of potential rewards.
+            These represent the maximum possible reward in Power-to-Gas (PtG) operation, 
+            either in partial load [part_full_b... = 0] or full load [part_full_b... = 1].
         """
 
-        # Compute PtG operation data for the theoretical optimum T-OPT (ignoring dynamics). 
-        # The function calculate_optimum() has been moved from Preprocessing() to the separate rl_opt.py file for clarity.
+        # Compute PtG operation data for the theoretical optimum (T-OPT), ignoring system dynamics.
+        # The function calculate_optimum() was moved from Preprocessing() to the separate rl_opt.py file for better clarity.
         print("---Calculate the theoretical optimum, the potential reward, and the load identifier")
         stats_dict_opt_train = calculate_optimum(self.dict_price_data['el_price_train'], self.dict_price_data['gas_price_train'],
                                                 self.dict_price_data['eua_price_train'], "Training", self.EnvConfig.stats_names)
@@ -217,16 +218,16 @@ class Preprocessing():
         stats_dict_opt_level = calculate_optimum(self.dict_price_data['el_price_reward_level'], self.dict_price_data['gas_price_reward_level'],
                                                 self.dict_price_data['eua_price_reward_level'], "reward_Level", self.EnvConfig.stats_names)
 
-        # Store datasets containing future values of potential rewards for two different load levels,
-        # along with datasets of the load identifier for future values of the potential reward in a dictionary.
-        # Pseudo code for part_full_b_... calculation:
+        # Store datasets containing future values of potential rewards at two different load levels,
+        # Additionally, store datasets for the load identifier corresponding to future potential rewards.
+        # The part_full_b_... variable is determined as follows:
         #       if pot_rew_... <= 0:
-        #           part_full_b_... = -1
+        #           part_full_b_... = -1        # Operation is not profitable
         #       else:
         #           if (pot_rew_... in full load) < (pot_rew... in partial load):
-        #               part_full_b_... = 0
+        #               part_full_b_... = 0     # Partial load is most profitable
         #           else:
-        #               part_full_b_... = 1
+        #               part_full_b_... = 1     # Full load is most profitable
         self.dict_pot_r_b = {
             'pot_rew_train': stats_dict_opt_train['Meth_reward_stats'],
             'part_full_b_train': stats_dict_opt_train['part_full_stats'],
@@ -240,7 +241,7 @@ class Preprocessing():
 
 
     def preprocessing_array(self):
-        """Transforms dictionaries to np.arrays for computational purposes"""
+        """Convert dictionaries to NumPy arrays for computational efficiency"""
 
         # e_r_b: Multi-Dimensional array which stores Day-ahead electricity price data as well as Day-ahead potential rewards
         # and load identifiers for the entire training and test sets
@@ -283,39 +284,39 @@ class Preprocessing():
         """Defines settings for training and evaluation episodes"""
 
         print("---Define episodes and step size limits")
-        # No. of days in the test set ("-1" excludes the day-ahead overhead)
+        # No. of days in the test set ("-1" accounts for the day-ahead overhead)
         val_len_d = len(self.dict_price_data['gas_price_val']) - 1
         test_len_d = len(self.dict_price_data['gas_price_test']) - 1
 
-        # Split up the entire training set into several smaller subsets, each subset represents an own episodes
-        self.n_eps = int(self.EnvConfig.train_len_d / self.EnvConfig.eps_len_d)  # No. of training subsets/episodes per training procedure
-        
+        # Divide the full training dataset into smaller subsets, each representing a separate episode
+        self.n_eps = int(self.EnvConfig.train_len_d / self.EnvConfig.eps_len_d)  # No. of training subsets (episodes)
         self.eps_len = 24 * 3600 * self.EnvConfig.eps_len_d  # Episode length in [s]
 
-        # No. of steps in train and test sets per episode
+        # No. of steps per episode in training, validation, and testing
         self.eps_sim_steps_train = int(self.eps_len / self.EnvConfig.sim_step)
         self.eps_sim_steps_val = int(24 * 3600 * val_len_d / self.EnvConfig.sim_step)
         self.eps_sim_steps_test = int(24 * 3600 * test_len_d /self.EnvConfig.sim_step)
 
-        # Define the total number of steps for all workers together
-        self.num_loops = self.TrainConfig.train_steps / (self.eps_sim_steps_train * self.n_eps)      # No. of loops over the total training set
+        # Define the total number of loops over the entire training set for all workers
+        self.num_loops = self.TrainConfig.train_steps / (self.eps_sim_steps_train * self.n_eps)            
+        # Print training process details
         print("    > Total number of training steps =", self.TrainConfig.train_steps)
         print("    > No. of loops over the entire training set =", round(self.num_loops,3))
         print("    > Training steps per episode =", self.eps_sim_steps_train)
         print("    > Steps in the evaluation set =", self.eps_sim_steps_test, "\n")
 
-        # Create random selection routine without replacement for the different training subsets
+        # Generate a randomized selection routine without replacement for different training subsets
         self.rand_eps_ind()
 
-        # For Multiprocessing, eps_ind should not be shared between different processes
-        self.n_eps_loops = self.n_eps * int(self.num_loops)  # Allows for definition of different eps_ind in Multiprocessing (see RL_PtG\env\ptg_gym_env.py)
+        # For multiprocessing, ensure eps_ind is not shared across processes
+        self.n_eps_loops = self.n_eps * int(self.num_loops)  # Allows unique eps_ind assignments per process (RL_PtG\env\ptg_gym_env.py for reference)
 
 
     def rand_eps_ind(self):
         """
-            The agent can either use the total training set in one episode (train_len_d == eps_len_d) or
-            divide the total training set into smaller subsets (train_len_d_i > eps_len_d). In the latter case, the
-            subsets where selected randomly.
+            The agent can either:
+            1. Use the entire training set in a single episode (train_len_d == eps_len_d).
+            2. Divide the training set into smaller subsets (train_len_d > eps_len_d), selecting subsets randomly.
         """
 
         np.random.seed(self.TrainConfig.seed_train)     # Set the random seed for random episode selection
@@ -323,7 +324,7 @@ class Preprocessing():
         if self.EnvConfig.train_len_d == self.EnvConfig.eps_len_d:
             self.eps_ind = np.zeros(self.n_eps*int(self.num_loops)*self.overhead_factor)
         else:           # self.EnvConfig.train_len_d > self.EnvConfig.eps_len_d:
-            # Random selection with sampling with replacement
+            # Random selection with replacement
             num_ep = np.linspace(start=0, stop=self.n_eps-1, num=self.n_eps)
             if self.num_loops < 1:      num_loops_int = 1
             else:                       num_loops_int = int(self.num_loops)
@@ -336,8 +337,8 @@ class Preprocessing():
     def dict_env_kwargs(self, type="train"):
         """
             Returns global model parameters and hyperparameters for the PtG environment as a dictionary.
-            :param type: Specifies whether the dataset is for training ("train") or for validation/testing ("val_test")
-            :return: env_kwargs: Dictionary with global parameters and hyperparameters 
+            :param type: Specifies whether the dataset is for training ("train") or for validation/testing ("val_test").
+            :return: env_kwargs - Dictionary containing global parameters and hyperparameters.
         """
 
         # General environment configurations
@@ -489,30 +490,29 @@ def create_vec_envs(env_id, str_id, AgentConfig, TrainConfig, env_kwargs_data):
                           dict(dict_input=env_kwargs_data['env_kwargs_train'], 
                                train_or_eval=TrainConfig.train_or_eval, render_mode="None"), vec_env_cls)
 
-    # Create validation and test environments with callbacks
+    # Create callbacks for validation and test
     _, eval_callback_val = _make_eval_env(env_id, str_id, TrainConfig, AgentConfig, env_kwargs_data['env_kwargs_val'], "val")
     _, eval_callback_test = _make_eval_env(env_id, str_id, TrainConfig, AgentConfig, env_kwargs_data['env_kwargs_test'], "test")
     
-    # Create test2 environment with only one instance of the environment for postprocessing
+    # Create second test environment with only one instance of the environment for postprocessing
     env_test_post, _ = _make_eval_env(env_id, str_id, TrainConfig, AgentConfig, env_kwargs_data['env_kwargs_test'], "test_post", n_envs=1)
 
     return env_train, env_test_post, eval_callback_val, eval_callback_test
     
        
 class Postprocessing():
-    """A class that contains variables and functions for postprocessing"""
+    """A class for post-processing"""
 
     def __init__(self, str_id, AgentConfig, EnvConfig, TrainConfig, env_test_post, Preprocess):
         """
-            Initialization of variables
-            :param str_id: String for identification of the present training run
-            :param AgentConfig: Agent configuration (class object)
-            :param EnvConfig: Environment configuration (class object)
-            :param TrainConfig: Training configuration (class object)
-            :param env_test_post: Test environment with only one instance for postprocessing
-            :param Preprocess: Class object of preprocessing
+            Initializes variables
+            :param str_id: Unique identifier for the current training run.
+            :param AgentConfig: Configuration settings for the agent (class object).
+            :param EnvConfig: Configuration settings for the environment (class object).
+            :param TrainConfig: Configuration settings for training (class object).
+            :param env_test_post: Test environment instance used for post-processing.
+            :param Preprocess: Instance of the Preprocessing class.
         """
-        # Initialization
         self.AgentConfig = AgentConfig
         self.EnvConfig = EnvConfig
         self.TrainConfig = TrainConfig
@@ -529,7 +529,6 @@ class Postprocessing():
         """
             Test RL policy on the validation environment
         """
-
         stats = np.zeros((self.eps_sim_steps_test, len(self.EnvConfig.stats_names)))
 
         obs = self.env_test_post.reset()
@@ -566,13 +565,13 @@ class Postprocessing():
         return None
 
     def plot_results(self):
-        """Creates a plot with multiple subplots of the time series and the methanation operation according to the agent"""
+        """Generates a multi-subplot plot displaying time-series data and methanation operations based on the agent's actions"""
         print("---Plot and save RL performance on the test set under ./plots/ ...\n") 
 
         stats_dict = self.stats_dict_test
         time_sim = stats_dict['steps_stats'] * self.EnvConfig.sim_step
-        time_sim *= 1 / 3600 / 24  # Converts the simulation time into days
-        time_sim = time_sim[:-6]                              # ptg_gym_env.py curtails an episode by 6 time steps to ensure a data overhead
+        time_sim *= 1 / 3600 / 24   # Converts the simulation time into days
+        time_sim = time_sim[:-6]    # ptg_gym_env.py curtails an episode by 6 time steps to ensure a data overhead
         meth_state = stats_dict['Meth_State_stats'][:-6]+1
 
         fig, axs = plt.subplots(3, 1, figsize=(10, 6), sharex=True, sharey=False)
