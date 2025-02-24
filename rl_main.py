@@ -2,16 +2,16 @@
 # RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
 # https://github.com/SimMarkt/RL_PtG
 
-# rl_main: 
-# > Main script for training deep RL algorithms on the PtG-CH4 dispatch task.
-# > Differentiates between available computational resources: local personal computer ('pc') or a computing cluster with SLURM management ('slurm').
+# rl_main:
+# > Main script for training deep reinforcement learning (RL) algorithms on the PtG-CH4 dispatch task.
+# > Adapts to different computational environments: a local personal computer ('pc') or a computing cluster with SLURM management ('slurm').
 # ----------------------------------------------------------------------------------------------------------------
 
 # --------------------------------------------Import Python libraries---------------------------------------------
 import os
 import torch as th
 
-# Libraries for RL environment
+# Library for the RL environment
 from gymnasium.envs.registration import registry, register 
 
 # Libraries with utility functions and classes
@@ -22,8 +22,8 @@ from src.rl_config_train import TrainConfiguration
 
 def computational_resources(TrainConfig):
     """
-        Set computational resources and the random seed of the present thread
-        :param TrainConfig: Training configuration in a class object
+        Configures computational resources and sets the random seed for the current thread
+        :param TrainConfig: Training configuration (class object)
     """
     print("Set computational resources...")
     TrainConfig.path = os.path.dirname(__file__)
@@ -33,7 +33,7 @@ def computational_resources(TrainConfig):
         TrainConfig.seed_test = TrainConfig.r_seed_test[0]
     else: 
         print("---SLURM Task ID:", os.environ['SLURM_PROCID'])
-        TrainConfig.slurm_id = int(os.environ['SLURM_PROCID'])         # Thread ID of the specific SLURM process in parallel computing on a cluster
+        TrainConfig.slurm_id = int(os.environ['SLURM_PROCID'])         # Thread ID of the specific SLURM process in parallel computing on a computing cluster
         assert TrainConfig.slurm_id <= len(TrainConfig.r_seed_train), f"No. of SLURM threads exceeds the No. of specified random seeds ({len(TrainConfig.r_seed_train)}) - please add additional seed values to RL_PtG/config/config_train.yaml -> r_seed_train & r_seed_test"
         TrainConfig.seed_train = TrainConfig.r_seed_train[TrainConfig.slurm_id]
         TrainConfig.seed_test = TrainConfig.r_seed_test[TrainConfig.slurm_id]
@@ -43,12 +43,12 @@ def computational_resources(TrainConfig):
 
 def check_env(env_id):
     """
-        Adds the Gymnasium environment to the registry if is not already registered
-        :param env_id: ID of the environment
+        Registers the Gymnasium environment if it is not already in the registry
+        :param env_id: Unique identifier for the environment
     """
     if env_id not in registry:      # Check if the environment is already registered
         try:
-            # Import your custom environment class
+            # Import the ptg_gym_env environment
             from env.ptg_gym_env import PTGEnv
 
             # Register the environment
@@ -65,7 +65,7 @@ def check_env(env_id):
         print(f"---Environment '{env_id}' is already registered.\n")
 
 def main():
-    # ----------------------------------------Initialize RL configuration-----------------------------------------
+    # --------------------------------------Initialize the RL configuration---------------------------------------
     initial_print()
     AgentConfig = AgentConfiguration()
     EnvConfig = EnvConfiguration()
@@ -79,7 +79,7 @@ def main():
 
     # Initialize preprocessing with calculation of potential rewards and load identifiers
     Preprocess = Preprocessing(dict_price_data, dict_op_data, AgentConfig, EnvConfig, TrainConfig)    
-    # Create dictionaries for kwargs of train and test environments
+    # Create dictionaries for kwargs of training and test environments
     env_kwargs_data = {'env_kwargs_train': Preprocess.dict_env_kwargs("train"),
                        'env_kwargs_val': Preprocess.dict_env_kwargs("val"),
                        'env_kwargs_test': Preprocess.dict_env_kwargs("test"),}
@@ -108,7 +108,7 @@ def main():
         print("Save RL agent under ./logs/ ... \n") 
         AgentConfig.save_model(model)
     
-    # ----------------------------------------------Postprocessing------------------------------------------------
+    # ----------------------------------------------Post-processing-----------------------------------------------
     print("Postprocessing...")
     PostProcess = Postprocessing(str_id, AgentConfig, EnvConfig, TrainConfig, env_test_post, Preprocess)
     PostProcess.test_performance()
