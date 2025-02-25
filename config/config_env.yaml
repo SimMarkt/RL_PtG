@@ -22,7 +22,7 @@
 #   EEG: German Renewable Energy Act (Erneuerbare-Energien-Gesetz)
 
 scenario : 2                    # Business case (must be one of [1, 2, 3])
-operation : OP1                 # Load level: "OP1" or "OP2" for the PtG-CH4 plant
+operation : OP2                 # Load level: "OP1" or "OP2" for the PtG-CH4 plant
 price_ahead : 13                # Number of forecasted electricity price values for future data (0-12h)
 time_step_op : 2                # Time step between consecutive entries in the methanation operation data [s]
 noise : 10                      # Noise factor influencing state transitions in the methanation process [steps in the operation data]
