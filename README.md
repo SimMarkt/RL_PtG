@@ -33,6 +33,10 @@ For more information on the data-based process model, please refer to ...
 
 - Data: Electricity price day-ahead data from SMARD; Since the main study used gas and EUA market data provided by MONTEL without the rights to publish. Create synthesized data based on the real market data using TimeGAN algorithm.
 
+potential rewards.
+These represent the maximum possible reward in Power-to-Gas (PtG) operation, 
+either in partial load [part_full_b... = 0] or full load [part_full_b... = 1].
+
 ---
 
 ## Project Structure
@@ -72,14 +76,13 @@ RL_PtG/
 ```
 
 ### `config/`
-Contains configuration files for various components of the project:
+Contains configuration files for the project:
 - **`config/config_agent.yaml`**: Configuration for the RL agent.
 - **`config/config_env.yaml`**: Configuration for PtG environment.
 - **`config/config_train.yaml`**: Configuration for training procedure.
 
 ### `data/`
-Contains configuration files for various components of the project:
-
+Contains process data for two different load levels OP1 and OP2 with different dynamics and energy market data:
 - **`data/OP.../data-meth_cooldown.csv`**: C
 - **`data/OP.../data-meth_op1_start_p.csv`**: C
 - **`data/OP.../data-meth_op2_start_f.csv`**: C
@@ -98,8 +101,6 @@ Contains configuration files for various components of the project:
 - **`data/OP.../data-meth_startup_cold.csv`**: C
 - **`data/OP.../data-meth_startup_hot.csv`**: C
 - **`data/OP.../data-meth_cooldown.csv`**: C
-
-Contains configuration files for various components of the project:
 - **`data/spot_market_data/data-day-ahead-el-test.csv`**: C
 - **`data/spot_market_data/data-day-ahead-el-train.csv`**: C
 - **`data/spot_market_data/data-day-ahead-el-val.csv`**: C
@@ -110,43 +111,58 @@ Contains configuration files for various components of the project:
 - **`data/spot_market_data/data-day-ahead-gas-train.csv`**: C
 - **`data/spot_market_data/data-day-ahead-gas-val.csv`**: C
 
-Contains configuration files for various components of the project:
-- **`config/config_agent.yaml`**: Configuration for the RL agent.
-- **`config/config_env.yaml`**: Configuration for PtG environment.
-- **`config/config_train.yaml`**: Configuration for training procedure.
+### `logs/`
+During training, RL_PtG stores the algorithm and its parameters with the best performance in the validation environment in 'logs/'.
+
+### `plots/`
+After the training procedure, the best algorithm/ policy is evaluated on the test set and RL_PtG will create a diagram of its performance in 'plots/'.
 
 ### `src/`
-Contains source code for the different threads and connection wrappers using object-oriented programming:
-- **`src/pci_modbus.py`**: Implements the Modbus connection with a class object providing:
-  - `connect()`: Connects to the Modbus client
-  - `is_connected()`: Tests the Modbus connection
-  - `read_pemel_status()`: Reads and interprets the Modbus register containing the current state of PEMEL using `convert_bits()`
-  - `read_pemel_process_values()`: Reads the PEMEL process values using `convert_process_values()`
-  - `convert_bits()`: Converts the binary signal of the bit-wise PEMEL state representation into a one-hot encoded array
-  - `convert_process_values()`: Converts the process values in the different registers to an array
-  - `write_pemel_current()`: Writes the set point of the PEMEL electrical current to the respective Modbus register using `convert_h2_flow_to_current()`
-  - `convert_h2_flow_to_current()`: Converts the hydrogen flow rate to the PEMEL's electrical current using `interpolate_h2_flow()`
-  - `interpolate_h2_flow()`: Determines the electrical current based on the experimental values in `PEMEL_Current_H2Flowrate.txt`
-- **`src/pci_opcua.py`**: Implements the OPC UA connection with a class object providing:
-  - `connect()`: Connects to the OPC UA server
-  - `is_connected()`: Tests the OPC UA connection
-  - `read_node_values()`: Reads the values of multiple nodes using their NodeIDs
-- **`src/pci_sql.py`**: Implements the SQL connection with a class object providing:
-  - `connect()`: Connects to the SQL database
-  - `is_connected()`: Tests the SQL connection
-  - `insert_data()`: Inserts data into PostgreSQL database
-- **`src/threads.py`**: Implements multi-threaded operations, including:
-  - **PEMEL control thread** > `pemel_control()`: Manages PEMEL operations using Modbus and OPC UA using `el_control_func()`
-  - **Data storage thread** > `data_storage()`: Handles data transfer between the OPC UA server, Modbus client, and SQL database using `data_trans_func()`
-  - **Supervisor thread** > `supervisor()`: Monitors and attempts reconnection for disconnected services.
+Contains source code for pre- and postprocessing:
+- **`src/rl_config_agent.py`**: C
+  - `AgentConfiguration()`: Class for preprocessing the agent's configuration.
+    - `set_model()`: Specifies and initializes the Stable-Baselines3 model for RL training.
+    - `load_model()`: Loads a pretrained Stable-Baselines3 model for RL training.
+    - `save_model()`: Saves the trained Stable-Baselines3 model and its replay buffer (if applicable).
+    - `get_hyper()`: Displays the algorithm's hyperparameters and creates a string for file identification using `get_hyper()`. 
+    - `hyp_print()`: Displays the value of a specific hyperparameter and adds it to the string identifier.
+- **`src/rl_config_env.py`**: C
+  - `EnvConfiguration()`: Class for preprocessing the environment's configuration.
+- **`src/rl_config_train.py`**: C
+  - `TrainConfiguration()`: Class for preprocessing the training configuration.
+- **`src/rl_opt.py`**: Computes the potential rewards, the load identifiers, and the theoretical optimum T-OPT ignoring plant dynamics.
+  - `calculate_optimum()`: Computes the theoretical maximum revenue for the Power-to-Gas process, assuming no operational constraints.          
+- **`src/rl_utils.py`**: Contains utiliy and helper functions
+  - `import_market_data()`: Imports day-ahead market price data.
+  - `import_data()`: Imports experimental methanation process data.
+  - `load_data()`: Loads historical market data and experimental methanation operation data using `import_market_data()` and `import_data()`
+  - `Preprocessing()`: A class for preprocessing energy market and process data
+    - `preprocessing_rew()`: Data preprocessing, including the calculation of potential rewards using `calculate_optimum()`
+    - `preprocessing_array()`: Convert dictionaries to NumPy arrays for computational efficiency
+    - `define_episodes()`: Defines settings for training and evaluation episodes using `rand_eps_ind()`
+    - `rand_eps_ind()`: Generate a randomized selection of subsets from the whole training data set without replacement
+    - `dict_env_kwargs()`: Attributes global model parameters and hyperparameters to a kwargs dictionary for the PtG environment
+    - `initial_print()`: Displays initial information to the text user interface
+    - `config_print()`: Gathers and prints general settings
+    - `_make_env()`: Helper function to create and normalized environments
+    - `eval_callback_dec()`: Decorator to create an evaluation environment and its EvalCallback
+    - `_make_eval_env()`: Creates an evaluation using `_make_env()` and `eval_callback_dec()`
+    - `create_vec_envs()`: Creates vectorized environments for training, validation, and testing using `_make_eval_env()` and `_make_env()`
+  - `Postprocessing()`: A class for post-processing
+    - `test_performance()`: Test RL policy on the test environment 
+    - `plot_results()`: Generates a plot displaying test results
 
-### Main Scripts
-- **`pci_main.py`**: The primary script for running multi-threaded data transfer operations.
-- **`pci_main_ws.py`**: A variation of the main script designed to set up a Windows service for data transfer.
+### `tensorboard/`
+During RL training, RL_PtG will store a tensorboard file for monitoring.
+
+### Main Script
+- **`rl_main.py`**: The main script for training the predefined RL agent on the PtG dispatch task.
+  - `computational_resources()`: Configures computational resources
+  - `check_env()`: Registers the Gymnasium environment if it is not already in the registry
+  - `main()`: Initiates and performs model training and evaluation
 
 ### Miscellaneous
-- **`PEMEL_Current_H2Flowrate.txt`**: Contains the PEMEL hydrogen production depending on the applied electrical current.
-- **`PyComInt.log`**: Contains the log for debugging and monitoring, will be created when running the code.
+- **`rl_tb.py`**: Returns the URL of the tensorboard server for monitoring of RL training results.
 - **`requirements.txt`**: Contains the required python libraries.
 
 ---

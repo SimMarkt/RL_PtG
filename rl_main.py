@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------------------------------------------
-# RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
-# https://github.com/SimMarkt/RL_PtG
-
+# RL_PtG: Deep Reinforcement Learning for Power-to-Gas Dispatch Optimization
+# GitHub Repository: https://github.com/SimMarkt/RL_PtG
+#
 # rl_main:
 # > Main script for training deep reinforcement learning (RL) algorithms on the PtG-CH4 dispatch task.
 # > Adapts to different computational environments: a local personal computer ('pc') or a computing cluster with SLURM management ('slurm').

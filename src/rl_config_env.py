@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------------------------------------------
-# RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
-# https://github.com/SimMarkt/RL_PtG
-
+# RL_PtG: Deep Reinforcement Learning for Power-to-Gas Dispatch Optimization
+# GitHub Repository: https://github.com/SimMarkt/RL_PtG
+#
 # rl_config_env: 
 # > Contains the configuration for the Power-to-Gas (PtG) process environment
 # > Converts the data from 'config_env.yaml' into a class object for further processing and usage

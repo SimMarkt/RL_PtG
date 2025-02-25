@@ -1,9 +1,9 @@
 # ----------------------------------------------------------------------------------------------------------------
-# RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
-# https://github.com/SimMarkt/RL_PtG
-
+# RL_PtG: Deep Reinforcement Learning for Power-to-Gas Dispatch Optimization
+# GitHub Repository: https://github.com/SimMarkt/RL_PtG
+#
 # rl_opt: 
-# > Computes the theoretical optimum T-OPT ignoring PtG plant dynamics
+# > Computes the potential rewards, the load identifiers, and the theoretical optimum T-OPT ignoring plant dynamics.
 # ----------------------------------------------------------------------------------------------------------------
 
 # Abbreviations:
