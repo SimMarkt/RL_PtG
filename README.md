@@ -72,14 +72,13 @@ RL_PtG/
 ```
 
 ### `config/`
-Contains configuration files for various components of the project:
+Contains configuration files for the project:
 - **`config/config_agent.yaml`**: Configuration for the RL agent.
 - **`config/config_env.yaml`**: Configuration for PtG environment.
 - **`config/config_train.yaml`**: Configuration for training procedure.
 
 ### `data/`
-Contains configuration files for various components of the project:
-
+Contains process data for two different load levels OP1 and OP2 with different dynamics and energy market data:
 - **`data/OP.../data-meth_cooldown.csv`**: C
 - **`data/OP.../data-meth_op1_start_p.csv`**: C
 - **`data/OP.../data-meth_op2_start_f.csv`**: C
@@ -98,8 +97,6 @@ Contains configuration files for various components of the project:
 - **`data/OP.../data-meth_startup_cold.csv`**: C
 - **`data/OP.../data-meth_startup_hot.csv`**: C
 - **`data/OP.../data-meth_cooldown.csv`**: C
-
-Contains configuration files for various components of the project:
 - **`data/spot_market_data/data-day-ahead-el-test.csv`**: C
 - **`data/spot_market_data/data-day-ahead-el-train.csv`**: C
 - **`data/spot_market_data/data-day-ahead-el-val.csv`**: C
@@ -110,10 +107,42 @@ Contains configuration files for various components of the project:
 - **`data/spot_market_data/data-day-ahead-gas-train.csv`**: C
 - **`data/spot_market_data/data-day-ahead-gas-val.csv`**: C
 
-Contains configuration files for various components of the project:
-- **`config/config_agent.yaml`**: Configuration for the RL agent.
-- **`config/config_env.yaml`**: Configuration for PtG environment.
-- **`config/config_train.yaml`**: Configuration for training procedure.
+### `logs/`
+During training, RL_PtG stores the algorithm and its parameters with the best performance in the validation environment in 'logs/'.
+
+### `plots/`
+After the training procedure, the best algorithm/ policy is evaluated on the test set and RL_PtG will create a diagram of its performance in 'plots/'.
+
+### `src/`
+Contains source code for pre- and postprocessing:
+- **`src/rl_config_agent.py`**: C
+  - `AgentConfiguration()`: Class for preprocessing the agent's configuration.
+    - `set_model()`: Specifies and initializes the Stable-Baselines3 model for RL training.
+    - `load_model()`: Loads a pretrained Stable-Baselines3 model for RL training.
+    - `save_model()`: Saves the trained Stable-Baselines3 model and its replay buffer (if applicable).
+    - `get_hyper()`: Displays the algorithm's hyperparameters and creates a string for file identification using `get_hyper()`. 
+    - `hyp_print()`: Displays the value of a specific hyperparameter and adds it to the string identifier.
+- **`src/rl_config_env.py`**: C
+  - `EnvConfiguration()`: Class for preprocessing the environment's configuration.
+- **`src/rl_config_train.py`**: C
+  - `TrainConfiguration()`: Class for preprocessing the training configuration.
+- **`src/rl_opt.py`**: Computes the potential rewards, the load identifiers, and the theoretical optimum T-OPT ignoring plant dynamics.
+  - `calculate_optimum()`: Computes the theoretical maximum revenue for the Power-to-Gas process, assuming no operational constraints.          
+- **`src/rl_utils.py`**: Contains utiliy and helper functions
+  - `import_market_data()`: Imports day-ahead market price data.
+  - `import_data()`: Imports experimental methanation process data.
+  
+
+### `tensorboard/`
+During RL training, RL_PtG will store a tensorboard file for monitoring.
+
+### Main Script
+- **`rl_main.py`**: The main script for training the predefined RL agent on the PtG dispatch task.
+
+### Miscellaneous
+- **`rl_tb.py`**: Returns the URL of the tensorboard server for monitoring of RL training results.
+- **`requirements.txt`**: Contains the required python libraries.
+
 
 ### `src/`
 Contains source code for the different threads and connection wrappers using object-oriented programming:

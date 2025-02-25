@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------------------------------------------
-# RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
-# https://github.com/SimMarkt/RL_PtG
-
+# RL_PtG: Deep Reinforcement Learning for Power-to-Gas Dispatch Optimization
+# GitHub Repository: https://github.com/SimMarkt/RL_PtG
+#
 # rl_utils: 
 # > Utiliy/Helper functions
 # ----------------------------------------------------------------------------------------------------------------

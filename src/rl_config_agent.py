@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------------------------------------------
 # RL_PtG: Deep Reinforcement Learning for Power-to-Gas Dispatch Optimization
 # GitHub Repository: https://github.com/SimMarkt/RL_PtG
-
+#
 # rl_config_agent:
 # > Stores hyperparameters for the RL agents
 # > Parses the config_agent.yaml data into a class object for further processing
