@@ -3,7 +3,7 @@
 # GitHub Repository: https://github.com/SimMarkt/RL_PtG
 #
 # rl_tb: 
-# > Returns the URL of the tensorboard server for monitoring of RL training results
+# > Starts the tensorboard server for monitoring of RL training results
 # ----------------------------------------------------------------------------------------------------------------
 
 import os

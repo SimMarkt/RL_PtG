@@ -30,6 +30,8 @@ To configure the code, the project provides two YAML files in "./config": config
 The experimental process data and energy market data are present in "./data".
 Note that two different load levels are ...
 
+
+
 ![Screenshot](screenshot.png)
 
 For more information on the data-based process model, please refer to ...
@@ -63,6 +65,9 @@ RL_PtG/
 │   ├── OP1/
 │   ├── OP2/
 │   └── spot_market_data/
+│
+├── env/
+│   └── ptg_gym_env.py
 │
 ├── logs/
 │
@@ -119,6 +124,10 @@ Contains process data for two load levels OP1 and OP2 with different dynamics an
 - **`data/spot_market_data/data-day-ahead-gas-train.csv`**: Day-ahead gas spot market data for training
 - **`data/spot_market_data/data-day-ahead-gas-val.csv`**: Day-ahead gas spot market data for validation
 
+### `env/`
+Contains the PtG environment modelled as a *Gymnasium* class
+- **`env/ptg_gym_env.py`**: The power to 
+
 ### `logs/`
 During training, RL_PtG stores the algorithm and its parameters with the best performance in the validation environment in 'logs/'.
 
@@ -170,7 +179,7 @@ During RL training, RL_PtG will store a tensorboard file for monitoring.
   - `main()`: Initiates and performs model training and evaluation
 
 ### Miscellaneous
-- **`rl_tb.py`**: Returns the URL of the tensorboard server for monitoring of RL training results.
+- **`rl_tb.py`**: Starts the tensorboard server for monitoring of RL training results.
 - **`requirements.txt`**: Contains the required python libraries.
 
 ---
@@ -192,7 +201,14 @@ Afterwards, create a new Python virtual environment in the project folder and in
 Note that Python 3.10 or a newer Version is required to run the code.
 After installing all Python packages, the code can be run by using the rl_main_TQC_hpc.py file.
 
+![TB_plot](plots/tb_plot.png)
+*Figure 3: Graphical user interface of the tensorboard server for RL monitoring with a learning curve of PPO on the validation environment.*
+
 ![Results](plots/RL_PtG_train_BS2_OP2_sfmod_ep37_ts600_PPO_al5e-05_ga0.973_ec1e-05_nf21_bs203_hl2_hu358_acReLU_ge0.8002_ep13_naFalse_gsFalse_rs3654_plot.png)
+*Figure 2: PPO performance on the test environment including energy market data, PtG process state, methane production, reward, and cumulative reward.*
+
+
+
 
 ---
 
