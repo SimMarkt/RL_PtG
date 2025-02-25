@@ -10,7 +10,7 @@
 # ----------------------------------------------------------------------------------------------------------------
 
 n_envs : 6                   # No. of environment instances/workers for training
-rl_alg : SAC                 # Selected RL algorithm (available options: [DQN, A2C, PPO, TD3, SAC, TQC])
+rl_alg : PPO                 # Selected RL algorithm (available options: [DQN, A2C, PPO, TD3, SAC, TQC])
 
 hyperparameters:    # Hyperparameters for the RL algorithms in use
     DQN :
