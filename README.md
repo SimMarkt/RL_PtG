@@ -2,12 +2,14 @@
 
 Deep Reinforcement Learning (RL) for dynamic Real-time optimization of Power-to-Gas (PtG) dispatch with respect to Day-ahead electricity, natural gas, and emission allowances market data. The PtG process comprises a proton exchange membrane electrolyzer (PEMEL) and a chemical methanation unit.
 
+![RL_PtG_int](plots/RL_PtG_int.png)
+
 ---
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Features](#features)
+2. [Project structure](#structure)
 3. [Installation and Usage](#installation)
 4. [License](#license)
 5. [Citing](#citing)
