@@ -8,7 +8,7 @@ Deep Reinforcement Learning (RL) for dynamic Real-time optimization of Power-to-
 
 1. [Overview](#overview)
 2. [Features](#features)
-3. [Installation](#installation)
+3. [Installation and Usage](#installation)
 4. [License](#license)
 5. [Citing](#citing)
 6. [Acknowledgments](#acknowledgments)
@@ -17,6 +17,9 @@ Deep Reinforcement Learning (RL) for dynamic Real-time optimization of Power-to-
 
 ## Overview
 
+**RL_PtG** is ... 
+
+### Application
 Deep RL is a promising approach for economic optimization of chemical plant operation. This python project implements deep RL for PtG dispatch optimization under Day-ahead energy
 market conditions. The file "rl_main.py" contains the for training RL agents using a "data-based process model" of PtG as environment. This model has been derived from experimental data of a real PtG demonstration plant and serve as environment, along with energy market data.
 The environment has been implemented using the Gymnasium environment.
@@ -32,6 +35,11 @@ Note that two different load levels are ...
 For more information on the data-based process model, please refer to ...
 
 - Data: Electricity price day-ahead data from SMARD; Since the main study used gas and EUA market data provided by MONTEL without the rights to publish. Create synthesized data based on the real market data using TimeGAN algorithm.
+
+### Deep RL algorithms
+... 
+
+### Data preprocessing and feature design
 
 potential rewards.
 These represent the maximum possible reward in Power-to-Gas (PtG) operation, 
@@ -82,34 +90,34 @@ Contains configuration files for the project:
 - **`config/config_train.yaml`**: Configuration for training procedure.
 
 ### `data/`
-Contains process data for two different load levels OP1 and OP2 with different dynamics and energy market data:
-- **`data/OP.../data-meth_cooldown.csv`**: C
-- **`data/OP.../data-meth_op1_start_p.csv`**: C
-- **`data/OP.../data-meth_op2_start_f.csv`**: C
-- **`data/OP.../data-meth_op3_p_f.csv`**: C
-- **`data/OP.../data-meth_op4_p_f_p_5.csv`**: C
-- **`data/OP.../data-meth_op5_p_f_p_10.csv`**: C
-- **`data/OP.../data-meth_op6_p_f_p_15.csv`**: C
-- **`data/OP.../data-meth_op7_p_f_p_20.csv`**: C
-- **`data/OP.../data-meth_op8_f_p.csv`**: C
-- **`data/OP.../data-meth_op9_f_p_f_5.csv`**: C
-- **`data/OP.../data-meth_op10_f_p_f_10.csv`**: C
-- **`data/OP.../data-meth_op11_f_p_f_15.csv`**: C
-- **`data/OP.../data-meth_op12_f_p_f_20.csv`**: C
-- **`data/OP.../data-meth_standby_down.csv`**: C
-- **`data/OP.../data-meth_standby_up.csv`**: C
-- **`data/OP.../data-meth_startup_cold.csv`**: C
-- **`data/OP.../data-meth_startup_hot.csv`**: C
-- **`data/OP.../data-meth_cooldown.csv`**: C
-- **`data/spot_market_data/data-day-ahead-el-test.csv`**: C
-- **`data/spot_market_data/data-day-ahead-el-train.csv`**: C
-- **`data/spot_market_data/data-day-ahead-el-val.csv`**: C
-- **`data/spot_market_data/data-day-ahead-eua-test.csv`**: C
-- **`data/spot_market_data/data-day-ahead-eua-train.csv`**: C
-- **`data/spot_market_data/data-day-ahead-eua-val.csv`**: C
-- **`data/spot_market_data/data-day-ahead-gas-test.csv`**: C
-- **`data/spot_market_data/data-day-ahead-gas-train.csv`**: C
-- **`data/spot_market_data/data-day-ahead-gas-val.csv`**: C
+Contains process data for two load levels OP1 and OP2 with different dynamics and energy market data:
+- **`data/OP.../data-meth_cooldown.csv`**: Cold startup data
+- **`data/OP.../data-meth_op1_start_p.csv`**: Partial load after startup
+- **`data/OP.../data-meth_op2_start_f.csv`**: Full load after startup
+- **`data/OP.../data-meth_op3_p_f.csv`**: Partial to full load transition
+- **`data/OP.../data-meth_op4_p_f_p_5.csv`**: Partial to full load and back after 5 min
+- **`data/OP.../data-meth_op5_p_f_p_10.csv`**: Partial to full load and back after 10 min
+- **`data/OP.../data-meth_op6_p_f_p_15.csv`**: Partial to full load and back after 15 min
+- **`data/OP.../data-meth_op7_p_f_p_20.csv`**: Partial to full load and back after 20 min
+- **`data/OP.../data-meth_op8_f_p.csv`**: Full to partial load transition
+- **`data/OP.../data-meth_op9_f_p_f_5.csv`**: Full to partial load and back after 5 min
+- **`data/OP.../data-meth_op10_f_p_f_10.csv`**: Full to partial load and back after 10 min
+- **`data/OP.../data-meth_op11_f_p_f_15.csv`**: Full to partial load and back after 15 min
+- **`data/OP.../data-meth_op12_f_p_f_20.csv`**: Full to partial load and back after 20 min
+- **`data/OP.../data-meth_standby_down.csv`**: From operation to standby
+- **`data/OP.../data-meth_standby_up.csv`**: # From idle state to standby
+- **`data/OP.../data-meth_startup_cold.csv`**: Cold startup data
+- **`data/OP.../data-meth_startup_hot.csv`**: Warm startup data
+- **`data/OP.../data-meth_cooldown.csv`**: Cooldown data
+- **`data/spot_market_data/data-day-ahead-el-test.csv`**: Day-ahead electricity spot market data for testing
+- **`data/spot_market_data/data-day-ahead-el-train.csv`**: Day-ahead electricity spot market data for training
+- **`data/spot_market_data/data-day-ahead-el-val.csv`**: Day-ahead electricity spot market data for validation
+- **`data/spot_market_data/data-day-ahead-eua-test.csv`**: Day-ahead EUA spot market data for testing
+- **`data/spot_market_data/data-day-ahead-eua-train.csv`**: Day-ahead EUA spot market data for training
+- **`data/spot_market_data/data-day-ahead-eua-val.csv`**: Day-ahead EUA spot market data for validation
+- **`data/spot_market_data/data-day-ahead-gas-test.csv`**: Day-ahead gas spot market data for testing
+- **`data/spot_market_data/data-day-ahead-gas-train.csv`**: Day-ahead gas spot market data for training
+- **`data/spot_market_data/data-day-ahead-gas-val.csv`**: Day-ahead gas spot market data for validation
 
 ### `logs/`
 During training, RL_PtG stores the algorithm and its parameters with the best performance in the validation environment in 'logs/'.
@@ -119,16 +127,16 @@ After the training procedure, the best algorithm/ policy is evaluated on the tes
 
 ### `src/`
 Contains source code for pre- and postprocessing:
-- **`src/rl_config_agent.py`**: C
+- **`src/rl_config_agent.py`**: Processing of the agent configuration
   - `AgentConfiguration()`: Class for preprocessing the agent's configuration.
     - `set_model()`: Specifies and initializes the Stable-Baselines3 model for RL training.
     - `load_model()`: Loads a pretrained Stable-Baselines3 model for RL training.
     - `save_model()`: Saves the trained Stable-Baselines3 model and its replay buffer (if applicable).
-    - `get_hyper()`: Displays the algorithm's hyperparameters and creates a string for file identification using `get_hyper()`. 
+    - `get_hyper()`: Displays the algorithm's hyperparameters and creates a string identifier for file identification using `hyp_print()`. 
     - `hyp_print()`: Displays the value of a specific hyperparameter and adds it to the string identifier.
-- **`src/rl_config_env.py`**: C
+- **`src/rl_config_env.py`**: Processing of the environment configuration
   - `EnvConfiguration()`: Class for preprocessing the environment's configuration.
-- **`src/rl_config_train.py`**: C
+- **`src/rl_config_train.py`**: Processing of the training configuration
   - `TrainConfiguration()`: Class for preprocessing the training configuration.
 - **`src/rl_opt.py`**: Computes the potential rewards, the load identifiers, and the theoretical optimum T-OPT ignoring plant dynamics.
   - `calculate_optimum()`: Computes the theoretical maximum revenue for the Power-to-Gas process, assuming no operational constraints.          
@@ -167,7 +175,7 @@ During RL training, RL_PtG will store a tensorboard file for monitoring.
 
 ---
 
-## Installation
+## Installation and Usage
 
 Detailed steps to set up the project on a local environment:
 
@@ -209,6 +217,6 @@ If you use RL_PtG in your research please use the following BibTeX entry:
 ## Acknowledgments
 
 This project was funded by the German *Federal Ministry for Economic Affairs and Climate Action* within the **Power-to-Biogas**
-project (Project ID: 03KB165).
+project (Project ID: 03KB165). For more information, please refer to Markthaler S., "*Optimization of Power-to-Gas operation and dispatch using Deep Reinforcement Learning*", Dissertation (PhD Thesis), Friedrich-Alexander-Universität Erlangen-Nürnberg, 2025 (not yet been published).
 
 ---
