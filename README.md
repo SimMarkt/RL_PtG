@@ -192,6 +192,8 @@ Afterwards, create a new Python virtual environment in the project folder and in
 Note that Python 3.10 or a newer Version is required to run the code.
 After installing all Python packages, the code can be run by using the rl_main_TQC_hpc.py file.
 
+![Results](plots/RL_PtG_train_BS2_OP2_sfmod_ep37_ts600_PPO_al5e-05_ga0.973_ec1e-05_nf21_bs203_hl2_hu358_acReLU_ge0.8002_ep13_naFalse_gsFalse_rs3654_plot.png)
+
 ---
 
 ## License
@@ -211,12 +213,13 @@ If you use RL_PtG in your research please use the following BibTeX entry:
   url = {https://github.com/SimMarkt/RL_PtG}
 }
 ```
+For more information, please refer to Markthaler S., "*Optimization of Power-to-Gas operation and dispatch using Deep Reinforcement Learning*", Dissertation (PhD Thesis), Friedrich-Alexander-Universität Erlangen-Nürnberg, 2025 (not yet been published).
 
 ---
 
 ## Acknowledgments
 
 This project was funded by the German *Federal Ministry for Economic Affairs and Climate Action* within the **Power-to-Biogas**
-project (Project ID: 03KB165). For more information, please refer to Markthaler S., "*Optimization of Power-to-Gas operation and dispatch using Deep Reinforcement Learning*", Dissertation (PhD Thesis), Friedrich-Alexander-Universität Erlangen-Nürnberg, 2025 (not yet been published).
+project (Project ID: 03KB165). 
 
 ---
