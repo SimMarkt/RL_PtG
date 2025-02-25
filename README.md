@@ -31,14 +31,123 @@ Note that two different load levels are ...
 
 For more information on the data-based process model, please refer to ...
 
+- Data: Electricity price day-ahead data from SMARD; Since the main study used gas and EUA market data provided by MONTEL without the rights to publish. Create synthesized data based on the real market data using TimeGAN algorithm.
+
 ---
 
-## Features
+## Project Structure
 
-Highlight the main features of the project:
-- Feature 1
-- Feature 2
-- Data: Electricity price day-ahead data from SMARD; Since the main study used gas and EUA market data provided by MONTEL without the rights to publish. Create synthesized data based on the real market data using TimeGAN algorithm.
+The project is organized into the following directories and files:
+
+```plaintext
+RL_PtG/
+│
+├── config/
+│   ├── config_agent.yaml
+│   ├── config_env.yaml
+│   └── config_train.yaml
+│
+├── data/
+│   ├── OP1/
+│   ├── OP2/
+│   └── spot_market_data/
+│
+├── logs/
+│
+├── plots/
+│
+├── src/
+│   ├── rl_config_agent.py
+│   ├── rl_config_env.py
+│   ├── rl_config_train.py
+│   ├── rl_opt.py
+│   └── rl_utils.py
+│
+├── tensorboard/
+│
+├── requirements.txt
+├── rl_main.py
+└── rl_tb.py
+
+```
+
+### `config/`
+Contains configuration files for various components of the project:
+- **`config/config_agent.yaml`**: Configuration for the RL agent.
+- **`config/config_env.yaml`**: Configuration for PtG environment.
+- **`config/config_train.yaml`**: Configuration for training procedure.
+
+### `data/`
+Contains configuration files for various components of the project:
+
+- **`data/OP.../data-meth_cooldown.csv`**: C
+- **`data/OP.../data-meth_op1_start_p.csv`**: C
+- **`data/OP.../data-meth_op2_start_f.csv`**: C
+- **`data/OP.../data-meth_op3_p_f.csv`**: C
+- **`data/OP.../data-meth_op4_p_f_p_5.csv`**: C
+- **`data/OP.../data-meth_op5_p_f_p_10.csv`**: C
+- **`data/OP.../data-meth_op6_p_f_p_15.csv`**: C
+- **`data/OP.../data-meth_op7_p_f_p_20.csv`**: C
+- **`data/OP.../data-meth_op8_f_p.csv`**: C
+- **`data/OP.../data-meth_op9_f_p_f_5.csv`**: C
+- **`data/OP.../data-meth_op10_f_p_f_10.csv`**: C
+- **`data/OP.../data-meth_op11_f_p_f_15.csv`**: C
+- **`data/OP.../data-meth_op12_f_p_f_20.csv`**: C
+- **`data/OP.../data-meth_standby_down.csv`**: C
+- **`data/OP.../data-meth_standby_up.csv`**: C
+- **`data/OP.../data-meth_startup_cold.csv`**: C
+- **`data/OP.../data-meth_startup_hot.csv`**: C
+- **`data/OP.../data-meth_cooldown.csv`**: C
+
+Contains configuration files for various components of the project:
+- **`data/spot_market_data/data-day-ahead-el-test.csv`**: C
+- **`data/spot_market_data/data-day-ahead-el-train.csv`**: C
+- **`data/spot_market_data/data-day-ahead-el-val.csv`**: C
+- **`data/spot_market_data/data-day-ahead-eua-test.csv`**: C
+- **`data/spot_market_data/data-day-ahead-eua-train.csv`**: C
+- **`data/spot_market_data/data-day-ahead-eua-val.csv`**: C
+- **`data/spot_market_data/data-day-ahead-gas-test.csv`**: C
+- **`data/spot_market_data/data-day-ahead-gas-train.csv`**: C
+- **`data/spot_market_data/data-day-ahead-gas-val.csv`**: C
+
+Contains configuration files for various components of the project:
+- **`config/config_agent.yaml`**: Configuration for the RL agent.
+- **`config/config_env.yaml`**: Configuration for PtG environment.
+- **`config/config_train.yaml`**: Configuration for training procedure.
+
+### `src/`
+Contains source code for the different threads and connection wrappers using object-oriented programming:
+- **`src/pci_modbus.py`**: Implements the Modbus connection with a class object providing:
+  - `connect()`: Connects to the Modbus client
+  - `is_connected()`: Tests the Modbus connection
+  - `read_pemel_status()`: Reads and interprets the Modbus register containing the current state of PEMEL using `convert_bits()`
+  - `read_pemel_process_values()`: Reads the PEMEL process values using `convert_process_values()`
+  - `convert_bits()`: Converts the binary signal of the bit-wise PEMEL state representation into a one-hot encoded array
+  - `convert_process_values()`: Converts the process values in the different registers to an array
+  - `write_pemel_current()`: Writes the set point of the PEMEL electrical current to the respective Modbus register using `convert_h2_flow_to_current()`
+  - `convert_h2_flow_to_current()`: Converts the hydrogen flow rate to the PEMEL's electrical current using `interpolate_h2_flow()`
+  - `interpolate_h2_flow()`: Determines the electrical current based on the experimental values in `PEMEL_Current_H2Flowrate.txt`
+- **`src/pci_opcua.py`**: Implements the OPC UA connection with a class object providing:
+  - `connect()`: Connects to the OPC UA server
+  - `is_connected()`: Tests the OPC UA connection
+  - `read_node_values()`: Reads the values of multiple nodes using their NodeIDs
+- **`src/pci_sql.py`**: Implements the SQL connection with a class object providing:
+  - `connect()`: Connects to the SQL database
+  - `is_connected()`: Tests the SQL connection
+  - `insert_data()`: Inserts data into PostgreSQL database
+- **`src/threads.py`**: Implements multi-threaded operations, including:
+  - **PEMEL control thread** > `pemel_control()`: Manages PEMEL operations using Modbus and OPC UA using `el_control_func()`
+  - **Data storage thread** > `data_storage()`: Handles data transfer between the OPC UA server, Modbus client, and SQL database using `data_trans_func()`
+  - **Supervisor thread** > `supervisor()`: Monitors and attempts reconnection for disconnected services.
+
+### Main Scripts
+- **`pci_main.py`**: The primary script for running multi-threaded data transfer operations.
+- **`pci_main_ws.py`**: A variation of the main script designed to set up a Windows service for data transfer.
+
+### Miscellaneous
+- **`PEMEL_Current_H2Flowrate.txt`**: Contains the PEMEL hydrogen production depending on the applied electrical current.
+- **`PyComInt.log`**: Contains the log for debugging and monitoring, will be created when running the code.
+- **`requirements.txt`**: Contains the required python libraries.
 
 ---
 
