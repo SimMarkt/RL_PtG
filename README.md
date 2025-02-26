@@ -199,6 +199,15 @@ git clone https://github.com/SimMarkt/RL_PtG.git
 # Navigate to the project directory
 cd RL_PtG
 
+# Create a Python virtual environment
+python -m venv venv
+
+# Activate the virtual environment
+.\venv\Scripts\activate
+
+# Install the required python libraries
+pip install -r requirements.txt
+
 ```
 
 Afterwards, create a new Python virtual environment in the project folder and install the packages in the requirements.txt.
@@ -235,7 +244,9 @@ If you use RL_PtG in your research please use the following BibTeX entry:
   url = {https://github.com/SimMarkt/RL_PtG}
 }
 ```
-For more information, please refer to
+
+For more information, please refer to:
+
 Markthaler S., "*Optimization of Power-to-Gas operation and dispatch using Deep Reinforcement Learning*", Dissertation (PhD Thesis), Friedrich-Alexander-Universität Erlangen-Nürnberg, 2025 (not yet been published).
 
 ---

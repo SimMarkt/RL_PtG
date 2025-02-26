@@ -30,7 +30,7 @@ eval_trials : 5               # No. of evaluation trials to run during validatio
 val_n_test : False            # Set to 'True' if the RL agent should be evaluated on both validation and test sets. 
                               # If 'False', evaluation is done only on the validation set.
 train_steps : 1500000         # No. of training steps
-test_steps : 2500            # Validation interval: No. of steps between evaluations during training
+test_steps : 20000            # Validation interval: No. of steps between evaluations during training
 # Random seeds for reproducibility of neural network initialization and environment randomness:
 r_seed_train : [3654, 467, 9327, 5797, 249, 9419]         # Random seeds for the training set (default: [3654] for single-threaded computations)
 r_seed_test : [605, 5534, 2910, 7653, 8936, 1925]         # Random seeds for the validation set (default: [605] for single-threaded computations)
