@@ -1,6 +1,6 @@
 # RL_PtG
 
-The RL_PtG project contains a framework for economic optimization of Power-to-Gas (PtG) dispatch using Deep Reinforcement Learning (RL). PtG is a technology for chemical energy storage of renewable energies in chemical energy carriers, such as hydrogen (H2) or methane (CH4). RL_PtG enables training state-of-the-art deep RL algorithms for optimal control of PtG plants depend on process data and Day-ahead electricity, natural gas, and emission spot market data. The present repository provides the source code for this application, which has been demonstrated successfully for autonomous control of a real-world PtG pilot plant in Northern Germany [1].
+The **RL_PtG** project contains a framework for economic optimization of Power-to-Gas (PtG) dispatch using Deep Reinforcement Learning (RL). PtG is a technology for chemical energy storage of renewable energies in chemical energy carriers, such as hydrogen (H2) or methane (CH4). **RL_PtG** enables training state-of-the-art deep RL algorithms for optimal control of PtG plants depend on process data and Day-ahead electricity, natural gas, and emission spot market data. The present repository provides the source code for this application, which has been demonstrated successfully for autonomous control of a real-world PtG pilot plant in Northern Germany [1].
 
 ![RL_PtG_int](plots/RL_PtG_int.png)
 
@@ -13,37 +13,32 @@ The RL_PtG project contains a framework for economic optimization of Power-to-Ga
 3. [Installation and Usage](#installation)
 4. [License](#license)
 5. [Citing](#citing)
-6. [Acknowledgments](#acknowledgments)
+6. [References](#references)
+7. [Acknowledgments](#acknowledgments)
 
 ---
 
 ## Overview
 
-**RL_PtG** is ... 
+**RL_PtG** is written in Python and includes a data-based process model of a real-world PtG plant. The present section describes the application in more detail and elaborates on the algorithms, the data preprocessing, and feature design.
 
 ### Application
-Deep RL is a promising approach for economic optimization of chemical plant operation. This python project implements deep RL for PtG dispatch optimization under Day-ahead energy
-market conditions. The file "rl_main.py" contains the for training RL agents using a "data-based process model" of PtG as environment. This model has been derived from experimental data of a real PtG demonstration plant and serve as environment, along with energy market data.
-The environment has been implemented using the Gymnasium environment.
-With regard to RL, the project incorporates six state-of-the-art RL algorithms (DQN, A2C, PPO, TD3, SAC, TQC) from Stable-Baselines3 library.
 
-To configure the code, the project provides two YAML files in "./config": config_agent.yaml (for the RL agents) and config_env.yaml (for the environment)
-
-The experimental process data and energy market data are present in "./data".
-Note that two different load levels are ...
-
-
+The first step in PtG is typically water electrolysis, which uses electrical current to split water (H2O) electrochemically into hydrogen and oxygen (O2). RL_PtG assumes a proton exchange membrane (PEM) electrolyzer with a load-depend efficiency of a commercial system [2]. The efficiency has been modelled using experimental data and linear regression with non-linear basis functions [3]. In addition to PEM electrolysis, RL_PtG incorporates a chemical methanation unit which converts hydrogen with carbon dioxide (CO2) into methane. Since biogas contains a large amount of CO2 (up to 50 %), the current process applies this carbon source. To model the process dynamics of the methanation unit, which dominates the overall PtG dynamics, the present approach incorporates a time-series process model based on experimental data of a real-world pilot plant. The experimental data contains plant transitions during startup, load changes, cooldown, and standby of the methanation unit. In standby, the reactor temperature is maintained at around 190 °C to enable a fast warm startup. The data-based process model switches between the different time-series data sets to predict the dynamic operation of the plant. Such an approach is simple and exhibits very low model-mismatch, if the plant behaves reproducible [3].
+Fig. 1 portrays the current PtG process, which can either blend the produced CH4 into the natural gas grid or use it in a gas engine for combined heat and power (CHP) production. The different ways of processing and selling the produced CH4 lead to three different options for business scenario (BS) in the present application. While BS1 trades CH4 at the natural gas spot market, BS2 sells CH4 to a bilateral partner via Over-the-Counter contracts. By contrast, BS3 integrateds the CHP plant and sells the produced electrical power P_el in special tenders of the German renewable energy act (EEG). Other revenue types are heat, oxygen, and European emission allowances (EUA). Due to binding emissions (CO2) in methane, BS1 and 2 can sell EUAs at the European emission trading system (EU-ETS). The main operational costs of the process are electricity and water. The electrical power is bought at the German Day-ahead spot market. The 
+RL_PtG integrates historical electricity market data in `data/spot_market_data/` provided by SMARD [4]. The original work and RL training in [1,3] uses historical market data for gas and EUA provided by MONTEL [5]. However, since RL_PtG has not permission for publishing gas and EUA spot market data, it includes a synthesized data sets which resemble the characteristics and non-linearity of the original ones. 
+RL_PtG contains the PtG processs including PEM electrolysis, chemical methanation, and energy market data in the PtGEnv environment (*Gymnasium* environemt). [Project structure](#structure) provides an overview over all directories and files involved.
 
 ![RL_PtG](plots/RL_PtG.png)
 
 *Figure 1: Optimization framework for Power-to-Gas dispatch using Reinforcement Learning agents and the PtGEnv environment including the different business cases.*
 
-For more information on the data-based process model, please refer to ...
-
-- Data: Electricity price day-ahead data from SMARD; Since the main study used gas and EUA market data provided by MONTEL without the rights to publish. Create synthesized data based on the real market data using TimeGAN algorithm.
-
 ### Deep RL algorithms
-... 
+
+Deep RL is a promising approach for economic optimization of chemical plant operation. This python project implements deep RL for PtG dispatch optimization under Day-ahead energy
+market conditions. The file "rl_main.py" contains the for training RL agents using a "data-based process model" of PtG as environment. This model has been derived from experimental data of a real PtG demonstration plant and serve as environment, along with energy market data.
+The environment has been implemented using the Gymnasium environment.
+With regard to RL, the project incorporates six state-of-the-art RL algorithms (DQN, A2C, PPO, TD3, SAC, TQC) from Stable-Baselines3 library.
 
 ### Data preprocessing and feature design
 
@@ -243,14 +238,23 @@ If you use RL_PtG in your research please use the following BibTeX entry:
 }
 ```
 
-For more information, please refer to:
+## References
 
 [1] Markthaler S., "*Katalytische Direktmethanisierung von Biogas: Demonstration
 in industrieller Umgebung und Betriebsoptimierung mittels Reinforcement
 Learning*", DECHEMA Jahrestreffen der Fachsektion Energie, Chemie
 und Klima (11.-12.03.), Frankfurt/Main, 2024
 
-[2] Markthaler S., "*Optimization of Power-to-Gas operation and dispatch using Deep Reinforcement Learning*", Dissertation (PhD Thesis), Friedrich-Alexander-Universität Erlangen-Nürnberg, 2025 (not yet been published).
+[2] M. Kopp, D. Coleman, C. Stiller, K. Scheffer, J. Aichinger, B. Scheppat, "*“Energiepark
+Mainz: Technical and economic analysis of the worldwide largest
+Power-to-Gas plant with PEM electrolysis*", International Journal of Hydrogen Energy,
+42, 2017, 13311–13320
+
+[3] Markthaler S., "*Optimization of Power-to-Gas operation and dispatch using Deep Reinforcement Learning*", Dissertation (PhD Thesis), Friedrich-Alexander-Universität Erlangen-Nürnberg, 2025 (not yet been published).
+
+[4] Bundesnetzagentur, "*SMARD - Strommarktdaten, Stromhandel und Stromerzeugung in Deutschland*", https://www.smard.de/home (Accessed, 15.08.2024)
+
+[5] Montel AS., "*Montel Online Platform*", https://www.montelnews.com/ (Accessed, 26.07.2023)
 
 ---
 
