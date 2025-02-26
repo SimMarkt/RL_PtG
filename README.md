@@ -1,6 +1,6 @@
 # RL_PtG
 
-Deep Reinforcement Learning (RL) for dynamic Real-time optimization of Power-to-Gas (PtG) dispatch with respect to Day-ahead electricity, natural gas, and emission allowances market data. The PtG process comprises a proton exchange membrane electrolyzer (PEMEL) and a chemical methanation unit.
+The RL_PtG project contains a framework for economic optimization of Power-to-Gas (PtG) dispatch using Deep Reinforcement Learning (RL). PtG is a technology for chemical energy storage of renewable energies in chemical energy carriers, such as hydrogen (H2) or methane (CH4). RL_PtG enables training state-of-the-art deep RL algorithms for optimal control of PtG plants depend on process data and Day-ahead electricity, natural gas, and emission spot market data. The present repository provides the source code for this application, which has been demonstrated successfully for autonomous control of a real-world PtG pilot plant in Northern Germany [1].
 
 ![RL_PtG_int](plots/RL_PtG_int.png)
 
@@ -190,7 +190,7 @@ During RL training, RL_PtG will store a tensorboard file for monitoring.
 
 ## Installation and Usage
 
-Detailed steps to set up the project on a local environment:
+The following steps describe the installation procedure:
 
 ```bash
 # Clone the repository
@@ -210,20 +210,18 @@ pip install -r requirements.txt
 
 ```
 
-Afterwards, create a new Python virtual environment in the project folder and install the packages in the requirements.txt.
-Note that Python 3.10 or a newer Version is required to run the code.
-After installing all Python packages, the code can be run by using the rl_main_TQC_hpc.py file.
+Note that Python 3.10 or a newer Version is required to run the code. After installing the python environment with its necessary packages, the configuration of the environment, the agent, and the training procedure can be adjusted using the yaml files in `config/`. The RL training can initiated by running the main script `rl_main.py`.
+During the training process, the RL performance will frequently be evaluated on the validation environemt with new and unkown energy market data. The best algorithm will further be saved in `logs/`. In addition, the training results (cumulative reward on the training and validation sets, and agorithm specific properties) are stored in a tensorboard file in `tensorboard/`.  The training and evaluation results can be viewed and monitored by starting the tensorboard server using `rl_tb.py` and the URL `http://localhost:6006/`. Fig. 2 displays the visualization of a learning curve while training a PPO algorithm on the PtG dispatch optimization task. 
 
 ![TB_plot](plots/tb_plot.png)
 
 *Figure 2: Graphical user interface of the tensorboard server for RL monitoring with a learning curve of PPO on the validation environment.*
 
+After the RL training, RL_PtG picks the best algorithm from `logs/` and evaluates its performance on the test environment to examine its ability to generalize well. The results are plotted and stored in `plots/` (Fig. 3). The file name and title indicates the applied business scenario (BS), load level (OP), state feature design (sf), training episode length (ep), time-step size (ts), algorithm, and the algorithm hyperparameters, such as learning rate (al), discount factor (ga), and entropy coefficient (ec), exploration noise (en), n-step TD update (ns), n-step factor (nf), replay buffer size (rb), batch size (bs), No. of hidden layers (hl), No. of hidden units, activation function (ac), generalized advantage estimation (ge), No. of epochs (ep), normalize advantage (na), No. of quantiles (nq), No. of dropped quantiles (dq), No. of critics (cr), soft update parameter (ta), learning starts (ls), training frequency (tf), target update interval (tu), and gSDE exploration (gs).
+
 ![Results](plots/RL_PtG_train_BS2_OP2_sfmod_ep37_ts600_PPO_al5e-05_ga0.973_ec1e-05_nf21_bs203_hl2_hu358_acReLU_ge0.8002_ep13_naFalse_gsFalse_rs3654_plot.png)
 
 *Figure 3: PPO performance on the test environment including energy market data, PtG process state, methane production, reward, and cumulative reward.*
-
-
-
 
 ---
 
@@ -247,7 +245,12 @@ If you use RL_PtG in your research please use the following BibTeX entry:
 
 For more information, please refer to:
 
-Markthaler S., "*Optimization of Power-to-Gas operation and dispatch using Deep Reinforcement Learning*", Dissertation (PhD Thesis), Friedrich-Alexander-Universität Erlangen-Nürnberg, 2025 (not yet been published).
+[1] Markthaler S., "*Katalytische Direktmethanisierung von Biogas: Demonstration
+in industrieller Umgebung und Betriebsoptimierung mittels Reinforcement
+Learning*", DECHEMA Jahrestreffen der Fachsektion Energie, Chemie
+und Klima (11.-12.03.), Frankfurt/Main, 2024
+
+[2] Markthaler S., "*Optimization of Power-to-Gas operation and dispatch using Deep Reinforcement Learning*", Dissertation (PhD Thesis), Friedrich-Alexander-Universität Erlangen-Nürnberg, 2025 (not yet been published).
 
 ---
 
