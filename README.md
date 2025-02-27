@@ -1,6 +1,8 @@
 # RL_PtG
 
-The **RL_PtG** project contains a framework for economic optimization of Power-to-Gas (PtG) dispatch using Deep Reinforcement Learning (RL). PtG is a technology for chemical energy storage of renewable energies in chemical energy carriers, such as hydrogen (H2) or methane (CH4). **RL_PtG** enables training state-of-the-art deep RL algorithms for optimal control of PtG plants depend on process data and Day-ahead electricity, natural gas, and emission spot market data. The present repository provides the source code for this application, which has been demonstrated successfully for autonomous control of a real-world PtG pilot plant in Northern Germany [1].
+The **RL_PtG** project provides a framework for the economic optimization of Power-to-Gas (PtG) dispatch using Deep Reinforcement Learning (RL). PtG is a technology that enables the chemical energy storage of renewable energy in chemical energy carriers such as hydrogen (H<sub>2</sub>) or methane (CH<sub>4</sub>). **RL_PtG** facilitates the training of state-of-the-art deep RL algorithms for the optimal control of PtG plants, based on process data and Day-ahead electricity, natural gas, and emissions spot market data.  
+
+This repository contains the source code for the **RL_PtG** framework, which has been successfully demonstrated for the autonomous control of a real-world PtG pilot plant in Northern Germany [1].  
 
 ![RL_PtG_int](plots/RL_PtG_int.png)
 
@@ -9,8 +11,8 @@ The **RL_PtG** project contains a framework for economic optimization of Power-t
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Project structure](#structure)
-3. [Installation and Usage](#installation)
+2. [Project structure](#project-structure)
+3. [Installation and Usage](#installation-and-usage)
 4. [License](#license)
 5. [Citing](#citing)
 6. [References](#references)
@@ -20,31 +22,76 @@ The **RL_PtG** project contains a framework for economic optimization of Power-t
 
 ## Overview
 
-**RL_PtG** is written in Python and includes a data-based process model of a real-world PtG plant. The present section describes the application in more detail and elaborates on the algorithms, the data preprocessing, and feature design.
+**RL_PtG** is written in Python and includes a data-driven process model of a real-world PtG plant. This section provides an in-depth explanation of the application and details the algorithms used, the data preprocessing, and the feature design.  
 
 ### Application
 
-The first step in PtG is typically water electrolysis, which uses electrical current to split water (H2O) electrochemically into hydrogen and oxygen (O2). RL_PtG assumes a proton exchange membrane (PEM) electrolyzer with a load-depend efficiency of a commercial system [2]. The efficiency has been modelled using experimental data and linear regression with non-linear basis functions [3]. In addition to PEM electrolysis, RL_PtG incorporates a chemical methanation unit which converts hydrogen with carbon dioxide (CO2) into methane. Since biogas contains a large amount of CO2 (up to 50 %), the current process applies this carbon source. To model the process dynamics of the methanation unit, which dominates the overall PtG dynamics, the present approach incorporates a time-series process model based on experimental data of a real-world pilot plant. The experimental data contains plant transitions during startup, load changes, cooldown, and standby of the methanation unit. In standby, the reactor temperature is maintained at around 190 °C to enable a fast warm startup. The data-based process model switches between the different time-series data sets to predict the dynamic operation of the plant. Such an approach is simple and exhibits very low model-mismatch, if the plant behaves reproducible [3].
+The PtG process typically begins with water electrolysis, where an electric current is used to split water (H<sub>2</sub>O) into hydrogen and oxygen (O<sub>2</sub>). **RL_PtG** assumes a proton exchange membrane (PEM) electrolyzer with a load-dependent efficiency modeled after a commercial system [2]. The efficiency has been derived using experimental data and linear regression with nonlinear basis functions [3].  
 
-Fig. 1 portrays the current PtG process, which can either blend the produced CH4 into the natural gas grid or use it in a gas engine for combined heat and power (CHP) production. The different ways of processing and selling the produced CH4 lead to three different options for business scenario (BS) in the present application. While BS1 trades CH4 at the natural gas spot market, BS2 sells CH4 to a bilateral partner via Over-the-Counter contracts. By contrast, BS3 integrateds the CHP plant and sells the produced electrical power P_el in special tenders of the German renewable energy act (EEG). Other revenue types are heat, oxygen, and European emission allowances (EUA). Due to binding emissions (CO2) in methane, BS1 and 2 can sell EUAs at the European emission trading system (EU-ETS). The main operational costs of the process are electricity and water. The electrical power is bought at the German Day-ahead spot market. 
+In addition to PEM electrolysis, **RL_PtG** incorporates a chemical methanation unit that converts hydrogen and carbon dioxide (CO<sub>2</sub>) into methane. Since biogas contains a significant amount of CO₂ (up to 55%), this process utilizes biogas as a carbon source. To accurately model the methanation unit's process dynamics—which dominate the overall PtG system dynamics—the approach integrates a time-series process model based on experimental data from a real-world pilot plant.  
 
-The RL_PtG integrates historical electricity market data in `data/spot_market_data/` provided by SMARD [4]. The original work and RL training in [1,3] uses historical market data for gas and EUA provided by MONTEL [5]. However, since RL_PtG has not permission for publishing gas and EUA spot market data, it includes a synthesized data sets which resemble the characteristics and non-linearity of the original ones. 
-RL_PtG contains the PtG processs including PEM electrolysis, chemical methanation, and energy market data in the PtGEnv environment (*Gymnasium* environemt). [Project structure](#structure) provides an overview over all directories and files involved.
+The experimental data captures plant behavior during startup, load changes, cooldown, and standby operations of the methanation unit. In standby mode, the reactor temperature is maintained at approximately 190°C to enable a rapid warm startup. The data-driven process model switches between different time-series datasets to simulate dynamic plant operations. This approach is both simple and highly accurate and provides that the plant operates consistently and predictably [3].  
+
+Figure 1 illustrates the current PtG process, where the produced CH<sub>4</sub> can either be injected into the natural gas grid or used in a gas engine for combined heat and power (CHP) generation. The various methods of processing and selling CH<sub>4</sub> define three distinct business scenarios (BS) within this application:  
+
+- **BS1**: Trades CH<sub>4</sub> on the natural gas spot market.  
+- **BS2**: Sells CH<sub>4</sub> to a bilateral partner via Over-the-Counter (OTC) contracts.  
+- **BS3**: Integrates a CHP plant and sells the generated electrical power (*P<sub>el</sub>*) through special tenders under the German Renewable Energy Act (EEG).  
+
+Additional revenue sources include heat, oxygen, and European Emission Allowances (EUA). Since BS1 and BS2 bind CO₂ in methane, they can generate revenue by selling EUAs through the European Emissions Trading System (EU-ETS). The primary operational costs of the process include electricity and water, with electricity being purchased from the German Day-ahead spot market.  
+
+**RL_PtG** integrates historical electricity market data from `data/spot_market_data/`, sourced from SMARD [4]. The original research and RL training in [1,3] also utilized historical market data for gas and EUA from MONTEL [5]. However, due to licensing restrictions, the present repository only includes synthesized datasets that replicate the statistical properties and non-linear characteristics of the original data.  
+
+The **RL_PtG** framework models the complete PtG process, including PEM electrolysis, chemical methanation, and energy market data, within the **PtGEnv** environment (*Gymnasium* framework). For an overview of the project's directories and files, refer to the [Project Structure](#project-structure) section.  
 
 ![RL_PtG](plots/RL_PtG.png)
 
 *Figure 1: Optimization framework for Power-to-Gas dispatch using Reinforcement Learning agents and the PtGEnv environment including the different business cases.*
 
-### Deep RL algorithms
+### Deep RL Algorithms  
 
-Deep RL is a promising approach for economic optimization of chemical plant operation with non-linearity and stochasticity in both process dynamics and market behavior. For deep RL, RL_PtG incorporates the *Stable-Baselines3* and *SB3 Contrib* libraries. These libraries contain implementations various state-of-the-art deep RL algorithms. The present project incorporates the DQN [6], A2C [7], PPO [8], TD3 [9], SAC [10], and TQC [11] algorithms based on the *Stable-Baselines3* and *SB3 Contrib* implementation. For more information on the implementation, refer to:
-      Stable-Baselines3: https://stable-baselines3.readthedocs.io/en/master/guide/algos.html
-      SB3 Contrib: https://sb3-contrib.readthedocs.io/en/master/
-The algorithm configurations for a training run can be set in `config/config_agent.yaml`. Note that if you want to add another algorithm from the *Stable-Baselines3* or *SB3 Contrib* libraries. You need to adjust `config/config_agent.yaml` and `src/rl_config_agent.py` by analogy to the already implemented ones.
+Deep reinforcement learning (RL) offers a promising approach for optimizing the economic operation of chemical plants, handling both the **non-linearity** and **stochasticity** of process dynamics and market behavior. 
 
-### Data preprocessing and feature design
+For deep RL, **RL_PtG** integrates the *Stable-Baselines3* and *SB3 Contrib* libraries, which provide implementations of various state-of-the-art deep RL algorithms. This project includes the following algorithms from these libraries:  
 
-During modeling and preliminary investigations on PtG dispatch optimization, two different ways of designing the state features has been developed. They can be specified in `config/config_env.yaml`. If `raw_modified` is set to `raw`, the environemt provides the raw Day-ahead energy market prices for electricity, gas, and EUA to the RL agent. On the other hand, if `raw_modified` is set to `mod`, RL_PtG will precompute a potential reward and a load identifier for the corresponding Day-ahead period (default 0-12 hours). For this period, it calculates the reward considering steady-state operation in partial and full load as well as in cooldown. The potential reward corresponds with the maximum reward which the system may get in steady-state operation for this period under the current market conditions. Since it does not indicate which load is more beneficial, the load identifier marks the most profitable operation type (Cooldown: Identifier = -1; Partial load: Identifier = 0; Full load: Identifier = 1). Together, potential reward and load identifier indicate the most beneficial operation type and its potential profit. Be aware that it ignores the plant dynamics. 
+**DQN** [6], **A2C** [7], **PPO** [8], **TD3** [9], **SAC** [10], and **TQC** [11]  
+
+For detailed information on these implementations, refer to:  
+
+- **Stable-Baselines3:** [https://stable-baselines3.readthedocs.io/en/master/guide/algos.html](https://stable-baselines3.readthedocs.io/en/master/guide/algos.html)  
+- **SB3 Contrib:** [https://sb3-contrib.readthedocs.io/en/master/](https://sb3-contrib.readthedocs.io/en/master/)  
+
+Algorithm configurations for training runs can be set in `config/config_agent.yaml`. 
+
+If you wish to add a new algorithm from *Stable-Baselines3* or *SB3 Contrib*, you must modify the following files accordingly:  
+
+- `config/config_agent.yaml`  
+- `src/rl_config_agent.py`  
+
+Use the existing implementations as a reference when making adjustments.  
+
+### Data Preprocessing and Feature Design  
+
+During the development of **RL_PtG**, two different state feature design approaches were explored for PtG dispatch optimization. These can be configured in `config/config_env.yaml`.
+
+The type of state feature design is controlled via the `raw_modified` parameter:  
+
+- `raw`: The environment provides the RL agent with raw Day-ahead market prices for **electricity, gas, and EUA**.  
+- `mod`: The environment precomputes a *potential reward* and a *load identifier* for the corresponding Day-ahead period (default: 0-12 hours).  
+
+In `mod`, the environment calculates the potential reward assuming steady-state operation under three conditions (*Partial load*, *Full load*, and *Cooldown*) for the selected Day-ahead period.
+
+The potential reward represents the maximum achievable reward in steady-state operation under the current market conditions in one of these conditions. However, it does not indicate which load level is the most beneficial.  
+
+To address this, the load identifier classifies the most profitable operation type:  
+
+| Load Condition  | Identifier Value |
+|----------------|-----------------|
+| *Cooldown*   | -1              |
+| *Partial Load* | 0              |
+| *Full Load*   | 1              |
+
+Together, the potential reward and load identifier provide insights into the most beneficial operating mode and its expected profitability. However, this approach does not account for plant dynamics, meaning real-world transitions between states may still impact performance.  
 
 ---
 
@@ -87,105 +134,105 @@ RL_PtG/
 
 ```
 
-### `config/`
-Contains configuration files for the project:
-- **`config/config_agent.yaml`**: Configuration for the RL agent.
-- **`config/config_env.yaml`**: Configuration for PtG environment.
-- **`config/config_train.yaml`**: Configuration for training procedure.
+### `config/`  
+Contains configuration files for the project:  
+- **`config/config_agent.yaml`**: Configuration for the RL agent.  
+- **`config/config_env.yaml`**: Configuration for the PtG environment.  
+- **`config/config_train.yaml`**: Configuration for the training procedure.  
 
 ### `data/`
-Contains process data for two load levels OP1 and OP2 with different dynamics and energy market data:
-- **`data/OP.../data-meth_cooldown.csv`**: Cold startup data
-- **`data/OP.../data-meth_op1_start_p.csv`**: Partial load after startup
-- **`data/OP.../data-meth_op2_start_f.csv`**: Full load after startup
-- **`data/OP.../data-meth_op3_p_f.csv`**: Partial to full load transition
-- **`data/OP.../data-meth_op4_p_f_p_5.csv`**: Partial to full load and back after 5 min
-- **`data/OP.../data-meth_op5_p_f_p_10.csv`**: Partial to full load and back after 10 min
-- **`data/OP.../data-meth_op6_p_f_p_15.csv`**: Partial to full load and back after 15 min
-- **`data/OP.../data-meth_op7_p_f_p_20.csv`**: Partial to full load and back after 20 min
-- **`data/OP.../data-meth_op8_f_p.csv`**: Full to partial load transition
-- **`data/OP.../data-meth_op9_f_p_f_5.csv`**: Full to partial load and back after 5 min
-- **`data/OP.../data-meth_op10_f_p_f_10.csv`**: Full to partial load and back after 10 min
-- **`data/OP.../data-meth_op11_f_p_f_15.csv`**: Full to partial load and back after 15 min
-- **`data/OP.../data-meth_op12_f_p_f_20.csv`**: Full to partial load and back after 20 min
-- **`data/OP.../data-meth_standby_down.csv`**: From operation to standby
-- **`data/OP.../data-meth_standby_up.csv`**: # From idle state to standby
-- **`data/OP.../data-meth_startup_cold.csv`**: Cold startup data
-- **`data/OP.../data-meth_startup_hot.csv`**: Warm startup data
-- **`data/OP.../data-meth_cooldown.csv`**: Cooldown data
-- **`data/spot_market_data/data-day-ahead-el-test.csv`**: Day-ahead electricity spot market data for testing
-- **`data/spot_market_data/data-day-ahead-el-train.csv`**: Day-ahead electricity spot market data for training
-- **`data/spot_market_data/data-day-ahead-el-val.csv`**: Day-ahead electricity spot market data for validation
-- **`data/spot_market_data/data-day-ahead-eua-test.csv`**: Day-ahead EUA spot market data for testing
-- **`data/spot_market_data/data-day-ahead-eua-train.csv`**: Day-ahead EUA spot market data for training
-- **`data/spot_market_data/data-day-ahead-eua-val.csv`**: Day-ahead EUA spot market data for validation
-- **`data/spot_market_data/data-day-ahead-gas-test.csv`**: Day-ahead gas spot market data for testing
-- **`data/spot_market_data/data-day-ahead-gas-train.csv`**: Day-ahead gas spot market data for training
-- **`data/spot_market_data/data-day-ahead-gas-val.csv`**: Day-ahead gas spot market data for validation
+Stores process data for two load levels (**OP1** and **OP2**) with different dynamics, along with energy market data:  
+- **`data/OP.../data-meth_cooldown.csv`**: Cold startup data.
+- **`data/OP.../data-meth_op1_start_p.csv`**: Partial load after startup.
+- **`data/OP.../data-meth_op2_start_f.csv`**: Full load after startup.
+- **`data/OP.../data-meth_op3_p_f.csv`**: Partial to full load transition.
+- **`data/OP.../data-meth_op4_p_f_p_5.csv`**: Partial to full load and back after 5 min.
+- **`data/OP.../data-meth_op5_p_f_p_10.csv`**: Partial to full load and back after 10 min.
+- **`data/OP.../data-meth_op6_p_f_p_15.csv`**: Partial to full load and back after 15 min.
+- **`data/OP.../data-meth_op7_p_f_p_20.csv`**: Partial to full load and back after 20 min.
+- **`data/OP.../data-meth_op8_f_p.csv`**: Full to partial load transition.
+- **`data/OP.../data-meth_op9_f_p_f_5.csv`**: Full to partial load and back after 5 min.
+- **`data/OP.../data-meth_op10_f_p_f_10.csv`**: Full to partial load and back after 10 min.
+- **`data/OP.../data-meth_op11_f_p_f_15.csv`**: Full to partial load and back after 15 min.
+- **`data/OP.../data-meth_op12_f_p_f_20.csv`**: Full to partial load and back after 20 min.
+- **`data/OP.../data-meth_standby_down.csv`**: From operation to standby.
+- **`data/OP.../data-meth_standby_up.csv`**: # From idle state to standby.
+- **`data/OP.../data-meth_startup_cold.csv`**: Cold startup data.
+- **`data/OP.../data-meth_startup_hot.csv`**: Warm startup data.
+- **`data/OP.../data-meth_cooldown.csv`**: Cooldown data.
+- **`data/spot_market_data/data-day-ahead-el-test.csv`**: Day-ahead electricity spot market data for testing.
+- **`data/spot_market_data/data-day-ahead-el-train.csv`**: Day-ahead electricity spot market data for training.
+- **`data/spot_market_data/data-day-ahead-el-val.csv`**: Day-ahead electricity spot market data for validation.
+- **`data/spot_market_data/data-day-ahead-eua-test.csv`**: Day-ahead EUA spot market data for testing.
+- **`data/spot_market_data/data-day-ahead-eua-train.csv`**: Day-ahead EUA spot market data for training.
+- **`data/spot_market_data/data-day-ahead-eua-val.csv`**: Day-ahead EUA spot market data for validation.
+- **`data/spot_market_data/data-day-ahead-gas-test.csv`**: Day-ahead gas spot market data for testing.
+- **`data/spot_market_data/data-day-ahead-gas-train.csv`**: Day-ahead gas spot market data for training.
+- **`data/spot_market_data/data-day-ahead-gas-val.csv`**: Day-ahead gas spot market data for validation.
 
 ### `env/`
-Contains the PtG environment modelled as a *Gymnasium* class
-- **`env/ptg_gym_env.py`**: The power to 
+Contains the PtG environment, modeled as a *Gymnasium* class: 
+- **`env/ptg_gym_env.py`**: Power-to-Gas environment implementation.
 
 ### `logs/`
-During training, RL_PtG stores the algorithm and its parameters with the best performance in the validation environment in 'logs/'.
+Stores training logs. RL_PtG saves the best-performing RL algorithm and its parameters during validation.  
 
 ### `plots/`
-After the training procedure, the best algorithm/ policy is evaluated on the test set and RL_PtG will create a diagram of its performance in 'plots/'.
+After training, RL_PtG evaluates the best RL policy on the test set and generates a performance diagram.
 
 ### `src/`
 Contains source code for pre- and postprocessing:
-- **`src/rl_config_agent.py`**: Processing of the agent configuration
-  - `AgentConfiguration()`: Class for preprocessing the agent's configuration.
-    - `set_model()`: Specifies and initializes the Stable-Baselines3 model for RL training.
-    - `load_model()`: Loads a pretrained Stable-Baselines3 model for RL training.
-    - `save_model()`: Saves the trained Stable-Baselines3 model and its replay buffer (if applicable).
-    - `get_hyper()`: Displays the algorithm's hyperparameters and creates a string identifier for file identification using `hyp_print()`. 
-    - `hyp_print()`: Displays the value of a specific hyperparameter and adds it to the string identifier.
-- **`src/rl_config_env.py`**: Processing of the environment configuration
-  - `EnvConfiguration()`: Class for preprocessing the environment's configuration.
-- **`src/rl_config_train.py`**: Processing of the training configuration
-  - `TrainConfiguration()`: Class for preprocessing the training configuration.
-- **`src/rl_opt.py`**: Computes the potential rewards, the load identifiers, and the theoretical optimum T-OPT ignoring plant dynamics.
-  - `calculate_optimum()`: Computes the theoretical maximum revenue for the Power-to-Gas process, assuming no operational constraints.          
-- **`src/rl_utils.py`**: Contains utiliy and helper functions
-  - `import_market_data()`: Imports day-ahead market price data.
+- **`src/rl_config_agent.py`**: Preprocesses agent settings.
+  - `AgentConfiguration()`: Agent class.
+    - `set_model()`: Initializes a Stable-Baselines3/SB3 Contrib model.
+    - `load_model()`: Loads a pretrained RL model.
+    - `save_model()`: Saves the trained model and replay buffer (if applicable).
+    - `get_hyper()`: Displays hyperparameters and generates an identifier string using `hyp_print()`. 
+    - `hyp_print()`: Prints and appends hyperparameter values to the identifier.
+- **`src/rl_config_env.py`**: Preprocesses environment settings.
+  - `EnvConfiguration()`: Environment class.
+- **`src/rl_config_train.py`**: Preprocesses training settings.
+  - `TrainConfiguration()`: Training class.
+- **`src/rl_opt.py`**: Computes the theoretical optimum T-OPT ignoring plant dynamics.
+  - `calculate_optimum()`: Computes the potential rewards, the load identifiers, and the theoretical optimum T-OPT assuming no operational constraints.          
+- **`src/rl_utils.py`**: Contains utility and helper functions.
+  - `import_market_data()`: Loads Day-ahead market price data.
   - `import_data()`: Imports experimental methanation process data.
-  - `load_data()`: Loads historical market data and experimental methanation operation data using `import_market_data()` and `import_data()`
-  - `Preprocessing()`: A class for preprocessing energy market and process data
-    - `preprocessing_rew()`: Data preprocessing, including the calculation of potential rewards using `calculate_optimum()`
-    - `preprocessing_array()`: Convert dictionaries to NumPy arrays for computational efficiency
-    - `define_episodes()`: Defines settings for training and evaluation episodes using `rand_eps_ind()`
-    - `rand_eps_ind()`: Generate a randomized selection of subsets from the whole training data set without replacement
-    - `dict_env_kwargs()`: Attributes global model parameters and hyperparameters to a kwargs dictionary for the PtG environment
-    - `initial_print()`: Displays initial information to the text user interface
-    - `config_print()`: Gathers and prints general settings
-    - `_make_env()`: Helper function to create and normalized environments
-    - `eval_callback_dec()`: Decorator to create an evaluation environment and its EvalCallback
-    - `_make_eval_env()`: Creates an evaluation using `_make_env()` and `eval_callback_dec()`
-    - `create_vec_envs()`: Creates vectorized environments for training, validation, and testing using `_make_eval_env()` and `_make_env()`
-  - `Postprocessing()`: A class for post-processing
-    - `test_performance()`: Test RL policy on the test environment 
-    - `plot_results()`: Generates a plot displaying test results
+  - `load_data()`: Loads historical market and process data using `import_market_data()` and `import_data()`.
+  - `Preprocessing()`: Preprocessing class.
+    - `preprocessing_rew()`: Computes potential rewards using `calculate_optimum()`.
+    - `preprocessing_array()`: Converts dictionaries into NumPy arrays.
+    - `define_episodes()`: Defines training and evaluation episodes using `rand_eps_ind()`.
+    - `rand_eps_ind()`: Selects random subsets of training data.
+    - `dict_env_kwargs()`: Stores global parameters and hyperparameters in a dictionary.
+    - `initial_print()`: Displays startup information.
+    - `config_print()`: Prints general configuration settings.
+    - `_make_env()`: Creates and normalizes Gymnasium environments.
+    - `eval_callback_dec()`: Decorator function for evaluation callbacks.
+    - `_make_eval_env()`: Creates an evaluation environment using `_make_env()` and `eval_callback_dec()`.
+    - `create_vec_envs()`: Generates vectorized environments for training, validation, and testing using `_make_eval_env()` and `_make_env()`.
+  - `Postprocessing()`: Postprocessing class.
+    - `test_performance()`: Evaluates the RL policy in the test environment.
+    - `plot_results()`: Generates performance plots.
 
 ### `tensorboard/`
-During RL training, RL_PtG will store a tensorboard file for monitoring.
+Stores *TensorBoard logs* for monitoring RL training progress.
 
-### Main Script
-- **`rl_main.py`**: The main script for training the predefined RL agent on the PtG dispatch task.
-  - `computational_resources()`: Configures computational resources
-  - `check_env()`: Registers the Gymnasium environment if it is not already in the registry
-  - `main()`: Initiates and performs model training and evaluation
+### **Main Script**  
+- **`rl_main.py`** – The main script for training the RL agent on the PtG dispatch task.  
+  - `computational_resources()` – Configures computational settings.  
+  - `check_env()` – Registers the Gymnasium environment if not already present.  
+  - `main()` – Runs model training and evaluation.  
 
-### Miscellaneous
-- **`rl_tb.py`**: Starts the tensorboard server for monitoring of RL training results.
-- **`requirements.txt`**: Contains the required python libraries.
+### **Miscellaneous**  
+- **`rl_tb.py`** – Starts a TensorBoard server for monitoring training progress.  
+- **`requirements.txt`** – Lists required Python libraries.
 
 ---
 
 ## Installation and Usage
 
-The following steps describe the installation procedure:
+Follow these steps to install and run the project:
 
 ```bash
 # Clone the repository
@@ -205,14 +252,28 @@ pip install -r requirements.txt
 
 ```
 
-Note that Python 3.10 or a newer Version is required to run the code. After installing the python environment with its necessary packages, the configuration of the environment, the agent, and the training procedure can be adjusted using the yaml files in `config/`. The RL training can initiated by running the main script `rl_main.py`.
+**Note:** Python **3.10** or newer is required to run the code. 
+
+After setting up the Python environment and installing the necessary packages, you can adjust the **environment, agent, and training configurations** by modifying the YAML files in the `config/` directory. RL training is initiated by running the main script `rl_main.py`.  
+
+During training, the RL model is periodically evaluated on the validation environment using new, unseen energy market data.  
+
 During the training process, the RL performance will frequently be evaluated on the validation environemt with new and unkown energy market data. The best algorithm will further be saved in `logs/`. In addition, the training results (cumulative reward on the training and validation sets, and agorithm specific properties) are stored in a tensorboard file in `tensorboard/`.  The training and evaluation results can be viewed and monitored by starting the tensorboard server using `rl_tb.py` and the URL `http://localhost:6006/`. Fig. 2 displays the visualization of a learning curve while training a PPO algorithm on the PtG dispatch optimization task. 
 
 ![TB_plot](plots/tb_plot.png)
 
 *Figure 2: Graphical user interface of the tensorboard server for RL monitoring with a learning curve of PPO on the validation environment.*
 
-After the RL training, RL_PtG picks the best algorithm from `logs/` and evaluates its performance on the test environment to examine its ability to generalize well. The results are plotted and stored in `plots/` (Fig. 3). The file name and title indicates the applied business scenario (BS), load level (OP), state feature design (sf), training episode length (ep), time-step size (ts), algorithm, and the algorithm hyperparameters, such as learning rate (al), discount factor (ga), and entropy coefficient (ec), exploration noise (en), n-step TD update (ns), n-step factor (nf), replay buffer size (rb), batch size (bs), No. of hidden layers (hl), No. of hidden units, activation function (ac), generalized advantage estimation (ge), No. of epochs (ep), normalize advantage (na), No. of quantiles (nq), No. of dropped quantiles (dq), No. of critics (cr), soft update parameter (ta), learning starts (ls), training frequency (tf), target update interval (tu), and gSDE exploration (gs).
+After the RL training, RL_PtG picks the best algorithm from `logs/` and evaluates its performance on the test environment to examine its ability to generalize well. The results are plotted and stored in `plots/` (Fig. 3). The file name and title indicates the applied settings:
+
+| Business Scenario (BS)  | Load Level (OP)  | State Feature Design (sf)  | Training Episode Length (ep)  |
+| Time-Step Size (ts)     | Algorithm (al)  | Discount Factor (ga)       | Initial Exploration Coefficient (ie) |
+| Final Exploration Coefficient (fe) | Exploration Ratio (re) | Entropy Coefficient (ec) | Exploration Noise (en) |
+| N-Step TD Update (ns)   | N-Step Factor (nf) | Replay Buffer Size (rb)  | Batch Size (bs)  |
+| No. Of Hidden Layers (hl) | No. Of Hidden Units (hu) | Activation Function (ac) | Generalized Advantage Estimation (ge) |
+| No. Of Epochs (ep)      | Normalize Advantage (na) | No. Of Quantiles (nq) | No. Of Dropped Quantiles (dq) |
+| No. Of Critics (cr)     | Soft Update Parameter (ta) | Learning Starts (ls) | Training Frequency (tf) |
+| Target Update Interval (tu) | gSDE Exploration (gs) |  |  |
 
 ![Results](plots/RL_PtG_train_BS2_OP2_sfmod_ep37_ts600_PPO_al5e-05_ga0.973_ec1e-05_nf21_bs203_hl2_hu358_acReLU_ge0.8002_ep13_naFalse_gsFalse_rs3654_plot.png)
 
@@ -241,8 +302,6 @@ If you use RL_PtG in your research please use the following BibTeX entry:
 ---
 
 ## References
-
-DQN [6], A2C [7], PPO [8], TD3 [9], SAC [6], and TQC [10]
 
 [1] Markthaler S., "*Katalytische Direktmethanisierung von Biogas: Demonstration
 in industrieller Umgebung und Betriebsoptimierung mittels Reinforcement
