@@ -25,8 +25,10 @@ The **RL_PtG** project contains a framework for economic optimization of Power-t
 ### Application
 
 The first step in PtG is typically water electrolysis, which uses electrical current to split water (H2O) electrochemically into hydrogen and oxygen (O2). RL_PtG assumes a proton exchange membrane (PEM) electrolyzer with a load-depend efficiency of a commercial system [2]. The efficiency has been modelled using experimental data and linear regression with non-linear basis functions [3]. In addition to PEM electrolysis, RL_PtG incorporates a chemical methanation unit which converts hydrogen with carbon dioxide (CO2) into methane. Since biogas contains a large amount of CO2 (up to 50 %), the current process applies this carbon source. To model the process dynamics of the methanation unit, which dominates the overall PtG dynamics, the present approach incorporates a time-series process model based on experimental data of a real-world pilot plant. The experimental data contains plant transitions during startup, load changes, cooldown, and standby of the methanation unit. In standby, the reactor temperature is maintained at around 190 °C to enable a fast warm startup. The data-based process model switches between the different time-series data sets to predict the dynamic operation of the plant. Such an approach is simple and exhibits very low model-mismatch, if the plant behaves reproducible [3].
-Fig. 1 portrays the current PtG process, which can either blend the produced CH4 into the natural gas grid or use it in a gas engine for combined heat and power (CHP) production. The different ways of processing and selling the produced CH4 lead to three different options for business scenario (BS) in the present application. While BS1 trades CH4 at the natural gas spot market, BS2 sells CH4 to a bilateral partner via Over-the-Counter contracts. By contrast, BS3 integrateds the CHP plant and sells the produced electrical power P_el in special tenders of the German renewable energy act (EEG). Other revenue types are heat, oxygen, and European emission allowances (EUA). Due to binding emissions (CO2) in methane, BS1 and 2 can sell EUAs at the European emission trading system (EU-ETS). The main operational costs of the process are electricity and water. The electrical power is bought at the German Day-ahead spot market. The 
-RL_PtG integrates historical electricity market data in `data/spot_market_data/` provided by SMARD [4]. The original work and RL training in [1,3] uses historical market data for gas and EUA provided by MONTEL [5]. However, since RL_PtG has not permission for publishing gas and EUA spot market data, it includes a synthesized data sets which resemble the characteristics and non-linearity of the original ones. 
+
+Fig. 1 portrays the current PtG process, which can either blend the produced CH4 into the natural gas grid or use it in a gas engine for combined heat and power (CHP) production. The different ways of processing and selling the produced CH4 lead to three different options for business scenario (BS) in the present application. While BS1 trades CH4 at the natural gas spot market, BS2 sells CH4 to a bilateral partner via Over-the-Counter contracts. By contrast, BS3 integrateds the CHP plant and sells the produced electrical power P_el in special tenders of the German renewable energy act (EEG). Other revenue types are heat, oxygen, and European emission allowances (EUA). Due to binding emissions (CO2) in methane, BS1 and 2 can sell EUAs at the European emission trading system (EU-ETS). The main operational costs of the process are electricity and water. The electrical power is bought at the German Day-ahead spot market. 
+
+The RL_PtG integrates historical electricity market data in `data/spot_market_data/` provided by SMARD [4]. The original work and RL training in [1,3] uses historical market data for gas and EUA provided by MONTEL [5]. However, since RL_PtG has not permission for publishing gas and EUA spot market data, it includes a synthesized data sets which resemble the characteristics and non-linearity of the original ones. 
 RL_PtG contains the PtG processs including PEM electrolysis, chemical methanation, and energy market data in the PtGEnv environment (*Gymnasium* environemt). [Project structure](#structure) provides an overview over all directories and files involved.
 
 ![RL_PtG](plots/RL_PtG.png)
@@ -42,10 +44,7 @@ The algorithm configurations for a training run can be set in `config/config_age
 
 ### Data preprocessing and feature design
 
-
-potential rewards.
-These represent the maximum possible reward in Power-to-Gas (PtG) operation, 
-either in partial load [part_full_b... = 0] or full load [part_full_b... = 1].
+During modeling and preliminary investigations on PtG dispatch optimization, two different ways of designing the state features has been developed. They can be specified in `config/config_env.yaml`. If `raw_modified` is set to `raw`, the environemt provides the raw Day-ahead energy market prices for electricity, gas, and EUA to the RL agent. On the other hand, if `raw_modified` is set to `mod`, RL_PtG will precompute a potential reward and a load identifier for the corresponding Day-ahead period (default 0-12 hours). For this period, it calculates the reward considering steady-state operation in partial and full load as well as in cooldown. The potential reward corresponds with the maximum reward which the system may get in steady-state operation for this period under the current market conditions. Since it does not indicate which load is more beneficial, the load identifier marks the most profitable operation type (Cooldown: Identifier = -1; Partial load: Identifier = 0; Full load: Identifier = 1). Together, potential reward and load identifier indicate the most beneficial operation type and its potential profit. Be aware that it ignores the plant dynamics. 
 
 ---
 
@@ -274,7 +273,6 @@ arXiv preprint arXiv:1602.01783, 2016, 1–19
 [10] T. Haarnoja, A. Zhou, K. Hartikainen, G. Tucker, S. Ha, J. Tan, V. Kumar, H. Zhu, A. Gupta, P. Abbeel, S. Levine, "*Soft Actor-Critic Algorithms and Applications*", arXiv preprint arXiv:1812.05905, 2019, 1–17
 
 [11] A. Kuznetsov, P. Shvechikov, A. Grishin, D. Vetrov, "*Controlling Overestimation Bias with Truncated Mixture of Continuous Distributional Quantile Critics*", arXiv preprint arXiv:2005.04269, 2020, 1–17
-
 
 
 ---
