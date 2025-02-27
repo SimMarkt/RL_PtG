@@ -35,12 +35,13 @@ RL_PtG contains the PtG processs including PEM electrolysis, chemical methanatio
 
 ### Deep RL algorithms
 
-Deep RL is a promising approach for economic optimization of chemical plant operation. This python project implements deep RL for PtG dispatch optimization under Day-ahead energy
-market conditions. The file "rl_main.py" contains the for training RL agents using a "data-based process model" of PtG as environment. This model has been derived from experimental data of a real PtG demonstration plant and serve as environment, along with energy market data.
-The environment has been implemented using the Gymnasium environment.
-With regard to RL, the project incorporates six state-of-the-art RL algorithms (DQN, A2C, PPO, TD3, SAC, TQC) from Stable-Baselines3 library.
+Deep RL is a promising approach for economic optimization of chemical plant operation with non-linearity and stochasticity in both process dynamics and market behavior. For deep RL, RL_PtG incorporates the *Stable-Baselines3* and *SB3 Contrib* libraries. These libraries contain implementations various state-of-the-art deep RL algorithms. The present project incorporates the DQN [6], A2C [7], PPO [8], TD3 [9], SAC [10], and TQC [11] algorithms based on the *Stable-Baselines3* and *SB3 Contrib* implementation. For more information on the implementation, refer to:
+      Stable-Baselines3: https://stable-baselines3.readthedocs.io/en/master/guide/algos.html
+      SB3 Contrib: https://sb3-contrib.readthedocs.io/en/master/
+The algorithm configurations for a training run can be set in `config/config_agent.yaml`. Note that if you want to add another algorithm from the *Stable-Baselines3* or *SB3 Contrib* libraries. You need to adjust `config/config_agent.yaml` and `src/rl_config_agent.py` by analogy to the already implemented ones.
 
 ### Data preprocessing and feature design
+
 
 potential rewards.
 These represent the maximum possible reward in Power-to-Gas (PtG) operation, 
@@ -238,7 +239,11 @@ If you use RL_PtG in your research please use the following BibTeX entry:
 }
 ```
 
+---
+
 ## References
+
+DQN [6], A2C [7], PPO [8], TD3 [9], SAC [6], and TQC [10]
 
 [1] Markthaler S., "*Katalytische Direktmethanisierung von Biogas: Demonstration
 in industrieller Umgebung und Betriebsoptimierung mittels Reinforcement
@@ -255,6 +260,22 @@ Power-to-Gas plant with PEM electrolysis*", International Journal of Hydrogen En
 [4] Bundesnetzagentur, "*SMARD - Strommarktdaten, Stromhandel und Stromerzeugung in Deutschland*", https://www.smard.de/home (Accessed, 15.08.2024)
 
 [5] Montel AS., "*Montel Online Platform*", https://www.montelnews.com/ (Accessed, 26.07.2023)
+
+[6] V. Mnih, K. Kavukcuoglu, D. Silver, A. A. Rusu, J. Veness, M. G. Bellemare, A. Graves, M. Riedmiller, A. K. Fidjeland, G. Ostrovski, S. Petersen, C. Beattie, A. Sadik, I. Antonoglou, H. King, D. Kumaran, D. Wierstra, S. Legg, D. Hassabis,
+"*Human-level control through deep reinforcement learning*", Nature, 518, 2015, 529–533
+
+[7] V. Mnih, A. P. Badia, M. Mirza, A. Graves, T. P. Lillicrap, T. Harley, D. Silver, K. Kavukcuoglu, "*Asynchronous Methods for Deep Reinforcement Learning*",
+arXiv preprint arXiv:1602.01783, 2016, 1–19
+
+[8] J. Schulman, F. Wolski, P. Dhariwal, A. Radford, O. Klimov, "*Proximal Policy Optimization Algorithms*", arXiv preprint arXiv:1707.06347, 2017, 1–12
+
+[9] S. Fujimoto, H. van Hoof, D. Meger, "*Addressing Function Approximation Error in Actor-Critic Methods*", arXiv preprint arXiv:1802.09477, 2018, 1–15
+
+[10] T. Haarnoja, A. Zhou, K. Hartikainen, G. Tucker, S. Ha, J. Tan, V. Kumar, H. Zhu, A. Gupta, P. Abbeel, S. Levine, "*Soft Actor-Critic Algorithms and Applications*", arXiv preprint arXiv:1812.05905, 2019, 1–17
+
+[11] A. Kuznetsov, P. Shvechikov, A. Grishin, D. Vetrov, "*Controlling Overestimation Bias with Truncated Mixture of Continuous Distributional Quantile Critics*", arXiv preprint arXiv:2005.04269, 2020, 1–17
+
+
 
 ---
 
