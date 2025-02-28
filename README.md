@@ -256,24 +256,60 @@ pip install -r requirements.txt
 
 After setting up the Python environment and installing the necessary packages, you can adjust the **environment, agent, and training configurations** by modifying the YAML files in the `config/` directory. RL training is initiated by running the main script `rl_main.py`.  
 
-During training, the RL model is periodically evaluated on the validation environment using new, unseen energy market data.  
+During training, the RL model is periodically evaluated on the validation environment using new, unseen energy market data:  
+- The best-performing algorithm is automatically saved in the `logs/` directory. 
+- Training results, including cumulative rewards on the training and validation sets, as well as algorithm-specific properties, are logged in *TensorBoard* (`tensorboard/`).  
 
-During the training process, the RL performance will frequently be evaluated on the validation environemt with new and unkown energy market data. The best algorithm will further be saved in `logs/`. In addition, the training results (cumulative reward on the training and validation sets, and agorithm specific properties) are stored in a tensorboard file in `tensorboard/`.  The training and evaluation results can be viewed and monitored by starting the tensorboard server using `rl_tb.py` and the URL `http://localhost:6006/`. Fig. 2 displays the visualization of a learning curve while training a PPO algorithm on the PtG dispatch optimization task. 
+To monitor the training and evaluation results, start the **TensorBoard server**:
+
+```bash
+python rl_tb.py
+```
+
+Then, open TensorBoard in your browser: http://localhost:6006/
+
+Figure 2 illustrates a learning curve for a PPO algorithm trained on the PtG dispatch optimization task.
 
 ![TB_plot](plots/tb_plot.png)
 
 *Figure 2: Graphical user interface of the tensorboard server for RL monitoring with a learning curve of PPO on the validation environment.*
 
-After the RL training, RL_PtG picks the best algorithm from `logs/` and evaluates its performance on the test environment to examine its ability to generalize well. The results are plotted and stored in `plots/` (Fig. 3). The file name and title indicates the applied settings:
+After RL training, RL_PtG selects the best-performing algorithm from `logs/` and evaluates its performance on the *test environment* to assess its generalization capability. The results are visualized and stored in `plots/` (Fig. 3).  
 
-| Business Scenario (BS)  | Load Level (OP)  | State Feature Design (sf)  | Training Episode Length (ep)  |
-| Time-Step Size (ts)     | Algorithm (al)  | Discount Factor (ga)       | Initial Exploration Coefficient (ie) |
-| Final Exploration Coefficient (fe) | Exploration Ratio (re) | Entropy Coefficient (ec) | Exploration Noise (en) |
-| N-Step TD Update (ns)   | N-Step Factor (nf) | Replay Buffer Size (rb)  | Batch Size (bs)  |
-| No. Of Hidden Layers (hl) | No. Of Hidden Units (hu) | Activation Function (ac) | Generalized Advantage Estimation (ge) |
-| No. Of Epochs (ep)      | Normalize Advantage (na) | No. Of Quantiles (nq) | No. Of Dropped Quantiles (dq) |
-| No. Of Critics (cr)     | Soft Update Parameter (ta) | Learning Starts (ls) | Training Frequency (tf) |
-| Target Update Interval (tu) | gSDE Exploration (gs) |  |  |
+The file name and title indicate the applied settings:  
+
+| Parameter | Description |  
+|-----------|------------|  
+| **Business Scenario (BS)** | Scenario defining the operational and economic conditions |  
+| **Load Level (OP)** | Operating load level for PtG dispatch |  
+| **State Feature Design (sf)** | Feature engineering method used for state representation |  
+| **Training Episode Length (ep)** | Number of time steps per training episode |  
+| **Time-Step Size (ts)** | Duration of a single time step in the simulation |  
+| **Algorithm (al)** | Deep RL algorithm used |  
+| **Discount Factor (ga)** | Discount rate for future rewards |  
+| **Initial Exploration Coefficient (ie)** | Initial value for exploration-exploitation tradeoff |  
+| **Final Exploration Coefficient (fe)** | Final value for exploration-exploitation tradeoff |  
+| **Exploration Ratio (re)** | Ratio of steps spent in exploration mode |  
+| **Entropy Coefficient (ec)** | Weighting factor for entropy in policy learning |  
+| **Exploration Noise (en)** | Noise applied during action exploration in TD3 |  
+| **N-Step TD Update (ns)** | Number of steps for n-step temporal difference updates |  
+| **N-Step Factor (nf)** | Factor for n-step learning |  
+| **Replay Buffer Size (rb)** | Capacity of the replay memory buffer |  
+| **Batch Size (bs)** | Number of samples used in each training batch |  
+| **No. of Hidden Layers (hl)** | Number of hidden layers in the neural network |  
+| **No. of Hidden Units (hu)** | Number of neurons per hidden layer |  
+| **Activation Function (ac)** | Activation function used in the neural network |  
+| **Generalized Advantage Estimation (ge)** | GAE parameter for advantage computation |  
+| **No. of Epochs (ep)** | Number of training epochs |  
+| **Normalize Advantage (na)** | Whether the advantage function is normalized |  
+| **No. of Quantiles (nq)** | Number of quantiles used in distributional RL |  
+| **No. of Dropped Quantiles (dq)** | Number of quantiles dropped in TQC algorithm |  
+| **No. of Critics (cr)** | Number of critic networks in actor-critic methods |  
+| **Soft Update Parameter (ta)** | τ parameter for soft target updates |  
+| **Learning Starts (ls)** | Number of steps before training begins |  
+| **Training Frequency (tf)** | Frequency of model updates |  
+| **Target Update Interval (tu)** | Interval for updating the target network |  
+| **gSDE Exploration (gs)** | Whether generalized State-Dependent Exploration (gSDE) is used |  
 
 ![Results](plots/RL_PtG_train_BS2_OP2_sfmod_ep37_ts600_PPO_al5e-05_ga0.973_ec1e-05_nf21_bs203_hl2_hu358_acReLU_ge0.8002_ep13_naFalse_gsFalse_rs3654_plot.png)
 
@@ -289,9 +325,9 @@ This project is licensed under [MIT License](LICENSE).
 
 ## Citing
 
-If you use RL_PtG in your research please use the following BibTeX entry:
+If you use RL_PtG in your research, please cite it using the following BibTeX entry:
 ```BibTeX
-@misc{SimMarkRLPtG,
+@misc{RL_PtG,
   author = {Markthaler, Simon},
   title = {RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization},
   year = {2024},
