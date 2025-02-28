@@ -76,7 +76,7 @@ During the development of **RL_PtG**, two different state feature design approac
 
 The type of state feature design is controlled via the `raw_modified` parameter:  
 
-- `raw`: The environment provides the RL agent with raw Day-ahead market prices for **electricity, gas, and EUA**.  
+- `raw`: The environment provides the RL agent with raw Day-ahead market prices for electricity, gas, and EUA.  
 - `mod`: The environment precomputes a *potential reward* and a *load identifier* for the corresponding Day-ahead period (default: 0-12 hours).  
 
 In `mod`, the environment calculates the potential reward assuming steady-state operation under three conditions (*Partial load*, *Full load*, and *Cooldown*) for the selected Day-ahead period.
@@ -254,7 +254,7 @@ pip install -r requirements.txt
 
 **Note:** Python **3.10** or newer is required to run the code. 
 
-After setting up the Python environment and installing the necessary packages, you can adjust the **environment, agent, and training configurations** by modifying the YAML files in the `config/` directory. RL training is initiated by running the main script `rl_main.py`.  
+After setting up the Python environment and installing the necessary packages, you can adjust the environment, agent, and training configurations by modifying the YAML files in the `config/` directory. RL training is initiated by running the main script `rl_main.py`.  
 
 During training, the RL model is periodically evaluated on the validation environment using new, unseen energy market data:  
 - The best-performing algorithm is automatically saved in the `logs/` directory. 
