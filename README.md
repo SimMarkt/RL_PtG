@@ -6,6 +6,8 @@ This repository contains the source code for the **RL_PtG** framework, which has
 
 ![RL_PtG_int](plots/RL_PtG_int.png)
 
+*Figure 1: Utilization of deep Reinforcement Learning for dispatch optimization of a real-world Power-to-Gas plant.*
+
 ---
 
 ## Table of Contents
@@ -32,7 +34,7 @@ In addition to PEM electrolysis, **RL_PtG** incorporates a chemical methanation 
 
 The experimental data captures plant behavior during startup, load changes, cooldown, and standby operations of the methanation unit. In standby mode, the reactor temperature is maintained at approximately 190°C to enable a rapid warm startup. The data-driven process model switches between different time-series datasets to simulate dynamic plant operations. This approach is both simple and highly accurate and provides that the plant operates consistently and predictably [3].  
 
-Figure 1 illustrates the current PtG process, where the produced CH<sub>4</sub> can either be injected into the natural gas grid or used in a gas engine for combined heat and power (CHP) generation. The various methods of processing and selling CH<sub>4</sub> define three distinct business scenarios (BS) within this application:  
+Figure 2 illustrates the current PtG process, where the produced CH<sub>4</sub> can either be injected into the natural gas grid or used in a gas engine for combined heat and power (CHP) generation. The various methods of processing and selling CH<sub>4</sub> define three distinct business scenarios (BS) within this application:  
 
 - **BS1**: Trades CH<sub>4</sub> on the natural gas spot market.  
 - **BS2**: Sells CH<sub>4</sub> to a bilateral partner via Over-the-Counter (OTC) contracts.  
@@ -46,7 +48,7 @@ The **RL_PtG** framework models the complete PtG process, including PEM electrol
 
 ![RL_PtG](plots/RL_PtG.png)
 
-*Figure 1: Optimization framework for Power-to-Gas dispatch using Reinforcement Learning agents and the PtGEnv environment including the different business cases.*
+*Figure 2: Optimization framework for Power-to-Gas dispatch using Reinforcement Learning agents and the PtGEnv environment including the different business cases.*
 
 ### Deep RL Algorithms  
 
@@ -268,13 +270,17 @@ python rl_tb.py
 
 Then, open TensorBoard in your browser: http://localhost:6006/
 
-Figure 2 illustrates a learning curve for a PPO algorithm trained on the PtG dispatch optimization task.
+Figure 3 illustrates a learning curve for a PPO algorithm trained on the PtG dispatch optimization task.
 
 ![TB_plot](plots/tb_plot.png)
 
-*Figure 2: Graphical user interface of the tensorboard server for RL monitoring with a learning curve of PPO on the validation environment.*
+*Figure 3: Graphical user interface of the tensorboard server for RL monitoring with a learning curve of PPO on the validation environment.*
 
-After RL training, RL_PtG selects the best-performing algorithm from `logs/` and evaluates its performance on the *test environment* to assess its generalization capability. The results are visualized and stored in `plots/` (Fig. 3).  
+After RL training, RL_PtG selects the best-performing algorithm from `logs/` and evaluates its performance on the *test environment* to assess its generalization capability. The results are visualized and stored in `plots/` (Fig. 4).  
+
+![Results](plots/RL_PtG_train_BS2_OP2_sfmod_ep37_ts600_PPO_al5e-05_ga0.973_ec1e-05_nf21_bs203_hl2_hu358_acReLU_ge0.8002_ep13_naFalse_gsFalse_rs3654_plot.png)
+
+*Figure 4: PPO performance on the test environment including energy market data, PtG process state, methane production, reward, and cumulative reward.*
 
 The file name and title indicate the applied settings:  
 
@@ -311,9 +317,32 @@ The file name and title indicate the applied settings:
 | **Target Update Interval (tu)** | Interval for updating the target network |  
 | **gSDE Exploration (gs)** | Whether generalized State-Dependent Exploration (gSDE) is used |  
 
-![Results](plots/RL_PtG_train_BS2_OP2_sfmod_ep37_ts600_PPO_al5e-05_ga0.973_ec1e-05_nf21_bs203_hl2_hu358_acReLU_ge0.8002_ep13_naFalse_gsFalse_rs3654_plot.png)
 
-*Figure 3: PPO performance on the test environment including energy market data, PtG process state, methane production, reward, and cumulative reward.*
+---
+
+## Requirements
+
+- Python 3.10+
+- Required libraries:
+  - `pymodbus`
+  - `opcua`
+  - `PyYAML`
+  - `pywin32`
+  - `cryptography`
+  - `pg8000`
+  - `matplotlib`
+  - `gymnasium`
+  - `pandas`
+  - `stable-baselines3`
+  - `sb3-contrib`
+  - `tensorboard`
+  - `tqdm`
+  - `numpy`
+  - `rich`
+  - `torch`
+  - `pyyaml`
+
+To avoid any version conflicts, it is recommended to use the libraries given in `requirements.txt`. 
 
 ---
 
@@ -339,7 +368,7 @@ If you use RL_PtG in your research, please cite it using the following BibTeX en
 
 ## References
 
-[1] Markthaler S., "*Katalytische Direktmethanisierung von Biogas: Demonstration
+[1] S. Markthaler, "*Katalytische Direktmethanisierung von Biogas: Demonstration
 in industrieller Umgebung und Betriebsoptimierung mittels Reinforcement
 Learning*", DECHEMA Jahrestreffen der Fachsektion Energie, Chemie
 und Klima (11.-12.03.), Frankfurt/Main, 2024
@@ -349,7 +378,7 @@ Mainz: Technical and economic analysis of the worldwide largest
 Power-to-Gas plant with PEM electrolysis*", International Journal of Hydrogen Energy,
 42, 2017, 13311–13320
 
-[3] Markthaler S., "*Optimization of Power-to-Gas operation and dispatch using Deep Reinforcement Learning*", Dissertation (PhD Thesis), Friedrich-Alexander-Universität Erlangen-Nürnberg, 2025 (not yet been published).
+[3] S. Markthaler, "*Optimization of Power-to-Gas operation and dispatch using Deep Reinforcement Learning*", Dissertation (PhD Thesis), Friedrich-Alexander-Universität Erlangen-Nürnberg, 2025 (not yet been published).
 
 [4] Bundesnetzagentur, "*SMARD - Strommarktdaten, Stromhandel und Stromerzeugung in Deutschland*", https://www.smard.de/home (Accessed, 15.08.2024)
 
