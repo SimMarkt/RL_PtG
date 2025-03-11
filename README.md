@@ -272,37 +272,37 @@ git clone https://github.com/SimMarkt/RL_PtG.git
 cd RL_PtG
 
 # Build the Docker container using the 'Dockerfile'
-docker build -t rl-ptg .
+docker build -t rl-ptg:v1 .
 
 # Verify that the image was created successfully
 docker images
 
 >>
 REPOSITORY    TAG       IMAGE ID       CREATED         SIZE
-rl-ptg        latest    ...            3 minutes ago   5.87GB
+rl-ptg        v1        ...            3 minutes ago   5.87GB
 >>
 
 # Run the container
-docker run --rm -it rl-ptg
+docker run --rm -it rl-ptg:v1
 
 ```
 
-If you need to adjust the environment, agent, or training configurations, you can modify the YAML files located in the `config/` directory. After making these changes, rebuild the Docker image to apply them in the container:
+If you need to adjust the environment, agent, or training configurations, you can modify the YAML files located in the `config/` directory. After making these changes, rebuild the Docker image to apply them in the container (you can also optionally update the tag):
 
 ```bash
 # Rebuild the Docker image using the 'Dockerfile'
-docker build -t rl-ptg .
+docker build -t rl-ptg:v1 .
 
 # Verify that the image was created successfully
 docker images
 
 >>
 REPOSITORY    TAG       IMAGE ID       CREATED         SIZE
-rl-ptg        latest    ...            1 minutes ago   5.87GB
+rl-ptg        v1        ...            1 minutes ago   5.87GB
 >>
 
 # Run the container
-docker run --rm -it rl-ptg
+docker run --rm -it rl-ptg:v1
 
 ```
 
