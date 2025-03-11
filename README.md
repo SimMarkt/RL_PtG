@@ -234,7 +234,11 @@ Stores *TensorBoard logs* for monitoring RL training progress.
 
 ## Installation and Usage
 
-Follow these steps to install and run the project:
+**Note:** Python **3.10** or newer is required to run the code. 
+
+### Using a virtual environment
+
+To run **RL_PtG** in a Python virtual environment, follow these steps to install and run the project:
 
 ```bash
 # Clone the repository
@@ -254,9 +258,57 @@ pip install -r requirements.txt
 
 ```
 
-**Note:** Python **3.10** or newer is required to run the code. 
-
 After setting up the Python environment and installing the necessary packages, you can adjust the environment, agent, and training configurations by modifying the YAML files in the `config/` directory. RL training is initiated by running the main script `rl_main.py`.  
+
+### Using a Docker container
+
+To run **RL_PtG** as a Docker container, follow these steps to install and run the project:
+
+```bash
+# Clone the repository
+git clone https://github.com/SimMarkt/RL_PtG.git
+
+# Navigate to the project directory
+cd RL_PtG
+
+# Build the Docker container using the 'Dockerfile'
+docker build -t rl-ptg .
+
+# Verify that the image was created successfully
+docker images
+
+>>
+REPOSITORY    TAG       IMAGE ID       CREATED         SIZE
+rl-ptg        latest    ...            3 minutes ago   5.87GB
+>>
+
+# Run the container
+docker run --rm -it rl-ptg
+
+```
+
+If you need to adjust the environment, agent, or training configurations, you can modify the YAML files located in the `config/` directory. After making these changes, rebuild the Docker image to apply them in the container:
+
+```bash
+# Rebuild the Docker image using the 'Dockerfile'
+docker build -t rl-ptg .
+
+# Verify that the image was created successfully
+docker images
+
+>>
+REPOSITORY    TAG       IMAGE ID       CREATED         SIZE
+rl-ptg        latest    ...            1 minutes ago   5.87GB
+>>
+
+# Run the container
+docker run --rm -it rl-ptg
+
+```
+
+Please note that training the RL agents can be resource-intensive, especially if you're performing extensive hyperparameter optimization or conducting in-depth analysis using multiple random seeds. In such cases, it's recommended to avoid using the Docker container and instead set up a Python virtual environment (as described above) for better performance.
+
+### Monitoring
 
 During training, the RL model is periodically evaluated on the validation environment using new, unseen energy market data:  
 - The best-performing algorithm is automatically saved in the `logs/` directory. 
