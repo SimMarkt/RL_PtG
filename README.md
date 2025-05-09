@@ -376,12 +376,6 @@ The file name and title indicate the applied settings:
 
 - Python 3.10+
 - Required libraries:
-  - `pymodbus`
-  - `opcua`
-  - `PyYAML`
-  - `pywin32`
-  - `cryptography`
-  - `pg8000`
   - `matplotlib`
   - `gymnasium`
   - `pandas`
@@ -393,6 +387,7 @@ The file name and title indicate the applied settings:
   - `rich`
   - `torch`
   - `pyyaml`
+  - `protobuf`
 
 To avoid any version conflicts, it is recommended to use the libraries given in `requirements.txt`. 
 
