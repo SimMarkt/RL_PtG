@@ -388,16 +388,16 @@ class Preprocessing():
                     "eps_sim_steps": self.eps_sim_steps_val,
                     "e_r_b": self.e_r_b_val,
                     "g_e": self.g_e_val,
-                    "rew_l_b": np.min(self.e_r_b_val[1, 0, :]),
-                    "rew_u_b": np.max(self.e_r_b_val[1, 0, :]),
+                    "rew_l_b": np.min(self.e_r_b_train[1, 0, :]),
+                    "rew_u_b": np.max(self.e_r_b_train[1, 0, :]),
                 })
             elif type == "test":
                 env_kwargs.update({
                     "eps_sim_steps": self.eps_sim_steps_test,
                     "e_r_b": self.e_r_b_test,
                     "g_e": self.g_e_test,
-                    "rew_l_b": np.min(self.e_r_b_test[1, 0, :]),
-                    "rew_u_b": np.max(self.e_r_b_test[1, 0, :]),
+                    "rew_l_b": np.min(self.e_r_b_train[1, 0, :]),
+                    "rew_u_b": np.max(self.e_r_b_train[1, 0, :]),
                 })
             else:
                 raise ValueError(f'Invalid type: {type}. Must be "train", "val", or "test".')

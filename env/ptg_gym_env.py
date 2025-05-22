@@ -1,3 +1,6 @@
+# Custom Environment implementing the Gymnasium interface for PtG dispatch optimization.
+# Version 0.0
+
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -471,6 +474,9 @@ class PTGEnv(gym.Env):
             info = self._get_info()
 
         self.k += 1
+
+        # PtGEnv uses only "terminated" because preliminary studies showed no performance difference 
+        # between using "terminated" and "truncated" episodes.
 
         return observation, reward, terminated, False, info
 
