@@ -8,6 +8,8 @@ rl_utils:
 ---------------------------------------------------------------------------------------------
 """
 
+from typing import Tuple
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -480,7 +482,7 @@ def _make_eval_env(env_id, n_envs, seed, env_kwargs, render_mode="None"):
     return _make_env(env_id, n_envs, seed, 
                      dict(dict_input=env_kwargs, train_or_eval="eval", render_mode=render_mode))
 
-def create_vec_envs(env_id, str_id, agent_config, train_config, env_kwargs_data):
+def create_vec_envs(env_id, str_id, agent_config, train_config, env_kwargs_data) -> Tuple():
     """Creates vectorized environments for training, validation, and testing"""
 
     # Set processing type

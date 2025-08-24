@@ -10,7 +10,7 @@ rl_main:
 ---------------------------------------------------------------------------------------------
 """
 
-# pylint: disable=no-member
+# pylint: disable=no-member, import-outside-toplevel
 
 # ---------------------------------Import Python libraries-----------------------------------
 import os
