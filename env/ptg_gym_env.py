@@ -1,5 +1,19 @@
-# Custom Environment implementing the Gymnasium interface for PtG dispatch optimization.
-# Version 0.0
+"""
+Custom Environment implementing the Gymnasium interface for PtG dispatch optimization.
+Version 0.0
+
+Abbreviations:
+   SNG: Synthetic natural gas
+   EUA: European emission allowances
+   CHP: Combined heat and power plant
+   CH4: Methane
+   H2: Hydrogen
+   O2: Oxygen
+   CO2: Carbon dioxide
+   H2O_DE: Water vapor (steam)
+   LHV: Lower heating value
+   EEG: German Renewable Energy Act (Erneuerbare-Energien-Gesetz)
+"""
 
 import gymnasium as gym
 from gymnasium import spaces
@@ -8,17 +22,6 @@ import math
 
 ep_index = 0
 
-# Abbreviations:
-#   SNG: Synthetic natural gas
-#   EUA: European emission allowances
-#   CHP: Combined heat and power plant
-#   CH4: Methane
-#   H2: Hydrogen
-#   O2: Oxygen
-#   CO2: Carbon dioxide
-#   H2O_DE: Water vapor (steam)
-#   LHV: Lower heating value
-#   EEG: German Renewable Energy Act (Erneuerbare-Energien-Gesetz)
 
 class PTGEnv(gym.Env):
     """Custom Environment implementing the Gymnasium interface for PtG dispatch optimization."""

@@ -1,10 +1,10 @@
-# ----------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------
 # RL_PtG: Deep Reinforcement Learning for Power-to-Gas Dispatch Optimization
 # https://github.com/SimMarkt/RL_PtG
 
 # config_train: 
 # > Configuration file for setting up training
-# ----------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------
           
 com_conf : pc               # Computational resources to be used: 
                             # 'pc' (local personal computer) or 'slurm' (computing cluster with SLURM management)

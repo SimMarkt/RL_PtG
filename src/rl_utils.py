@@ -1,10 +1,12 @@
-# ----------------------------------------------------------------------------------------------------------------
-# RL_PtG: Deep Reinforcement Learning for Power-to-Gas Dispatch Optimization
-# GitHub Repository: https://github.com/SimMarkt/RL_PtG
-#
-# rl_utils: 
-# > Utiliy/Helper functions
-# ----------------------------------------------------------------------------------------------------------------
+"""
+---------------------------------------------------------------------------------------------
+RL_PtG: Deep Reinforcement Learning for Power-to-Gas Dispatch Optimization
+GitHub Repository: https://github.com/SimMarkt/RL_PtG
+
+rl_utils:
+> Utiliy/Helper functions
+---------------------------------------------------------------------------------------------
+"""
 
 import pandas as pd
 import numpy as np

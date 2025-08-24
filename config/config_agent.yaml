@@ -1,4 +1,4 @@
-# ----------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------
 # RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization
 # https://github.com/SimMarkt/RL_PtG
 
@@ -7,7 +7,7 @@
 # > RL_PtG incorporates the Stable-Baselines3 and SB3 Contrib libraries. For more information, refer to:
 #       Stable-Baselines3 : https://stable-baselines3.readthedocs.io/en/master/guide/algos.html
 #       SB3 Contrib: https://sb3-contrib.readthedocs.io/en/master/
-# ----------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------
 
 n_envs : 6                   # No. of environment instances/workers for training
 rl_alg : PPO                 # Selected RL algorithm (available options: [DQN, A2C, PPO, TD3, SAC, TQC])

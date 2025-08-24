@@ -1,18 +1,23 @@
-# ----------------------------------------------------------------------------------------------------------------
-# RL_PtG: Deep Reinforcement Learning for Power-to-Gas Dispatch Optimization
-# GitHub Repository: https://github.com/SimMarkt/RL_PtG
-#
-# rl_config_train: 
-# > Manages the configuration and settings for RL training.
-# > Converts data from 'config_train.yaml' into a class object for further processing
-# ----------------------------------------------------------------------------------------------------------------
+"""
+---------------------------------------------------------------------------------------------
+RL_PtG: Deep Reinforcement Learning for Power-to-Gas Dispatch Optimization
+GitHub Repository: https://github.com/SimMarkt/RL_PtG
+
+rl_config_train:
+> Manages the configuration and settings for RL training.
+> Converts data from 'config_train.yaml' into a class object for further processing
+---------------------------------------------------------------------------------------------
+"""
+
+# pylint: disable=no-member
 
 import yaml
 
 class TrainConfiguration:
+    """ Configuration of the RL training procedure. """
     def __init__(self):
         # Load the environment configuration from the YAML file
-        with open("config/config_train.yaml", "r") as env_file:
+        with open("config/config_train.yaml", "r", encoding="utf-8") as env_file:
             train_config = yaml.safe_load(env_file)
 
         # Unpack data from dictionary
