@@ -4,7 +4,8 @@ RL_PtG: Deep Reinforcement Learning for Power-to-Gas Dispatch Optimization
 GitHub Repository: https://github.com/SimMarkt/RL_PtG
 
 rl_opt: 
-> Computes the potential rewards, the load identifiers, and the theoretical optimum T-OPT ignoring plant dynamics.
+> Computes the potential rewards, the load identifiers, and the theoretical optimum T-OPT.
+(T-OPT ignores plant dynamics)
 
 Abbreviations:
    SNG: Synthetic natural gas
@@ -20,61 +21,82 @@ Abbreviations:
 ---------------------------------------------------------------------------------------------
 """
 
-import numpy as np
+# pylint: disable=no-member
+
 import math
+import numpy as np
 
-from src.rl_config_env import env_configuration
 
-def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_price_data: np.array, data_name: str, stats_names):
+from src.rl_config_env import EnvConfiguration
+
+def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_price_data: np.array,
+                      data_name: str, stats_names):
     """
-        Computes the theoretical maximum revenue for the Power-to-Gas process, assuming no operational constraints.
+        Computes the theoretical maximum revenue for the Power-to-Gas process, assuming no
+        operational constraints.
         :param el_price_data: Electricity market data
         :param gas_price_data: Gas market data
         :param eua_price_data: EUA market data
         :param data_name: Identifier for the dataset
         :param stats_names: List of statistical variable names for tracking results
-        :return stats_dict_opt: Dictionary containing process and economic data for the theoretical optimal scenario
+        :return stats_dict_opt: Dictionary containing process and economic data for 
+                                the theoretical optimal scenario
     """
 
-    env_config = env_configuration()
+    env_config = EnvConfiguration()
 
-    meth_stats = env_config.meth_stats_load      # Methanation process data for partial and full load
+    meth_stats = env_config.meth_stats_load     # Methanation process data for partial and full load
 
     stats_dict_opt = {}                         # Dictionary to store computed results
     stats = np.zeros((len(el_price_data), len(stats_names)))
 
     # Scenario 3 includes CHP (Combined Heat and Power) revenue calculation
-    b_s3 = 1 if env_config.scenario == 3 else 0  
+    b_s3 = 1 if env_config.scenario == 3 else 0
 
-    rew_l = [0,1]       # First entry of the list is dedicated to partial load, the second to full load
-    cum_rew = 0         # Cumulative reward
+    rew_l = [0,1]    # First entry of the list is dedicated to partial load, the second to full load
+    cum_rew = 0      # Cumulative reward
 
     for t in range(len(el_price_data)):     # Loop over the electricity price data
         t_day = int(math.floor(t / 24))     # Convert hourly index to daily index
-        if t_day == len(gas_price_data): t_day -= 1
-        for l in range(len(rew_l)):   # Iterate over partial and full load scenarios               
+        if t_day == len(gas_price_data):
+            t_day -= 1
+        for l in range(len(rew_l)):   # Iterate over partial and full load scenarios
              # Compute revenues and costs for different operating conditions
 
-            # Gas proceeds (Scenario 1+2):          If Scenario == 3: self.gas_price_h[0] = 0
-            ch4_volumeflow = meth_stats['Meth_CH4_flow'][l+1] * env_config.convert_mol_to_Nm3            # in [Nm³/s]
-            h2_res_volumeflow = meth_stats['Meth_H2_res_flow'][l+1] * env_config.convert_mol_to_Nm3      # in [Nm³/s]
-            Q_ch4 = ch4_volumeflow * env_config.H_u_CH4 * 1000                                           # Thermal power of methane in [kW]
-            Q_h2_res = h2_res_volumeflow * env_config.H_u_H2 * 1000                                      # Thermal power of residual hydrogen in [kW]
-            ch4_revenues = (Q_ch4 + Q_h2_res) * gas_price_data[t_day]                                   # SNG revenues in [ct/h]
+            # Gas proceeds (Scenario 1+2):     If Scenario == 3: self.gas_price_h[0] = 0
+            # ch4_volumeflow, h2_res_volumeflow in [Nm³/s]
+            ch4_volumeflow = meth_stats['Meth_CH4_flow'][l+1] * env_config.convert_mol_to_Nm3
+            h2_res_volumeflow = meth_stats['Meth_H2_res_flow'][l+1] * env_config.convert_mol_to_Nm3
+            # Thermal power of methane in [kW]
+            q_ch4 = ch4_volumeflow * env_config.H_u_CH4 * 1000
+            # Thermal power of residual hydrogen in [kW]
+            q_h2_res = h2_res_volumeflow * env_config.H_u_H2 * 1000
+            # SNG revenues in [ct/h]
+            ch4_revenues = (q_ch4 + q_h2_res) * gas_price_data[t_day]
 
-            # CHP revenues (Scenario 3):               If Scenario == 3: self.b_s3 = 1 else self.b_s3 = 0
-            power_chp = Q_ch4 * env_config.eta_CHP * b_s3                        # Electrical power of the CHP in [kW]
-            Q_chp = Q_ch4 * (1 - env_config.eta_CHP) * b_s3                      # Thermal power of the produced steam in the CHP in [kW]
-            chp_revenues = power_chp * env_config.eeg_el_price                   # EEG tender revenues in [ct/h]
+            # CHP revenues (Scenario 3):       If Scenario == 3: self.b_s3 = 1 else self.b_s3 = 0
+            # Electrical power of the CHP in [kW]
+            power_chp = q_ch4 * env_config.eta_CHP * b_s3
+            # Thermal power of the produced steam in the CHP in [kW]
+            q_chp = q_ch4 * (1 - env_config.eta_CHP) * b_s3
+            # EEG tender revenues in [ct/h]
+            chp_revenues = power_chp * env_config.eeg_el_price
 
-            # Steam revenues (Scenario 1+2+3):          If Scenario != 3: self.Q_chp = 0
-            Q_steam = meth_stats['Meth_H2O_flow'][l+1] * (env_config.dt_water * env_config.cp_water + env_config.h_H2O_evap) / 3600    # Thermal power of the produced steam in the methanation plant in [kW]
-            steam_revenues = (Q_steam + Q_chp) * env_config.heat_price                                                               # in [ct/h]
+            # Steam revenues (Scenario 1+2+3):          If Scenario != 3: self.q_chp = 0
+            # Thermal power of the produced steam in the methanation plant in [kW]
+            q_steam = (meth_stats['Meth_H2O_flow'][l+1]
+                       * (env_config.dt_water * env_config.cp_water + env_config.h_H2O_evap)
+                       / 3600)
+            # Steam revenues in [ct/h]
+            steam_revenues = (q_steam + q_chp) * env_config.heat_price
 
             # Oxygen revenues (Scenario 1+2+3):
-            h2_volumeflow = meth_stats['Meth_H2_flow'][l+1] * env_config.convert_mol_to_Nm3          # in [Nm³/s]
-            o2_volumeflow = 1 / 2 * h2_volumeflow * 3600                                            # in [Nm³/h] = [Nm³/s * 3600 s/h]
-            o2_revenues = o2_volumeflow * env_config.o2_price                                        # Oxygen revenues in [ct/h]
+            # h2_volumeflow in [Nm³/s]
+            h2_volumeflow = meth_stats['Meth_H2_flow'][l+1] * env_config.convert_mol_to_Nm3
+            # o2_volumeflow in [Nm³/h] = [Nm³/s * 3600 s/h]
+            o2_volumeflow = 1 / 2 * h2_volumeflow * 3600
+            # Oxygen revenues in [ct/h]
+            o2_revenues = o2_volumeflow * env_config.o2_price
 
             # EUA revenues (Scenario 1+2):              If Scenario == 3: self.eua_price_h[0] = 0
             Meth_CO2_mass_flow = meth_stats['Meth_CH4_flow'][l+1] * env_config.Molar_mass_CO2 / 1000     # Consumed CO2 mass flow in [kg/s]
