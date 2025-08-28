@@ -403,7 +403,7 @@ class PTGEnv(gym.Env):
 
         return self.rew
 
-    def step(self, action):
+    def step(self, action: Any) -> tuple[dict[str, Any], float, bool, bool, dict[str, Any]]:
         k = self.k
 
         if self.meth_t_cat <= self.t_cat_startup_cold:
@@ -584,7 +584,11 @@ class PTGEnv(gym.Env):
 
         return observation, reward, terminated, False, info
 
-    def reset(self, seed=None, options=None):   # pylint: disable=arguments-differ
+    def reset(                                          # pylint: disable=arguments-differ
+            self,
+            seed: int | None = None,
+            options=None
+        ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Reset the environment"""
         super().reset(seed=seed)    # Reset the random seed
 
@@ -609,7 +613,7 @@ class PTGEnv(gym.Env):
 
         return observation, info
 
-    def _is_terminated(self):
+    def _is_terminated(self) -> bool:
         """Returns whether the episode terminates"""
         if self.k == self.eps_sim_steps - 6:
             return True     # Curtails training to ensure and data overhead (-6)
@@ -617,7 +621,7 @@ class PTGEnv(gym.Env):
             return False
 
     # --------- Utility/Helper Functions for Predicting Process Dynamics and State Changes ---------
-    def _get_index(self, operation, t_cat):
+    def _get_index(self, operation: np.ndarray, t_cat: float) -> int:
         """
             Determine the position (index) in the operation data set based on 
             the catalyst temperature.
@@ -629,8 +633,16 @@ class PTGEnv(gym.Env):
         idx = diff.argmin()                         # Find the index with the smallest difference
         return idx
 
-    def _perform_sim_step(self, operation, initial_state, next_operation, next_state,
-                          idx, j, change_operation):
+    def _perform_sim_step(
+            self,
+            operation: np.ndarray,
+            initial_state: Any,
+            next_operation: np.ndarray,
+            next_state: Any,
+            idx: int,
+            j: int,
+            change_operation: bool
+        ) -> tuple[np.ndarray, Any, int, int]:
         """
             Performs a single simulation step
             :param operation: np.array of operation modes for each timestep
@@ -669,7 +681,14 @@ class PTGEnv(gym.Env):
                 op_range = np.ones((self.step_size, operation.shape[1])) * operation[-1, :]
         return op_range, r_state, idx, j
 
-    def _cont(self, operation, initial_state, next_operation, next_state, change_operation):
+    def _cont(
+            self,
+            operation: np.ndarray,
+            initial_state: Any,
+            next_operation: np.ndarray,
+            next_state: Any,
+            change_operation: bool
+        ) -> tuple[np.ndarray, Any, int, int]:
         """
             Perform a single simulation step in the current methanation state operation.
             :param operation: np.array of operation modes for each timestep
@@ -684,7 +703,7 @@ class PTGEnv(gym.Env):
         return self._perform_sim_step(operation, initial_state, next_operation, next_state,
                                       self.i, self.j, change_operation)
 
-    def _standby(self):
+    def _standby(self) -> tuple[np.ndarray, Any, int, int]:
         """
             Transition the system to the 'Standby' methanation state and perform a simulation step
             :return: op_range: Operation range; r_state: Methanation state; idx; j
@@ -703,7 +722,7 @@ class PTGEnv(gym.Env):
         return self._perform_sim_step(self.standby, self.meth_state, self.standby, self.meth_state,
                                       self.i, self.j, False)
 
-    def _cooldown(self):
+    def _cooldown(self) -> tuple[np.ndarray, Any, int, int]:
         """
             Transition the system to the 'Cooldown' methanation state and perform a simulation step
             :return: op_range: Operation range; r_state: Methanation state; idx; j
@@ -717,7 +736,7 @@ class PTGEnv(gym.Env):
         return self._perform_sim_step(self.cooldown, self.meth_state, self.cooldown,
                                       self.meth_state, self.i, self.j, False)
 
-    def _startup(self):
+    def _startup(self) -> tuple[np.ndarray, Any, int, int]:
         """
             Transition the system to the 'Startup' methanation state and perform a simulation step
             :return: op_range: Operation range; r_state: Methanation state; idx; j
@@ -739,7 +758,7 @@ class PTGEnv(gym.Env):
         return self._perform_sim_step(self.startup, self.meth_state, self.partial,
                                       self.m_state['partial_load'], self.i, self.j, True)
 
-    def _partial(self):
+    def _partial(self) -> tuple[np.ndarray, Any, int, int]:
         """
             Transition the system to the 'Partial load' state and perform a simulation step,
             dependent on prior full-load conditions.
@@ -808,7 +827,7 @@ class PTGEnv(gym.Env):
         return self._perform_sim_step(self.partial, self.meth_state, self.partial,
                                       self.m_state['partial_load'], self.i, self.j, False)
 
-    def _full(self):
+    def _full(self) -> tuple[np.ndarray, Any, int, int]:
         """
             Transition the system to the 'Full load' state and perform a simulation step,
             dependent on prior partial-load conditions.
@@ -877,6 +896,6 @@ class PTGEnv(gym.Env):
         return self._perform_sim_step(self.full, self.meth_state, self.full,
                                       self.m_state['full_load'], self.i, self.j, False)
 
-    def render(self, mode="human"): # pylint: disable=unused-argument
+    def render(self, mode: str = "human") -> None: # pylint: disable=unused-argument
         """Optional: No rendering needed for this env"""
         return None
