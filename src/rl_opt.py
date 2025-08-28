@@ -24,13 +24,18 @@ Abbreviations:
 # pylint: disable=no-member
 
 import math
-import numpy as np
 
+import numpy as np
 
 from src.rl_config_env import EnvConfiguration
 
-def calculate_optimum(el_price_data: np.array, gas_price_data: np.array, eua_price_data: np.array,
-                      data_name: str, stats_names):
+def calculate_optimum(
+        el_price_data: np.ndarray,
+        gas_price_data: np.ndarray,
+        eua_price_data: np.ndarray,
+        data_name: str,
+        stats_names: list[str]
+    ) -> dict[str, np.ndarray]:
     """
         Computes the theoretical maximum revenue for the Power-to-Gas process, assuming no
         operational constraints.

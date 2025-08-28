@@ -17,10 +17,13 @@ import torch as th
 import yaml
 
 from stable_baselines3.common.vec_env import VecNormalize
+from stable_baselines3.common.base_class import BaseAlgorithm
+
+from src.rl_config_train import TrainConfiguration
 
 class AgentConfiguration:
     """ Configuration of the RL agent. """
-    def __init__(self):
+    def __init__(self) -> None:
         # Load the environment configuration from the YAML file
         with open("config/config_agent.yaml", "r", encoding="utf-8") as env_file:
             agent_config = yaml.safe_load(env_file)
@@ -31,7 +34,7 @@ class AgentConfiguration:
         # Ensure the specified RL algorithm exists in the hyperparameters
         if self.rl_alg not in self.hyperparameters:
             raise ValueError(
-                "Invalid algorithm specified - data/config_agent.yaml -> "+
+                "Invalid algorithm specified - data/config_agent.yaml -> "
                 f"model_conf : {self.rl_alg} must match {self.hyperparameters.keys()}"
             )
         # Hyperparameters of the selected algorithm
@@ -67,7 +70,8 @@ class AgentConfiguration:
                       'gSDE exploration': {'abb' :"_gs", 'var': 'gSDE'},
                       }
 
-    def set_model(self, env: VecNormalize, tb_log, train_config):
+    def set_model(self, env: VecNormalize, tb_log: str,
+                  train_config: TrainConfiguration) -> BaseAlgorithm:
         """
             Specifies and initializes the Stable-Baselines3 model for RL training
             :param env: The environment for training
@@ -85,7 +89,7 @@ class AgentConfiguration:
         elif self.rl_alg_hyp['activation'] == 'Tanh':
             activation_fn = th.nn.Tanh
         else:
-            raise ValueError(f"Type of activation function ({self.rl_alg_hyp['activation']}) needs"+
+            raise ValueError(f"Type of activation function ({self.rl_alg_hyp['activation']}) needs"
                               " to be 'ReLU' or 'Tanh'! -> Check RL_PtG/config/config_agent.yaml")
         hidden_layers = self.rl_alg_hyp['hidden_layers']
         hidden_units = self.rl_alg_hyp['hidden_units']
@@ -140,12 +144,12 @@ class AgentConfiguration:
             policy_kwargs = dict(activation_fn=activation_fn, net_arch=net_arch)
             if self.rl_alg_hyp['normalize_advantage'] not in [False, True]:
                 raise ValueError(
-                    f"Normalize advantage ({self.rl_alg_hyp['normalize_advantage']}) "+
+                    f"Normalize advantage ({self.rl_alg_hyp['normalize_advantage']}) "
                     "should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
                 )
             if self.rl_alg_hyp['gSDE'] not in [False, True]:
                 raise ValueError(
-                    f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) "+
+                    f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) "
                     "should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
                 )
             model = A2C(
@@ -186,12 +190,12 @@ class AgentConfiguration:
             n_steps = int(self.rl_alg_hyp['n_steps_f'] * self.rl_alg_hyp['batch_size'])
             if self.rl_alg_hyp['normalize_advantage'] not in [False, True]:
                 raise ValueError(
-                    f"Normalize advantage ({self.rl_alg_hyp['normalize_advantage']}) "+
+                    f"Normalize advantage ({self.rl_alg_hyp['normalize_advantage']}) "
                     "should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
                 )
             if self.rl_alg_hyp['gSDE'] not in [False, True]:
                 raise ValueError(
-                    f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) "+
+                    f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) "
                     "should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
                 )
             model = PPO(
@@ -270,7 +274,7 @@ class AgentConfiguration:
             policy_kwargs = dict(activation_fn=activation_fn, net_arch=net_arch)
             if self.rl_alg_hyp['gSDE'] not in [False, True]:
                 raise ValueError(
-                    f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) "+
+                    f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) "
                     "should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
                 )
             model = SAC(
@@ -317,7 +321,7 @@ class AgentConfiguration:
                             n_quantiles=int(self.rl_alg_hyp['n_quantiles']))
             if self.rl_alg_hyp['gSDE'] not in [False, True]:
                 raise ValueError(
-                    f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) "+
+                    f"gSDE exploration ({self.rl_alg_hyp['gSDE']}) "
                     "should be 'False' or 'True'! - Check RL_PtG/config/config_agent.yaml"
                 )
             model = TQC(
@@ -363,7 +367,8 @@ class AgentConfiguration:
 
         return model
 
-    def load_model(self, env, tb_log, model_path, train_type):
+    def load_model(self, env: VecNormalize, tb_log: str,
+                   model_path: str, train_type: str) -> BaseAlgorithm:
         """
             Loads a pretrained Stable-Baselines3 model for RL training
             :param env: The environment for training
@@ -403,7 +408,7 @@ class AgentConfiguration:
 
         return model
 
-    def save_model(self, model):
+    def save_model(self, model: BaseAlgorithm) -> None:
         """
             Saves the trained Stable-Baselines3 model and its replay buffer (if applicable).
             :param model: Stable-Baselines3 model
@@ -412,7 +417,7 @@ class AgentConfiguration:
         if 'buffer_size' in self.rl_alg_hyp.keys():
             model.save_replay_buffer(self.path_files + self.str_inv)
 
-    def get_hyper(self):
+    def get_hyper(self) -> str:
         """
             Displays the algorithm's hyperparameters and returns a string identifier 
             for file identification.
@@ -436,7 +441,7 @@ class AgentConfiguration:
             self.hyp_print('n-step TD update')
         if self.rl_alg in ['PPO']:
             self.hyp_print('n-step factor')
-            print("         No. of steps of the n-step TD update:"+
+            print("         No. of steps of the n-step TD update:"
                   f"\t {int(self.rl_alg_hyp['n_steps_f'] * self.rl_alg_hyp['batch_size'])}")
         if self.rl_alg in ['DQN','TD3','SAC','TQC']:
             self.hyp_print('Replay buffer size')
@@ -467,8 +472,7 @@ class AgentConfiguration:
 
         return self.str_alg
 
-
-    def hyp_print(self, hyp_name: str):
+    def hyp_print(self, hyp_name: str) -> None:
         """
             Displays the value of a specific hyperparameter and 
             adds it to the string identifier for file naming.
@@ -476,21 +480,21 @@ class AgentConfiguration:
         """
         if hyp_name not in self.hyper:
             raise ValueError(
-                f"Specified hyperparameter ({hyp_name}) is not part"+
+                f"Specified hyperparameter ({hyp_name}) is not part"
                 " of the implemented settings!"
             )
         length_str = len(hyp_name)
         if length_str > 28:
-            print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):"+
+            print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):"
                   f" {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
         elif length_str > 22:
-            print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):"+
+            print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):"
                   f"\t {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
         elif length_str > 15:
-            print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):"+
+            print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):"
                   f"\t\t {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
         else:
-            print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):"+
+            print(f"         {hyp_name} ({self.hyper[hyp_name]['abb']}):"
                   f"\t\t\t {self.rl_alg_hyp[self.hyper[hyp_name]['var']]}")
         self.str_alg += (self.hyper[hyp_name]['abb'] +
                          str(self.rl_alg_hyp[self.hyper[hyp_name]['var']]))

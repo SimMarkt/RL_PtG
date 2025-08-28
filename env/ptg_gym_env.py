@@ -18,6 +18,7 @@ Abbreviations:
 # pylint: disable=no-member, global-statement, attribute-defined-outside-init
 
 import math
+from typing import Any
 
 import gymnasium as gym
 from gymnasium import spaces
@@ -32,7 +33,12 @@ class PTGEnv(gym.Env):
 
     metadata = {"render_modes": ["None"]}
 
-    def __init__(self, dict_input, train_or_eval = "train", render_mode="None"):
+    def __init__(
+            self,
+            dict_input: dict[str, Any],
+            train_or_eval: str = "train",
+            render_mode: str = "None"
+        ) -> None:
         """
             Initialize the PtG environment for training or evaluation
             :param dict_input: Dictionary containing energy market data, process data,
@@ -90,7 +96,7 @@ class PTGEnv(gym.Env):
 
         self.render_mode = render_mode
 
-    def _initialize_datasets(self):
+    def _initialize_datasets(self) -> None:
         """Initialize data sets and temporal encoding"""
         # self.e_r_b: np.array that stores elec. price data, potential reward,
         #             and boolean identifier
@@ -115,7 +121,7 @@ class PTGEnv(gym.Env):
         self.temp_h_enc_sin = math.sin(2 * math.pi * self.clock_hours)
         self.temp_h_enc_cos = math.cos(2 * math.pi * self.clock_hours)
 
-    def _initialize_op_rew(self):
+    def _initialize_op_rew(self) -> None:
         """Initialize methanation operation and reward constituents"""
         # Methanation operation
         self.meth_state = self.m_state['cooldown']
@@ -154,7 +160,7 @@ class PTGEnv(gym.Env):
         self.info = {}                      # Info for evaluation
         self.k = 0                          # Step counter
 
-    def _initialize_action_space(self):
+    def _initialize_action_space(self) -> None:
         """Initialize the action space for plant operations""" 
         self.actions = ['standby', 'cooldown', 'startup', 'partial_load', 'full_load']
         self.current_action = 'cooldown'       # Aligned with the real-world plant
@@ -177,7 +183,7 @@ class PTGEnv(gym.Env):
             assert False, (f"ptg_gym_env.py error: invalid action type ({self.action_type}) - "
                            "must match ['discrete', 'continuous']!")
 
-    def _initialize_observation_space(self):
+    def _initialize_observation_space(self) -> None:
         """Define observation space based on raw or modified economic data"""
         b_norm, b_enc = [0, 1], [-1, 1]     # Normalized lower and upper bounds [low, up]
 
@@ -243,7 +249,7 @@ class PTGEnv(gym.Env):
             assert False, (f"ptg_gym_env.py error: state design raw_modified {self.raw_modified} "
                            "must match 'raw' or 'mod'!")
 
-    def _normalize_observations(self):
+    def _normalize_observations(self) -> None:
         """Normalize observations using standardization"""
         self.pot_rew_n = (self.e_r_b_act[1, :] - self.rew_l_b) / (self.rew_u_b - self.rew_l_b)
         self.el_n = (self.e_r_b_act[0, :] - self.el_l_b) / (self.el_u_b - self.el_l_b)
@@ -258,7 +264,7 @@ class PTGEnv(gym.Env):
         self.meth_el_heating_n = ((self.meth_el_heating - self.heat_l_b) /
                                   (self.heat_u_b - self.heat_l_b))
 
-    def _get_obs(self):
+    def _get_obs(self) -> dict[str, Any]:
         """Retrieve the current observations from the environment"""
         if self.raw_modified == "raw":
             return {
@@ -290,7 +296,7 @@ class PTGEnv(gym.Env):
                 "Temp_hour_enc_cos": np.array([self.temp_h_enc_cos], dtype=np.float64),
             }
 
-    def _get_info(self):
+    def _get_info(self) -> dict[str, Any]:
         """Retrieve additional details or metadata about the environment"""
         return {
             "step": self.k,
@@ -319,7 +325,7 @@ class PTGEnv(gym.Env):
             "Part_Full": self.e_r_b_act[2, 0],
         }
 
-    def _get_reward(self):
+    def _get_reward(self) -> float:
         """Calculate the reward based on the current revenues and costs"""
 
         # Gas revenues (Scenario 1+2):          If Scenario == 3: self.gas_price_h[0] = 0

@@ -15,7 +15,7 @@ import yaml
 
 class TrainConfiguration:
     """ Configuration of the RL training procedure. """
-    def __init__(self):
+    def __init__(self) -> None:
         # Load the environment configuration from the YAML file
         with open("config/config_train.yaml", "r", encoding="utf-8") as env_file:
             train_config = yaml.safe_load(env_file)
@@ -30,13 +30,13 @@ class TrainConfiguration:
         com_set = ['pc', 'slurm']
         if self.com_conf not in com_set:
             raise ValueError(
-                "Invalid computation setup specified - data/config_train.yaml -> com_conf "+
+                "Invalid computation setup specified - data/config_train.yaml -> com_conf "
                 f": {self.com_conf} must match {com_set}"
             )
         train_set = ['simple_train', 'save_model', 'load_model', 'save_load_model']
         if self.model_conf not in train_set:
             raise ValueError(
-                "Invalid training setup specified - data/config_agent.yaml -> model_conf "+
+                "Invalid training setup specified - data/config_agent.yaml -> model_conf "
                 f": {train_config['model_conf']} must match {train_set}"
             )
 

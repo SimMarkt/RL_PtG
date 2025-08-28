@@ -9,6 +9,7 @@ rl_utils:
 """
 
 import warnings
+from typing import Any
 
 import pandas as pd
 import numpy as np
@@ -19,9 +20,12 @@ from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv, SubprocV
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import EvalCallback
 
+from src.rl_config_agent import AgentConfiguration
+from src.rl_config_env import EnvConfiguration
+from src.rl_config_train import TrainConfiguration
 from src.rl_opt import calculate_optimum
 
-def import_market_data(csvfile: str, market_type: str, path: str):
+def import_market_data(csvfile: str, market_type: str, path: str) -> np.ndarray:
     """
         Imports day-ahead market price data.
         :param csvfile: Name of the .csv file containing market data ["Time [s]"; <data>].
@@ -49,7 +53,7 @@ def import_market_data(csvfile: str, market_type: str, path: str):
     return arr
 
 
-def import_data(csvfile: str, path: str):
+def import_data(csvfile: str, path: str) -> np.ndarray:
     """
         Imports experimental methanation process data.
         :param csvfile: Name of the .csv file containing operational data.
@@ -80,7 +84,10 @@ def import_data(csvfile: str, path: str):
     return arr
 
 
-def load_data(env_config, train_config):
+def load_data(
+        env_config: EnvConfiguration,
+        train_config: TrainConfiguration
+    ) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
     """
         Loads historical market data and experimental methanation operation data
         :param env_config: Environment configuration (class object)
@@ -104,7 +111,7 @@ def load_data(env_config, train_config):
     }
 
     # Function to verify consistency of market data sizes across datasets.
-    def check_market_data_size(split):
+    def check_market_data_size(split: str) -> None:
         el_size_h = len(dict_price_data[f'el_price_{split}'])
         el_size_d = el_size_h // 24
         gas_size_d = len(dict_price_data[f'gas_price_{split}'])
@@ -177,7 +184,14 @@ def load_data(env_config, train_config):
 class Preprocessing():
     """A class for preprocessing energy market and process data"""
 
-    def __init__(self, dict_price_data, dict_op_data, agent_config, env_config, train_config):
+    def __init__(
+            self,
+            dict_price_data: dict[str, np.ndarray],
+            dict_op_data: dict[str, np.ndarray],
+            agent_config: AgentConfiguration,
+            env_config: EnvConfiguration,
+            train_config: TrainConfiguration
+        ) -> None:
         """
             Initializes preprocessing with configuration parameters and data
             :param dict_price_data: Dictionary containing historical market data.
@@ -243,7 +257,7 @@ class Preprocessing():
         self.define_episodes()
 
 
-    def preprocessing_rew(self):
+    def preprocessing_rew(self) -> None:
         """
             Data preprocessing, including the calculation of potential rewards.
             These represent the maximum possible reward in Power-to-Gas (PtG) operation, 
@@ -294,7 +308,7 @@ class Preprocessing():
         self.r_level = stats_dict_opt_level['Meth_reward_stats']
 
 
-    def preprocessing_array(self):
+    def preprocessing_array(self) -> None:
         """Convert dictionaries to NumPy arrays for computational efficiency"""
 
         # e_r_b: Multi-Dimensional array which stores Day-ahead electricity price data
@@ -343,7 +357,7 @@ class Preprocessing():
         self.g_e_test[0, 1, :] = self.dict_price_data['gas_price_test'][1:]
         self.g_e_test[1, 1, :] = self.dict_price_data['eua_price_test'][1:]
 
-    def define_episodes(self):
+    def define_episodes(self) -> None:
         """Defines settings for training and evaluation episodes"""
 
         print("---Define episodes and step size limits")
@@ -378,7 +392,7 @@ class Preprocessing():
         self.n_eps_loops = self.n_eps * int(self.num_loops)
         # Allows unique eps_ind assignments per process (RL_PtG\env\ptg_gym_env.py for reference)
 
-    def rand_eps_ind(self):
+    def rand_eps_ind(self) -> None:
         """
             The agent can either:
             1. Use the entire training set in a single episode (train_len_d == eps_len_d).
@@ -405,7 +419,7 @@ class Preprocessing():
                                                  num_loops_int *
                                                  self.overhead_factor)).astype(int)
 
-    def dict_env_kwargs(self, train_val_test_type="train"):
+    def dict_env_kwargs(self, train_val_test_type: str = "train") -> dict[str, Any]:
         """
             Returns global model parameters and hyperparameters for the PtG environment.
             :param train_val_test_type: Specifies whether the dataset is
@@ -479,14 +493,18 @@ class Preprocessing():
         return env_kwargs
 
 
-def initial_print():
+def initial_print() -> None:
     """ Prints the initial banner for the RL_PtG project """
     print('\n-------------------------------------------------------------------------------------')
     print('------RL_PtG: Deep Reinforcement Learning for Power-to-Gas dispatch optimization-----')
     print('-------------------------------------------------------------------------------------\n')
 
 
-def config_print(agent_config, env_config, train_config):
+def config_print(
+            agent_config: AgentConfiguration,
+            env_config: EnvConfiguration,
+            train_config: TrainConfiguration
+    ) -> str:
     """
         Gathers and prints general settings
         :param agent_config: Agent configuration (class object)
@@ -536,7 +554,13 @@ def config_print(agent_config, env_config, train_config):
     return str_id
 
 
-def _make_env(env_id, n_envs, seed, env_kwargs, vec_env_cls=DummyVecEnv):
+def _make_env(
+        env_id: str,
+        n_envs: int,
+        seed: int,
+        env_kwargs: dict[str, Any],
+        vec_env_cls: Any = DummyVecEnv
+    ) -> VecNormalize:
     """Helper function to create and normalized environments"""
 
     env = make_vec_env(env_id=env_id, n_envs=n_envs, seed=seed,
@@ -544,11 +568,19 @@ def _make_env(env_id, n_envs, seed, env_kwargs, vec_env_cls=DummyVecEnv):
 
     return VecNormalize(env, norm_obs=False)
 
-def eval_callback_dec(env_fn):
+def eval_callback_dec(env_fn: Any) -> Any:
     """Decorator to create an evaluation environment and its EvalCallback"""
 
-    def wrapper(env_id, str_id, train_config, agent_config,
-                env_kwargs, suffix, render_mode="None", n_envs=None):
+    def wrapper(
+            env_id: str,
+            str_id: str,
+            train_config: TrainConfiguration,
+            agent_config: AgentConfiguration,
+            env_kwargs: dict[str, Any],
+            suffix: str,
+            render_mode: str = "None",
+            n_envs: int | None = None
+        ) -> tuple[VecNormalize, EvalCallback]:
         """Wrapper function to create evaluation environment and callback"""
         # Default n_envs to train_config.eval_trials if not provided
         n_envs = n_envs if n_envs is not None else train_config.eval_trials
@@ -564,13 +596,25 @@ def eval_callback_dec(env_fn):
     return wrapper
 
 @eval_callback_dec
-def _make_eval_env(env_id, n_envs, seed, env_kwargs, render_mode="None"):
+def _make_eval_env(
+        env_id: str,
+        n_envs: int,
+        seed: int,
+        env_kwargs: dict[str, Any],
+        render_mode: str = "None"
+    ) -> VecNormalize:
     """Creates an evaluation environment"""
 
     return _make_env(env_id, n_envs, seed,
                      dict(dict_input=env_kwargs, train_or_eval="eval", render_mode=render_mode))
 
-def create_vec_envs(env_id, str_id, agent_config, train_config, env_kwargs_data):
+def create_vec_envs(
+        env_id: str,
+        str_id: str,
+        train_config: TrainConfiguration,
+        agent_config: AgentConfiguration,
+        env_kwargs_data: dict[str, Any]
+    ) -> tuple[VecNormalize, VecNormalize, EvalCallback, EvalCallback]:
     """Creates vectorized environments for training, validation, and testing"""
 
     # Set processing type
@@ -610,7 +654,15 @@ def create_vec_envs(env_id, str_id, agent_config, train_config, env_kwargs_data)
 class Postprocessing():
     """A class for post-processing"""
 
-    def __init__(self, str_id, agent_config, env_config, train_config, env_test_post, preprocess):
+    def __init__(
+            self,
+            str_id: str,
+            agent_config: AgentConfiguration,
+            env_config: EnvConfiguration,
+            train_config: TrainConfiguration,
+            env_test_post: VecNormalize,
+            preprocess: Preprocessing
+        ) -> None:
         """
             Initializes variables
             :param str_id: Unique identifier for the current training run.
@@ -633,7 +685,7 @@ class Postprocessing():
         self.model = agent_config.load_model(env=None, tb_log=None,
                                              model_path=model_path, train_type='eval')
 
-    def test_performance(self):
+    def test_performance(self) -> None:
         """
             Test RL policy on the test environment
         """
@@ -671,7 +723,7 @@ class Postprocessing():
 
         return None
 
-    def plot_results(self):
+    def plot_results(self) -> None:
         """
         Generates a multi-subplot plot displaying time-series data and
         methanation operations based on the agent's actions.

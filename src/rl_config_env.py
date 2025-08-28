@@ -15,7 +15,7 @@ import yaml
 
 class EnvConfiguration:
     """ Configuration of the environment. """
-    def __init__(self):
+    def __init__(self) -> None:
         # Load the environment configuration from the YAML file
         with open("config/config_env.yaml", "r", encoding="utf-8") as env_file:
             env_config = yaml.safe_load(env_file)
@@ -25,21 +25,21 @@ class EnvConfiguration:
 
         if self.scenario not in [1,2,3]:
             raise ValueError(
-                f"Specified business scenario ({self.scenario}) "+
+                f"Specified business scenario ({self.scenario}) "
                 "must match one of the three implemented scenarios [1,2,3]!"
             )
         self.train_len_d = None     # Total number of days in the training set
         raw_mod_set = ['raw', 'mod']
         if self.raw_modified not in raw_mod_set:
             raise ValueError(
-                "Invalid type of state design specified - data/config_train.yaml -> raw_mod "+
+                "Invalid type of state design specified - data/config_train.yaml -> raw_mod "
                 f": {env_config['raw_modified']} must match {raw_mod_set}"
             )
 
         # Construct file paths for process data depending on the load level (OP1 or OP2):
         if self.operation not in ['OP1', 'OP2']:
             raise ValueError(
-                "Invalid load level specified - data/config_env.yaml -> operation "+
+                "Invalid load level specified - data/config_env.yaml -> operation "
                 f": {env_config['operation']} must match ['OP1', 'OP2']"
             )
         base_path = self.datafile_path['path'] + self.operation
