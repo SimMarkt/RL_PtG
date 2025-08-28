@@ -56,7 +56,7 @@ def computational_resources(train_config: TrainConfiguration) -> None:
         print("---CUDA available:", th.cuda.is_available(),
               "GPU device:", th.cuda.get_device_name(0), "\n")
 
-def check_env(env_id):
+def check_env(env_id: str) -> None:
     """
         Registers the Gymnasium environment if it is not already in the registry
         :param env_id: Unique identifier for the environment
@@ -79,7 +79,7 @@ def check_env(env_id):
     else:
         print(f"---Environment '{env_id}' is already registered.\n")
 
-def main():
+def main() -> None:
     """
         Main function to set up and execute the RL training process.
     """
