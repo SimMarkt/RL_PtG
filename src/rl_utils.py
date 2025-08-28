@@ -42,13 +42,15 @@ def import_market_data(csvfile: str, market_type: str, path: str) -> np.ndarray:
     if market_type == "el":        # Electricity price data
         # Convert Euro/MWh into ct/kWh
         arr = df["Day-Ahead-price [Euro/MWh]"].values.astype(float) / 10
-    elif type == "gas":     # Gas price data
+    elif market_type == "gas":     # Gas price data
         # Convert Euro/MWh into ct/kWh
         arr = df["THE_DA_Gas [Euro/MWh]"].values.astype(float) / 10
-    elif type == "eua":     # EUA price data
+    elif market_type == "eua":     # EUA price data
         arr = df["EUA_CO2 [Euro/t]"].values.astype(float)
     else:
-        assert False, "Invalid market data type. Must be one of ['el', 'gas', 'eua']!"
+        raise ValueError(
+                f"Invalid market data type {market_type}. Must be one of ['el', 'gas', 'eua']!"
+            )
 
     return arr
 
@@ -611,8 +613,8 @@ def _make_eval_env(
 def create_vec_envs(
         env_id: str,
         str_id: str,
-        train_config: TrainConfiguration,
         agent_config: AgentConfiguration,
+        train_config: TrainConfiguration,
         env_kwargs_data: dict[str, Any]
     ) -> tuple[VecNormalize, VecNormalize, EvalCallback, EvalCallback]:
     """Creates vectorized environments for training, validation, and testing"""

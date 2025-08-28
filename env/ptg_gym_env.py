@@ -134,6 +134,10 @@ class PTGEnv(gym.Env):
         self.full = self.op2_start_f                                # Current full load data set
         self.full_op = 'op2_start_f'                                # Track full load conditions
         self.meth_t_cat = 16                                        # Catalyst temperature [°C]
+        (
+            self.meth_ch4_flow, self.meth_h2_flow, self.meth_h2_res_flow,
+            self.meth_h2o_flow, self.meth_el_heating
+        ) = (0.0,) * 5
         self.i = self._get_index(self.cooldown, self.meth_t_cat)    # Index for operation
         self.j = 0                                                  # Step counter for operation
         self.op = self.cooldown[self.i, :]                          # Current operation point
