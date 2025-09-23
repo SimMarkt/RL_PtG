@@ -130,6 +130,8 @@ RL_PtG/
 │
 ├── tensorboard/
 │
+├── tests/
+│
 ├── requirements.txt
 ├── rl_main.py
 └── rl_tb.py
@@ -220,6 +222,9 @@ Contains source code for pre- and postprocessing:
 ### `tensorboard/`
 Stores *TensorBoard logs* for monitoring RL training progress.
 
+### `tests/`
+Unit test files for the project.
+
 ### **Main Script**  
 - **`rl_main.py`** – The main script for training the RL agent on the PtG dispatch task.  
   - `computational_resources()` – Configures computational settings.  
@@ -255,6 +260,9 @@ python -m venv venv
 
 # Install the required python libraries
 pip install -r requirements.txt
+
+# Run the project
+python rl_main.py
 
 ```
 
@@ -425,7 +433,7 @@ Mainz: Technical and economic analysis of the worldwide largest
 Power-to-Gas plant with PEM electrolysis*", International Journal of Hydrogen Energy,
 42, 2017, 13311–13320
 
-[3] S. Markthaler, "*Optimization of Power-to-Gas operation and dispatch using Deep Reinforcement Learning*", Dissertation (PhD Thesis), Friedrich-Alexander-Universität Erlangen-Nürnberg, 2025 (not yet been published).
+[3] S. Markthaler, "*Optimization of Power-to-Gas operation and dispatch using Deep Reinforcement Learning*", Dissertation (PhD Thesis), Friedrich-Alexander-Universität Erlangen-Nürnberg, 2025, https://open.fau.de/handle/openfau/37298
 
 [4] Bundesnetzagentur, "*SMARD - Strommarktdaten, Stromhandel und Stromerzeugung in Deutschland*", https://www.smard.de/home (Accessed, 15.08.2024)
 
